@@ -477,9 +477,16 @@
         "deduction_resident_tax": 300000,
         "widow_deduction_income_tax": 270000,
         "widow_deduction_resident_tax": 260000,
-        "not_de_facto_marriage": true
+        "not_de_facto_marriage": true,
+        "resident_tax_free_income": 1350000,
+        "resident_tax_free_note": "ひとり親（寡婦・障害者・未成年者も同じ）は、前の年の合計所得金額が135万円以下なら住民税がかかりません（地方税法第295条第1項第2号）。",
+        "resident_tax_base": 350000,
+        "resident_tax_plus": 100000,
+        "resident_tax_add_kintouwari": 210000,
+        "resident_tax_add_shotokuwari": 320000,
+        "resident_tax_limit_note": "ひとり親でない場合でも、合計所得金額が「35万円×（本人＋扶養の数）＋10万円＋（扶養がいれば21万円）」以下なら均等割がかからず、「同じ計算で21万円を32万円に置きかえた額」以下なら所得割がかかりません。35万円と21万円は、お住まいの地域（生活保護の級地区分）によってこれより低いことがあります。このツールは条文の上限値で計算しているので、実際より税が軽く出ることがあります。"
       },
-      "benefit_summary": "所得税で35万円、住民税で30万円を、税をかける前の所得から差し引けます。手取りベースでは年におよそ5万円から8万円ほど変わります（収入により違います）。",
+      "benefit_summary": "所得税で35万円、住民税で30万円を、税をかける前の所得から差し引けます。ただし、これは税を払っている人にしか効きません。もともと所得税も住民税もかからない収入では、軽くなる額は0円です。税がかかっている場合は、年におよそ5万円から10万円ほど変わります（収入により違います）。",
       "how_to_apply": "勤め先の年末調整（扶養控除等申告書）、または確定申告",
       "cautions": [
         "申告しそこねた年があっても、5年前までさかのぼって取り戻せます（更正の請求・還付申告）。",
@@ -487,10 +494,11 @@
         "死別などでひとり親にあたらない場合は、寡婦控除（所得税27万円・住民税26万円）を確認してください。"
       ],
       "source": {
-        "law": "所得税法第81条（ひとり親控除）・第80条（寡婦控除）、地方税法",
+        "law": "所得税法第81条（ひとり親控除）・第80条（寡婦控除）、地方税法第295条第1項第2号（住民税がかからない範囲）・附則第3条の3第4項（所得割がかからない範囲）、地方税法施行令第47条の3（均等割がかからない範囲）",
         "url": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1171.htm",
         "url_detail": "https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/144643_01.html",
-        "publisher": "国税庁／総務省",
+        "url_law": "https://laws.e-gov.go.jp/law/325AC0000000226",
+        "publisher": "国税庁／総務省／e-Gov法令検索",
         "last_verified": "2026-08-11"
       }
     },
