@@ -47,7 +47,7 @@ function 道筋のチェック() {
     return 待つ(2200).then(function () {
       var 見本 = require(path.join(ROOT, 'data', 'samples.js')).samples;
       var 期待 = {
-        part_two_kids: ['黒字になります', '追い越します'],
+        part_two_kids: ['黒字になります', '資格を取って抜ける道'],
         seishain_one_kid: ['早まります'],
         over_limit: ['学費の山'],
         considering_divorce: ['養育費を取り決めると'],
@@ -248,6 +248,12 @@ server.listen(0, '127.0.0.1', function () {
         ok(前提文.indexOf('物価の上昇') > 0, '物価と制度改正を入れていないことが書いてある');
         ok(前提.querySelector('.warn-inline') !== null, '甘く出るところが目立つ形になっている');
 
+        /* 資格ルートは、はじめは切れている（まず現実だけを見せる） */
+        ok(!d.getElementById('training-on').checked, '記入例を入れても、資格ルートは切れたまま');
+        eq(d.getElementById('training-box').style.display, 'none', '資格ルートの設定も、はじめは出さない');
+        eq(d.querySelectorAll('#stage2b-body svg path').length, 2,
+          'はじめのグラフは2本（いまのまま・全部使う）だけ');
+
         /* 資格ルート: 働き方の3択 */
         eq(d.querySelectorAll('input[name="training-work"]').length, 4,
           '通っているあいだの働き方が4つから選べる（働かない・半分・いまのまま・自分で入れる）');
@@ -361,6 +367,7 @@ server.listen(0, '127.0.0.1', function () {
             'いますぐ穴を塞ぐ手への副リンクがある');
           var ボタン = カード.querySelector('#go-training');
           ok(ボタン !== null, '資格ルートへ誘導する主ボタンがある');
+          ok(ボタン.classList.contains('pulse'), '主ボタンが、目を引く形（脈打つ）になっている');
           ok(ボタン.textContent.indexOf('資格を取って収入を上げた場合を見る') >= 0,
             '主ボタンの文言が分かりやすい', ボタン.textContent);
 
@@ -376,6 +383,12 @@ server.listen(0, '127.0.0.1', function () {
           var 後の本数 = d.querySelectorAll('#stage2b-body svg path').length;
           ok(後の本数 > 前の本数, 'グラフの線が増える（資格ルートが描かれる）',
             前の本数 + ' → ' + 後の本数);
+          /* 押した瞬間だけ、線が伸びる動きがつく */
+          ok(d.querySelector('#stage2b-body path.draw-in') !== null,
+            '押した瞬間、線が伸びる動きで描かれる');
+          d.getElementById('training-years').dispatchEvent(new w.Event('change', { bubbles: true }));
+          ok(d.querySelector('#stage2b-body path.draw-in') === null,
+            'そのあとの描き直しでは、動きをくり返さない');
 
           /* カードの文言が、資格ルートONの結果を反映して切りかわる */
           var カード2 = d.querySelector('#stage2b-body .alert-card');
@@ -434,6 +447,7 @@ server.listen(0, '127.0.0.1', function () {
       }).then(function () {
         /* 「働かない」を選ぶと、線がその場で引き直される */
         d.querySelectorAll('#sample-buttons button')[0].click();
+        d.getElementById('go-training').click();   /* まず資格ルートを出す */
         var 前の絵 = d.querySelector('#stage2b-body svg').outerHTML;
         d.querySelector('input[name="training-work"][value="none"]').checked = true;
         d.querySelector('input[name="training-work"][value="none"]')

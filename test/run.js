@@ -630,6 +630,16 @@ ok(見本.samples.some(function (s) { return (s.input.plans || []).length > 0; }
   '見本のうち少なくとも1件は、私立などの進路を選んでいる');
 ok(見本.samples.some(function (s) { return (s.input.usedPrograms || []).length > 0; }),
   '見本のうち少なくとも1件は、すでに制度を使っている');
+/* 資格ルートは、どの見本でも切った状態から始める。
+   まず「いまのまま」の現実を見てもらい、ボタンで線が現れる体験にするため。 */
+見本.samples.forEach(function (s) {
+  eq((s.input.training || {}).enabled, false, '[' + s.id + '] 資格ルートは、はじめは切ってある');
+  ok((s.input.training || {}).afterIncome > 0,
+    '[' + s.id + '] 見込みの年収は用意してある（ボタンを押したらすぐ線が出るように）');
+  eq(SPS.資産カーブ(Object.assign({}, s.input,
+    { divorced_childSupportMonthly: s.input.childSupportMonthly }), データ).training, null,
+    '[' + s.id + '] はじめの計算には、資格ルートの線が入らない');
+});
 
 /* ------------------------------------------------------------ */
 見出し('9. 見本（画面の「例で試す」と同じ数字）');
@@ -951,6 +961,20 @@ function 重なり(svg) {
   ok(字.every(function (t) { return t.h >= 10; }), 'グラフ' + (i + 1) + 'の文字が小さすぎない（10px以上）');
 });
 
+/* 線が伸びる動きは、ボタンで出した直後だけ */
+var 出した直後 = SPS.資産カーブ(訓入力, データ);
+出した直後.training.animate = true;
+var 動くsvg = Chart.資産を描く(出した直後);
+ok(動くsvg.indexOf('class="draw-in"') > 0, '出した直後は、線が伸びる動きの印がつく');
+ok(/stroke-dasharray:\d+;stroke-dashoffset:\d+/.test(動くsvg), '線の長さが指定されている（左から伸びるため）');
+var 長さm = /stroke-dasharray:(\d+)/.exec(動くsvg);
+ok(Number(長さm[1]) > 100, '線の長さが、それらしい値になっている', 長さm[1]);
+ok(動くsvg.indexOf('class="fade-in"') > 0, '期間の帯のラベルも、遅れて出てくる');
+var 動かないsvg = Chart.資産を描く(SPS.資産カーブ(訓入力, データ));
+ok(動かないsvg.indexOf('draw-in') === -1, 'ふだんの描き直しでは、動きをつけない（毎回動くとうるさいため）');
+ok(動かないsvg.indexOf('fade-in') === -1, 'ラベルも同様');
+ok((動かないsvg.match(/<path /g) || []).length === 3, '動きがなくても線は3本ある');
+
 /* ------------------------------------------------------------ */
 見出し('13-3. スマートフォンでの縦長のグラフ');
 
@@ -1000,6 +1024,22 @@ ok(たてB.h / たてB.w > 1.2, '貯金のグラフもスマホでは縦長');
 /* 資格ルートを出した縦長でも、かぶらないこと */
 var 縦訓 = Chart.資産を描く(SPS.資産カーブ(訓入力, データ), true);
 ok(重なり(縦訓).length === 0, 'スマホの縦長で資格ルートを出しても、文字がかぶらない', 重なり(縦訓).join(' / '));
+
+/* 動きを減らす設定のときは、アニメーションを止める */
+var css = fs.readFileSync(path.join(ROOT, 'css', 'style.css'), 'utf8');
+ok(/@keyframes cta-pulse/.test(css), 'ボタンが脈打つ動きが定義されている');
+ok(/@keyframes draw-line/.test(css), '線が伸びる動きが定義されている');
+var 減らす = css.slice(css.lastIndexOf('@media (prefers-reduced-motion: reduce)'));
+ok(減らす.indexOf('.alert-cta.pulse') > 0 && /\.alert-cta\.pulse\s*\{[^}]*animation:\s*none/.test(減らす),
+  '動きを減らす設定では、ボタンの脈打ちを止める');
+ok(/\.alert-cta\.pulse\s*\{[^}]*(outline|box-shadow)/.test(減らす),
+  '動きを止めるかわりに、枠で強調している');
+ok(/path\.draw-in\s*\{[^}]*animation:\s*none/.test(減らす),
+  '動きを減らす設定では、線が伸びる動きも止める');
+ok(/path\.draw-in\s*\{[^}]*stroke-dashoffset:\s*0/.test(減らす),
+  '動きを止めたときも、線はちゃんと最後まで見える');
+ok(/\.fade-in\s*\{[^}]*opacity:\s*1/.test(減らす), '遅れて出る文字も、動きなしで最初から見える');
+ok(css.indexOf('cta-pulse 1.8s') > 0, '脈打つ周期は1.8秒（1.5〜2秒のあいだ）');
 
 /* ------------------------------------------------------------ */
 見出し('14. 画面と処理のつながり');

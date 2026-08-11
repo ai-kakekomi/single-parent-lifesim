@@ -37,7 +37,7 @@
         "parentAge": 0,
         "livingCost": 88000,
         "currentSavings": 80000,
-        "training": { "enabled": true, "years": 2, "afterIncome": 3200000 },
+        "training": { "enabled": false, "years": 2, "afterIncome": 3200000 },
         "usedPrograms": ["jido_teate"]
       },
       "expect": {
@@ -125,7 +125,7 @@
         "parentAge": 0,
         "livingCost": 95000,
         "currentSavings": 300000,
-        "training": { "enabled": true, "years": 2, "afterIncome": 3000000 },
+        "training": { "enabled": false, "years": 2, "afterIncome": 3000000 },
         "usedPrograms": ["jido_teate"]
       },
       "expect": {
@@ -155,7 +155,7 @@
         "parentAge": 0,
         "livingCost": 90000,
         "currentSavings": 150000,
-        "training": { "enabled": true, "years": 2, "afterIncome": 3200000 },
+        "training": { "enabled": false, "years": 2, "afterIncome": 3200000 },
         "usedPrograms": ["jido_fuyo_teate", "jido_teate"]
       },
       "expect": {
@@ -184,7 +184,7 @@
         "parentAge": 68,
         "livingCost": 100000,
         "currentSavings": 400000,
-        "training": { "enabled": true, "years": 3, "afterIncome": 3600000 },
+        "training": { "enabled": false, "years": 3, "afterIncome": 3600000 },
         "usedPrograms": ["jido_teate"]
       },
       "expect": {

@@ -414,3 +414,34 @@ ul.cost-ref .cost-ref-b { color: var(--ink-sub); }
   .alert-actions .alert-cta { width: 100%; }
   .alert-actions { gap: .55rem; }
 }
+
+/* ---- 目を引くボタン（ゆっくり脈打つ） ---- */
+.alert-cta.pulse {
+  position: relative;
+  animation: cta-pulse 1.8s ease-in-out infinite;
+}
+@keyframes cta-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(31, 111, 139, .55); }
+  70%  { box-shadow: 0 0 0 12px rgba(31, 111, 139, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(31, 111, 139, 0); }
+}
+
+/* ---- 線が左から伸びる ---- */
+.chart-box path.draw-in { animation: draw-line 1.1s ease-out forwards; }
+@keyframes draw-line { to { stroke-dashoffset: 0; } }
+.chart-box .fade-in { animation: fade-in-late .5s ease-out .85s both; }
+@keyframes fade-in-late { from { opacity: 0; } to { opacity: 1; } }
+
+.quiet-cta { margin: .4rem 0 0; }
+
+/* 動きを減らす設定のときは、動かさずに枠で強調する */
+@media (prefers-reduced-motion: reduce) {
+  .alert-cta.pulse {
+    animation: none;
+    box-shadow: 0 0 0 3px rgba(31, 111, 139, .45);
+    outline: 2px solid var(--accent-dark);
+    outline-offset: 2px;
+  }
+  .chart-box path.draw-in { animation: none; stroke-dasharray: none !important; stroke-dashoffset: 0 !important; }
+  .chart-box .fade-in { animation: none; opacity: 1; }
+}

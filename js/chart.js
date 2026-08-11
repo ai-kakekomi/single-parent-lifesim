@@ -345,11 +345,23 @@
       { y: Y(床(pts[末].all)) + 4, col: 色.withProg, 名: '全部使う' }
     ];
     if (tr && 資格描く数 > 0) {
-      var td = tr.points.slice(0, 資格描く数).map(function (p, i) {
-        return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(床(p.all)).toFixed(1);
+      /* 線の長さをだいたい測っておく。
+         「左から伸びる」動きをCSSでつけるのに、長さが要るため。 */
+      var 点列 = tr.points.slice(0, 資格描く数).map(function (p, i) {
+        return { x: X(i), y: Y(床(p.all)) };
+      });
+      var td = 点列.map(function (q, i) {
+        return (i ? 'L' : 'M') + q.x.toFixed(1) + ' ' + q.y.toFixed(1);
       }).join(' ');
+      var 長さ = 0;
+      for (var li = 1; li < 点列.length; li++) {
+        長さ += Math.sqrt(Math.pow(点列[li].x - 点列[li - 1].x, 2) + Math.pow(点列[li].y - 点列[li - 1].y, 2));
+      }
+      長さ = Math.ceil(長さ) + 2;
       s.push('<path d="' + td + '" fill="none" stroke="' + 色.training +
-        '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>');
+        '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"' +
+        (tr.animate ? ' class="draw-in" style="stroke-dasharray:' + 長さ + ';stroke-dashoffset:' + 長さ + '"' : '') +
+        '/>');
       /* 学校に通っている期間を、たての帯で示す。
          期間の情報なので、ラベルはグラフの上のほうに置く。
          下のほう（生活防衛資金の帯・借りられる上限の線・網かけ）は
@@ -361,13 +373,14 @@
         s.push('<line x1="' + tx.toFixed(1) + '" y1="' + 上 + '" x2="' + tx.toFixed(1) + '" y2="' + (上 + 高) +
           '" stroke="' + 色.training + '" stroke-width="1" stroke-dasharray="2 3" opacity="0.55"/>');
         s.push('<text x="' + (左 + 4) + '" y="' + (上 + 13) + '" font-size="11" font-weight="700" fill="' + 色.training +
-          '">' + (縦長 ? '通学' + tr.years + '年' : '学校に通う期間（' + tr.years + '年）') + '</text>');
+          '"' + (tr.animate ? ' class="fade-in"' : '') + '>' +
+          (縦長 ? '通学' + tr.years + '年' : '学校に通う期間（' + tr.years + '年）') + '</text>');
 
         /* 修了した時点に、小さな印をつける */
         if (tr.years < 資格描く数) {
           var my = Y(床(tr.points[tr.years - 1].all));
           s.push('<circle cx="' + tx.toFixed(1) + '" cy="' + my.toFixed(1) + '" r="4.5" fill="#fff" stroke="' +
-            色.training + '" stroke-width="2.5"/>');
+            色.training + '" stroke-width="2.5"' + (tr.animate ? ' class="fade-in"' : '') + '/>');
           if (!縦長) {
             s.push('<text x="' + (tx + 5).toFixed(1) + '" y="' + (上 + 27) + '" font-size="10" font-weight="700" fill="' +
               色.training + '">▲資格取得</text>');

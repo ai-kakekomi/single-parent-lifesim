@@ -7,6 +7,7 @@
   var データ = null, 見本 = null, 落とし穴 = null;
   var 最新入力 = null, 最新判定 = null, 最新シミュ = null;
   var 最新資産 = null;
+  var 資格ルートを出したところ = false;   // 線を伸ばす動きは、出した直後の1回だけ
   var グラフの見方 = 'perPerson';   // 'perPerson' ひとりあたり ／ 'total' 家ぜんたい
 
   function $(id) { return document.getElementById(id); }
@@ -319,8 +320,11 @@
     document.querySelectorAll('.used-prog').forEach(function (el) {
       el.checked = (i.usedPrograms || []).indexOf(el.value) >= 0;
     });
+    /* 資格ルートは、いつも切った状態から始める。
+       まず「いまのまま」の現実だけを見てもらい、
+       ボタンを押したときに線が現れる体験にするため。 */
     var tr = i.training || { enabled: false };
-    $('training-on').checked = !!tr.enabled;
+    $('training-on').checked = false;
     $('training-years').value = String(tr.years || 2);
     var w = tr.work || 'half';
     var wEl = document.querySelector('input[name="training-work"][value="' + w + '"]');
@@ -328,7 +332,7 @@
     $('training-during').value = tr.duringIncome ? Math.round(tr.duringIncome / 10000) : '';
     $('training-during-row').style.display = (w === 'custom') ? '' : 'none';
     $('training-after').value = tr.afterIncome ? Math.round(tr.afterIncome / 10000) : '';
-    $('training-box').style.display = tr.enabled ? '' : 'none';
+    $('training-box').style.display = 'none';
     進路欄を作る(i.children);
     (i.plans || []).forEach(function (pl, idx) {
       Object.keys(pl).forEach(function (st) {
@@ -521,6 +525,8 @@
     }
     最新資産 = SPS.資産カーブ(入力, データ);
     var c = 最新資産;
+    if (c.training) { c.training.animate = 資格ルートを出したところ; }
+    資格ルートを出したところ = false;
 
     var 頭 = 不足の警告カード(c);
 
@@ -801,7 +807,10 @@
     var t = c.training;
     var 不足あり = (c.monthlyBalance < 0) || (c.goesNegative && c.shortfallMonthly);
     if (!不足あり) {
-      return '<p><strong>使える制度を全部使うと、ひと月に約' + SPS.円(c.monthlyBalance) + ' 残る計算です。</strong></p>';
+      var 入口 = (t && t.afterIncome > 0) ? ''
+        : '<p class="quiet-cta"><button type="button" class="ghost" id="go-training">' +
+          '収入を上げるルートも見てみる</button></p>';
+      return '<p><strong>使える制度を全部使うと、ひと月に約' + SPS.円(c.monthlyBalance) + ' 残る計算です。</strong></p>' + 入口;
     }
 
     var 見出し, 説明;
@@ -843,7 +852,7 @@
 
     h.push('<div class="alert-actions">');
     if (!(t && t.afterIncome > 0)) {
-      h.push('<button type="button" class="primary alert-cta" id="go-training">' +
+      h.push('<button type="button" class="primary alert-cta pulse" id="go-training">' +
         '資格を取って収入を上げた場合を見る</button>');
     } else {
       h.push('<button type="button" class="ghost alert-cta" id="go-training">' +
@@ -858,13 +867,12 @@
   /** カードのボタンから、資格ルートを出して設定までスクロールする */
   function 資格ルートを開く() {
     var 変えた = false;
-    if (!$('training-on').checked) { $('training-on').checked = true; 変えた = true; }
+    if (!$('training-on').checked) { $('training-on').checked = true; 変えた = true; 資格ルートを出したところ = true; }
     if (!数('training-after')) {
       $('training-after').value = Math.max(Math.round(数('my-income')), 200);
       変えた = true;
     }
-    訓練欄を反映();
-    if (変えた && 最新入力) { 最新入力.training = 訓練の入力(); 資産を描く(); }
+    訓練欄を反映();   /* この中で1回だけ描き直す（2回描くと、線が伸びる動きが消えてしまう） */
     var 先 = $('training-box');
     if (先 && 先.scrollIntoView) { 先.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
     var 入 = $('training-after');
