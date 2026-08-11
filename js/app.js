@@ -6,6 +6,7 @@
 
   var データ = null, 見本 = null, 落とし穴 = null;
   var 最新入力 = null, 最新判定 = null, 最新シミュ = null;
+  var グラフの見方 = 'perPerson';   // 'perPerson' ひとりあたり ／ 'total' 家ぜんたい
 
   function $(id) { return document.getElementById(id); }
   function esc(s) {
@@ -148,7 +149,7 @@
       }
       var p = r.program;
       出力.push(
-        '<div class="prog ' + r.status + '">' +
+        '<div class="prog ' + r.status + '" id="prog-' + esc(p.id) + '">' +
         '<h4>' + esc(p.name) + ' <span class="badge ' + r.status + '">' + esc(r.label) + '</span></h4>' +
         '<p>' + esc(p.summary) + '</p>' +
         (r.amountText ? '<p class="amount">' + esc(r.amountText) + '</p>' : '') +
@@ -186,18 +187,62 @@
     }
     最新シミュ = SPS.シミュレーション(入力, データ);
     var y = 最新シミュ.years;
-    var 差 = y.length ? (y[0].divorced.total - y[0].married.total) : 0;
+    var 値 = (グラフの見方 === 'total') ? 'total' : 'perPerson';
+    var 差 = y.length ? (y[0].divorced[値] - y[0].married[値]) : 0;
+
+    var 頭 = 入力.isSingleParent
+      ? '<p>すでにひとり親の方は、「離婚した場合」の線がいまの姿です。「結婚を続けた場合」の線は、配偶者の年収を入れたときの参考です。</p>'
+      : '<p><strong>いま（お子さん' + y[0].youngestAge + '歳）の時点では、離婚した場合のほうが ひと月あたり ' +
+        (差 >= 0 ? '約' + SPS.円(差) + ' 多く' : '約' + SPS.円(-差) + ' 少なく') + 'なる見込みです。</strong>' +
+        (値 === 'perPerson' ? 'ひとりあたりに直した金額での比較です。' : '家ぜんたいの金額での比較です。') + '</p>';
 
     $('stage2-body').innerHTML =
-      '<p>' + (入力.isSingleParent
-        ? 'すでにひとり親の方は、「離婚した場合」の線がいまの状態です。「結婚を続けた場合」の線は参考として、配偶者の年収を入れたときの姿を出しています。'
-        : '<strong>いま（お子さん' + y[0].youngestAge + '歳）の時点で、離婚した場合はひと月あたり ' +
-          (差 >= 0 ? '約' + SPS.円(差) + ' 多く' : '約' + SPS.円(-差) + ' 少なく') + 'なる見込みです。</strong>') + '</p>' +
-      SPSChart.凡例() +
-      '<div class="chart-box">' + SPSChart.描く(y, 最新シミュ.cliffs) + '</div>' +
+      頭 + 見方の切りかえ() + 見方の説明() + SPSChart.凡例() +
+      '<div class="chart-box">' + SPSChart.描く(y, 最新シミュ.cliffs, グラフの見方) + '</div>' +
       '<p class="hint">たての線は、制度が切りかわって金額が変わるところです。グラフの上を指でなぞる（マウスを乗せる）と、その年の金額が出ます。</p>' +
-      SPSChart.表(y) +
-      崖の説明(最新シミュ.cliffs);
+      SPSChart.表(y, グラフの見方) +
+      崖の説明(最新シミュ.cliffs) + お金以外の注意();
+
+    document.querySelectorAll('button[data-view]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        グラフの見方 = b.getAttribute('data-view');
+        グラフを描く();
+      });
+    });
+  }
+
+  function 見方の切りかえ() {
+    function b(v, 名) {
+      var 選 = (グラフの見方 === v);
+      return '<button type="button" class="' + (選 ? 'primary' : 'ghost') + '" data-view="' + v + '"' +
+        (選 ? ' aria-pressed="true"' : ' aria-pressed="false"') +
+        ' style="width:auto;margin:0;padding:.45rem .9rem;font-size:.85rem">' + 名 + '</button>';
+    }
+    return '<div class="view-switch">' + b('perPerson', 'ひとりあたりに直して見る') + b('total', '家ぜんたいの金額で見る') + '</div>';
+  }
+
+  function 見方の説明() {
+    if (グラフの見方 === 'total') {
+      return '<p class="hint">いま見ているのは <strong>家ぜんたい</strong>の金額です。' +
+        '結婚を続けた場合は大人2人ぶん、離婚した場合は大人1人ぶんの暮らしなので、この数字をそのまま比べると、' +
+        '結婚を続けたほうが実際より豊かに見えます。比べるときは「ひとりあたりに直して見る」に切りかえてください。</p>';
+    }
+    return '<p class="hint"><strong>家族の人数がちがうので、そのまま足した金額では比べられません。' +
+      'ひとりあたりに直した金額で比べています。</strong><br>' +
+      'ひと月の合計を、世帯人数の平方根で割っています。人数で単純に割らないのは、家賃や電気代のように' +
+      '「人がふえてもそれほどふえない費用」があるからです。厚生労働省が国民生活基礎調査で貧困の割合を出すときと同じやり方（OECDの作成基準）です。<br>' +
+      '<a href="https://www.mhlw.go.jp/toukei/list/dl/20-21a-01.pdf" target="_blank" rel="noopener">厚生労働省「国民生活基礎調査（貧困率）よくあるご質問」</a>（最終確認 8/11(火)）</p>';
+  }
+
+  function お金以外の注意() {
+    return '<div class="pit yellow" style="margin-top:1rem">' +
+      '<h4>🟡 このグラフは、お金の話だけです</h4>' +
+      '<p>結婚を続けた場合の金額は、<strong>相手の収入が家計にきちんと入っていることが前提</strong>です。</p>' +
+      '<p>生活費を渡してもらえない。使い道を細かく責められる。身の安全に不安がある。' +
+      'そういう場合は、お金の多い少ないとは別の問題です。グラフの数字だけで決めないでください。</p>' +
+      '<p><a href="#stage3">身の安全のことは、下の「気をつけてほしいこと」を見てください</a>／' +
+      '<a href="manual.html#erase" target="_blank" rel="noopener">相談できるところの一覧を開く</a></p>' +
+      '</div>';
   }
 
   function 崖の説明(cliffs) {
@@ -232,14 +277,82 @@
     return 落とし穴.items.filter(function (it) { return 落とし穴の条件(it, 入力, 判定); });
   }
 
+  /* ---------- まずやること（チェックリスト） ----------
+     長い説明を読む前に、やることだけを short に出します。
+     チェックの状態は保存しません。持ち歩けるように、コピーだけできるようにしてあります。 */
+  function まずやること(入力, 判定) {
+    var 一覧 = [];
+    /* いちばん最後の「窓口へ行く」は必ず残したいので、条件つきの項目は6個までにする */
+    function 足す(文, 制度id) { if (一覧.length < 6) { 一覧.push({ text: 文, prog: 制度id || null }); } }
+
+    var 判定表 = {};
+    判定.results.forEach(function (r) { 判定表[r.program.id] = r.status; });
+    var j = 判定.jidoFuyoTeate;
+
+    /* 順番は「取り返しがつかなくなる順」「お金が大きい順」 */
+    if (入力.childSupportState.indexOf('取り決めている') === -1) {
+      足す('養育費の取り決めを、公正証書にする', 'youikuhi');
+    }
+    if (判定表.jido_fuyo_teate === 'likely') {
+      足す('市区町村の窓口で、児童扶養手当を申し込む', 'jido_fuyo_teate');
+    }
+    if (判定表.jido_teate === 'likely') {
+      足す('児童手当を受け取れているか、確かめる', 'jido_teate');
+    }
+    if (判定表.hitorioya_kojo === 'likely') {
+      足す('ひとり親控除を申告する（5年前までさかのぼれる）', 'hitorioya_kojo');
+    }
+    if (入力.children.some(function (a) { return a >= 6 && a <= 15; })) {
+      足す('学校で、就学援助が使えるか聞く', 'shugaku_enjo');
+    }
+    if (入力.children.some(function (a) { return a >= 14 && a <= 18; })) {
+      足す('高校の授業料の支援を、学校で聞く', 'koukou_shugaku_shienkin');
+    }
+    if (入力.children.some(function (a) { return a >= 16; })) {
+      足す('返さなくてよい奨学金があるか、調べる', 'koutou_kyoiku_shugaku_shien');
+    }
+    if (j && (j.status === 'partial' || (j.status === 'full' && j.income > j.limits.full - 300000))) {
+      足す('働く時間をふやす前に、手当がいくら減るか確かめる', 'jido_fuyo_teate');
+    }
+    if (入力.parentSupportMonthly > 0) {
+      足す('親の援助が終わる年に、月いくら足りなくなるか見ておく', null);
+    }
+    if (入力.housingType === '賃貸') {
+      足す('公営住宅の募集の時期を調べる', 'koei_jutaku');
+    }
+    /* これだけは、どんなときも最後に置く */
+    一覧.push({ text: '聞きたいことをメモして、市区町村のひとり親相談の窓口へ行く', prog: null });
+    return 一覧;
+  }
+
+  function チェックリストを描く(一覧) {
+    if (!一覧.length) { return ''; }
+    var h = ['<div class="checklist">',
+      '<h3 style="margin-top:0">まずやること</h3>',
+      '<p class="hint">上から順に、ひとつずつで大丈夫です。全部やらなくても、1つ進めば前に進みます。</p>',
+      '<ul>'];
+    一覧.forEach(function (it, i) {
+      h.push('<li><label><input type="checkbox" id="todo-' + i + '"><span>' + esc(it.text) + '</span></label>' +
+        (it.prog ? ' <a class="jump" href="#prog-' + esc(it.prog) + '">くわしく</a>' : '') + '</li>');
+    });
+    h.push('</ul>',
+      '<div class="copy-row"><button type="button" class="ghost" id="copy-todo">このリストをコピーする</button>',
+      '<span class="copy-msg" id="copy-todo-msg"></span></div>',
+      '<p class="hint">チェックを入れても、どこにも保存されません。画面を閉じると消えます。' +
+      '持っていきたいときは、上のボタンでコピーして、メモ帳などに貼りつけてください。</p>',
+      '</div>');
+    return h.join('');
+  }
+
   function 落とし穴を描く(入力, 判定) {
     var items = 当てはまる落とし穴(入力, 判定);
     var 赤 = items.filter(function (i) { return i.tone === 'red'; });
     var 黄 = items.filter(function (i) { return i.tone === 'yellow'; });
+    var やること = まずやること(入力, 判定);
 
-    function 一件(it) {
-      var h = ['<div class="pit ' + it.tone + '">'];
-      h.push('<h4>' + (it.tone === 'red' ? '🔴 ' : '🟡 ') + esc(it.title) + '</h4>');
+    function 中身(it) {
+      var h = [];
+      h.push('<p><strong>' + esc(it.title) + '</strong></p>');
       if (it.intro) { h.push('<p>' + esc(it.intro) + '</p>'); }
       if (it.facts && it.facts.length) {
         h.push('<ul>' + it.facts.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>');
@@ -262,13 +375,33 @@
           return '<a href="' + esc(s.url) + '" target="_blank" rel="noopener">' + esc(s.label) + '</a>';
         }).join(' ／ ') + '（最終確認 ' + 日付表示(it.last_verified) + '）</p>');
       }
-      h.push('</div>');
       return h.join('');
     }
 
+    function 一件(it) {
+      return '<div class="pit ' + it.tone + '">' +
+        '<h4>' + (it.tone === 'red' ? '🔴 ' : '🟡 ') + esc(it.headline || it.title) + '</h4>' +
+        '<details><summary>くわしく読む</summary><div class="pit-detail">' + 中身(it) + '</div></details>' +
+        '</div>';
+    }
+
     $('stage3-body').innerHTML =
-      '<h3>とくに気をつけてほしいこと</h3>' + 赤.map(一件).join('') +
-      '<h3>入力の内容から、確かめてほしいこと</h3>' + (黄.length ? 黄.map(一件).join('') : '<p class="hint">とくにありません。</p>');
+      チェックリストを描く(やること) +
+      '<h3>とくに気をつけてほしいこと</h3>' +
+      '<p class="hint">見出しだけ読めば大丈夫です。気になるものだけ開いてください。</p>' +
+      赤.map(一件).join('') +
+      '<h3>入力の内容から、確かめてほしいこと</h3>' +
+      (黄.length ? 黄.map(一件).join('') : '<p class="hint">とくにありません。</p>');
+
+    var b = $('copy-todo');
+    if (b) {
+      b.addEventListener('click', function () {
+        var 文 = ['まずやること（ひとり親ライフチョイス・シミュレータ）', ''].concat(
+          やること.map(function (it) { return '□ ' + it.text; }),
+          ['', '※ 金額はすべて概算です。正確な額は市区町村の窓口で確認してください。']).join('\n');
+        コピーする(文, $('copy-todo-msg'));
+      });
+    }
   }
 
   /* ---------- Stage 4 AIに相談する文章 ---------- */
@@ -283,6 +416,22 @@
         '<span class="copy-msg" id="msg-pr-' + i + '"></span></div>' +
         '</div>';
     }).join('');
+  }
+
+  function コピーする(文, msg) {
+    function done(ok) {
+      msg.textContent = ok ? 'コピーしました' : 'コピーできませんでした。文章を選んでコピーしてください。';
+      setTimeout(function () { msg.textContent = ''; }, 3000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(文).then(function () { done(true); }, function () { done(false); });
+      return;
+    }
+    var ta = document.createElement('textarea');
+    ta.value = 文; document.body.appendChild(ta); ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta); done(ok);
   }
 
   function コピー設定() {

@@ -217,6 +217,43 @@ eq(simD.years[0].married.jidoFuyoTeate, 0, '婚姻中は児童扶養手当が入
 ok(simD.years[0].divorced.jidoFuyoTeate > 0, '離婚後は児童扶養手当が入る');
 
 /* ------------------------------------------------------------ */
+見出し('8-2. ひとりあたりに直した金額（等価可処分所得）');
+
+eq(SPS.等価所得(300000, 1), 300000, 'ひとり暮らしなら、そのままの金額');
+eq(SPS.等価所得(300000, 4), 150000, '4人家族なら、平方根の2で割って半分になる');
+eq(SPS.等価所得(300000, 9), 100000, '9人なら、平方根の3で割る');
+eq(SPS.等価所得(200000, 2), Math.round(200000 / Math.SQRT2), '2人家族は √2 で割る');
+eq(SPS.等価所得(300000, 0), 300000, '人数が0でも1人として扱い、0で割らない');
+eq(SPS.等価所得(0, 3), 0, '金額が0なら0');
+ok(SPS.等価所得(300000, 3) > 300000 / 3,
+  '単純に人数で割るより大きくなる（人数がふえても、それほどふえない費用があるため）');
+
+/* 大人2人と大人1人を、同じものさしにそろえられているか */
+var 入力E = {
+  isSingleParent: false, myIncome: 1100000, spouseIncome: 5000000,
+  children: [3, 6], housingNow: 110000, housingAfter: 65000,
+  divorced_childSupportMonthly: 40000, parentSupportMonthly: 0, parentAge: 0
+};
+var simE = SPS.シミュレーション(入力E, データ);
+var y0 = simE.years[0];
+eq(y0.married.householdSize, 4, '結婚を続けた場合の世帯人数は 大人2＋子2 で4人');
+eq(y0.divorced.householdSize, 3, '離婚した場合の世帯人数は 大人1＋子2 で3人');
+eq(y0.married.perPerson, SPS.等価所得(y0.married.total, 4), '結婚を続けた場合のひとりあたりの金額が計算されている');
+eq(y0.divorced.perPerson, SPS.等価所得(y0.divorced.total, 3), '離婚した場合のひとりあたりの金額が計算されている');
+ok(y0.married.perPerson < y0.married.total, '人数で調整すると、家ぜんたいの金額より小さくなる');
+
+var 総額の開き = y0.married.total / y0.divorced.total;
+var 一人あたりの開き = y0.married.perPerson / y0.divorced.perPerson;
+ok(一人あたりの開き < 総額の開き,
+  'ひとりあたりに直すと、家ぜんたいの金額で比べたときより差が小さくなる（大人の人数のちがいを織り込むため）',
+  '総額 ' + 総額の開き.toFixed(2) + '倍 → ひとりあたり ' + 一人あたりの開き.toFixed(2) + '倍');
+simE.years.forEach(function (y) {
+  ok(y.married.perPerson === SPS.等価所得(y.married.total, y.married.householdSize) &&
+     y.divorced.perPerson === SPS.等価所得(y.divorced.total, y.divorced.householdSize),
+    'どの年でも、ひとりあたりの金額が世帯人数と合っている');
+});
+
+/* ------------------------------------------------------------ */
 見出し('9. 見本（画面の「例で試す」と同じ数字）');
 
 見本.samples.forEach(function (s) {
@@ -345,6 +382,10 @@ eq(黄.length, 6, '黄（確かめてほしいこと）は6件');
     });
   }
   ok(/^\d{4}-\d{2}-\d{2}$/.test(it.last_verified), '「' + it.title + '」に最終確認日がある');
+  /* 折りたたんだ状態でも結論が分かる、短い1行の見出し */
+  ok(!!it.headline, '「' + it.title + '」に、たたんだ状態で読む1行見出しがある');
+  ok(it.headline.length <= 32, '「' + it.headline + '」の1行見出しが32文字以内', it.headline.length + '文字');
+  ok(it.headline.indexOf('\n') === -1, '1行見出しに改行が入っていない');
 });
 ok(落とし穴.items.filter(function (i) { return i.id === 'yami_baito'; })[0].sources
   .every(function (s) { return s.url.indexOf('npa.go.jp') > 0; }), '闇バイトの出典はすべて警察庁');
@@ -387,6 +428,17 @@ ok(svg.indexOf('stroke-dasharray') > 0, '色のほかに線の種類でも見分
 ok(Chart.描く([], []).indexOf('<svg') === -1, 'データがないときは絵を描かない');
 ok(Chart.表(simA.years).indexOf('<table') === 0, '数字だけの表も出せる');
 
+/* 見方の切りかえ（ひとりあたり／家ぜんたい） */
+var 絵1 = Chart.描く(simE.years, simE.cliffs);
+var 絵2 = Chart.描く(simE.years, simE.cliffs, 'total');
+ok(絵1.indexOf('ひとりあたりに直した、ひと月のお金') > 0, 'ふだんは、ひとりあたりに直した金額を出す');
+ok(絵2.indexOf('家ぜんたいで、ひと月に使えるお金') > 0, '切りかえると、家ぜんたいの金額を出す');
+ok(絵1 !== 絵2, '切りかえると絵が変わる');
+ok(Chart.表(simE.years).indexOf('ひとりあたりに直した金額') > 0, '表の見出しも、ひとりあたりであることを書く');
+ok(Chart.表(simE.years, 'total').indexOf('家ぜんたいの金額') > 0, '表も切りかえられる');
+ok(Chart.表(simE.years).indexOf(Math.round(y0.married.perPerson).toLocaleString('ja-JP')) > 0,
+  '表に、ひとりあたりに直した金額がそのまま出ている');
+
 /* ------------------------------------------------------------ */
 見出し('14. 画面と処理のつながり');
 
@@ -395,7 +447,11 @@ var app = fs.readFileSync(path.join(ROOT, 'js', 'app.js'), 'utf8');
 var 使っているid = [];
 app.replace(/\$\('([a-z0-9-]+)'\)/g, function (_, id) { 使っているid.push(id); return _; });
 使っているid.filter(function (v, i, a) { return a.indexOf(v) === i; })
-  .filter(function (id) { return id.indexOf('child-age-') !== 0 && id.indexOf('pr-') !== 0 && id.indexOf('msg-') !== 0; })
+  .filter(function (id) {
+    /* 画面のうごきの中で作られる欄は、index.html には書かれていない */
+    return id.indexOf('child-age-') !== 0 && id.indexOf('pr-') !== 0 &&
+      id.indexOf('msg-') !== 0 && id.indexOf('copy-todo') !== 0;
+  })
   .forEach(function (id) {
     ok(html.indexOf('id="' + id + '"') > 0, '画面に「' + id + '」の欄がある');
   });

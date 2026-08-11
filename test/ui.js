@@ -65,8 +65,44 @@ server.listen(0, '127.0.0.1', function () {
         eq(d.querySelectorAll('#stage2-body svg path').length, 2, 'グラフの線が2本');
         ok(d.querySelectorAll('#stage2-body table.compare tr').length > 2, '数字だけの表も出る');
 
+        /* ひとりあたりに直した金額が既定で、切りかえもできる */
+        ok(d.getElementById('stage2-body').textContent.indexOf('ひとりあたりに直した金額で比べています') > 0,
+          '人数がちがうから比べられない、という説明が出ている');
+        ok(d.querySelector('#stage2-body svg').textContent.indexOf('ひとりあたりに直した、ひと月のお金') >= 0,
+          'グラフの縦軸が、ひとりあたりの金額になっている');
+        var 切替 = d.querySelectorAll('#stage2-body button[data-view]');
+        eq(切替.length, 2, '見方の切りかえボタンが2つある');
+        eq(切替[0].getAttribute('aria-pressed'), 'true', 'はじめは「ひとりあたり」が選ばれている');
+        切替[1].click();
+        ok(d.getElementById('stage2-body').textContent.indexOf('家ぜんたい') > 0,
+          '切りかえると、家ぜんたいの金額が見られる');
+        d.querySelectorAll('#stage2-body button[data-view]')[0].click();
+        ok(d.getElementById('stage2-body').textContent.indexOf('ひとりあたりに直した金額で比べています') > 0,
+          'もう一度切りかえると、ひとりあたりに戻る');
+        ok(d.getElementById('stage2-body').textContent.indexOf('相手の収入が家計にきちんと入っていることが前提') > 0,
+          'お金の話だけである、という注記が出ている');
+        ok(d.querySelector('#stage2-body a[href="#stage3"]') !== null,
+          '身の安全のことを見に行くリンクがある');
+
+        /* まずやること（チェックリスト） */
+        var todo = d.querySelectorAll('#stage3-body .checklist li');
+        ok(todo.length >= 5 && todo.length <= 7, 'まずやることが5〜7個に絞られている', todo.length + '個');
+        eq(d.querySelectorAll('#stage3-body .checklist input[type="checkbox"]').length, todo.length,
+          'どの項目にもチェックの四角が付いている');
+        ok(d.getElementById('copy-todo') !== null, 'リストをコピーするボタンがある');
+        ok(d.querySelector('#stage3-body .checklist a.jump[href^="#prog-"]') !== null,
+          '該当する制度カードへのリンクが付いている');
+        var 飛び先 = d.querySelector('#stage3-body .checklist a.jump').getAttribute('href').slice(1);
+        ok(d.getElementById(飛び先) !== null, 'リンク先の制度カードが実在する', 飛び先);
+
+        /* 長い解説は折りたたまれている */
         eq(d.querySelectorAll('#stage3-body .pit.red').length, 5, '赤い注意書きが5つ');
         ok(d.querySelectorAll('#stage3-body .pit.yellow').length >= 1, '黄色い注意書きが出る');
+        eq(d.querySelectorAll('#stage3-body .pit details').length,
+          d.querySelectorAll('#stage3-body .pit').length, 'どの注意書きも折りたたまれている');
+        ok(!d.querySelector('#stage3-body .pit details').open, 'はじめは閉じている');
+        ok(d.querySelector('#stage3-body .pit h4').textContent.indexOf('闇バイト') > 0,
+          '閉じたままでも、結論の1行が読める', d.querySelector('#stage3-body .pit h4').textContent);
         ok(d.querySelectorAll('#stage3-body .stance').length >= 4, '立場表明の枠が、事実と分けて表示される');
         ok(d.getElementById('stage3-body').textContent.indexOf('私たちAIかけこみ寺は') > 0,
           '立場表明が「私たちAIかけこみ寺は」で始まっている');
