@@ -515,24 +515,14 @@
     var 入力 = 最新入力;
     if (!入力 || !入力.children.length) { return; }
     if (!入力.livingCost) {
-      $('stage2b-body').innerHTML = '<p class="hint">「毎月の生活費」を入れると、貯金のたまり方のグラフが出ます。' +
+      $('stage2b-body').innerHTML = '<p class="hint">「毎月の生活費」を入れると、貯金シミュレーションのグラフが出ます。' +
         '食費・光熱費・通信費・日用品などの合計のめやすで大丈夫です（家賃と学校のお金はのぞきます）。</p>';
       return;
     }
     最新資産 = SPS.資産カーブ(入力, データ);
     var c = 最新資産;
 
-    var 頭;
-    if (c.monthlyBalance < 0) {
-      頭 = '<p class="deficit-line"><strong>いま、毎月あと ' + SPS.円(-c.monthlyBalance) + ' 足りない状態です。</strong>' +
-        '（使える制度を全部使ったとしても、です）</p>';
-    } else if (c.goesNegative && c.shortfallMonthly) {
-      頭 = '<p class="deficit-line"><strong>いまは足りていますが、いちばん下のお子さんが' +
-        c.points[c.negativeFromOffset].youngestAge + '歳のころに、貯金が底をつく計算です。</strong>' +
-        'その時期は、毎月あと ' + SPS.円(c.shortfallMonthly) + ' 足りません。</p>';
-    } else {
-      頭 = '<p><strong>使える制度を全部使うと、ひと月に約' + SPS.円(c.monthlyBalance) + ' 残る計算です。</strong></p>';
-    }
+    var 頭 = 不足の警告カード(c);
 
     /* いちばん見せたい数字: まだ使っていない制度でいくら変わるか */
     var 伸びしろ = '';
@@ -578,6 +568,9 @@
       赤字の警告(c) +
       学費の説明(c) +
       前提のボックス(c);
+
+    var cta = $('go-training');
+    if (cta) { cta.addEventListener('click', 資格ルートを開く); }
   }
 
   /* ============================================================
@@ -641,7 +634,8 @@
           (t.reachSafetyOffset !== null
             ? '生活防衛資金にとどくのは、' + (t.reachSafetyOffset === 0 ? 'すぐ' : t.reachSafetyOffset + '年後') + 'です。' : '') +
           '22歳のときの貯金は、約' + Math.round(t.finalAll / 10000).toLocaleString('ja-JP') + '万円になります。' +
-          '<strong>令和5年度は、この給付金で2,988人が資格を取り、2,105人が就職しています。</strong>',
+          '<strong>令和5年度は、この給付金で2,988人が資格を取り、2,105人が就職しています。</strong>' +
+          '窓口は、市・区にお住まいならその市・区、町村にお住まいなら都道府県です。',
           '#prog-koutou_shokugyo_kunren', 'この給付金のくわしい説明を見る');
       } else {
         足す('資格を取る道は、この見込みでは追い越しません',
@@ -790,6 +784,7 @@
       esc(訓.after_income_note) + '</p>');
     h.push('<p class="hint" style="margin:.3rem 0">' + esc(訓.target_qualifications) + '</p>');
     h.push('<p class="track-record"><strong>この橋は、実際に渡れます。</strong>' + esc(訓.track_record) + '</p>');
+    h.push('<p class="hint" style="margin:.3rem 0">' + esc(訓.window_note) + '</p>');
     h.push('<p class="hint" style="margin:.3rem 0">' + esc(訓.non_taxable_note) + '</p>');
     h.push('<p class="src">根拠: ' + esc(訓.source.law) + '／<a href="' + esc(訓.source.url) +
       '" target="_blank" rel="noopener">' + esc(訓.source.publisher) + 'のページを開く</a>（最終確認 ' +
@@ -798,6 +793,82 @@
       日付表示(訓.track_record_source.last_verified) + '）</p>');
     h.push('</div>');
     return h.join('');
+  }
+
+  /* ---------- 足りないことのお知らせカード ----------
+     数字を言いっぱなしにせず、その場から次の一手に進めるようにする。 */
+  function 不足の警告カード(c) {
+    var t = c.training;
+    var 不足あり = (c.monthlyBalance < 0) || (c.goesNegative && c.shortfallMonthly);
+    if (!不足あり) {
+      return '<p><strong>使える制度を全部使うと、ひと月に約' + SPS.円(c.monthlyBalance) + ' 残る計算です。</strong></p>';
+    }
+
+    var 見出し, 説明;
+    if (c.monthlyBalance < 0) {
+      見出し = 'いま、毎月あと ' + SPS.円(-c.monthlyBalance) + ' 足りない状態です';
+      説明 = '使える制度を全部使ったとしても、です。ただし、ここからできることがあります。';
+    } else {
+      見出し = 'いちばん下のお子さんが' + c.points[c.negativeFromOffset].youngestAge +
+        '歳のころに、貯金が底をつく計算です';
+      説明 = 'いまは足りています。その時期に、毎月あと ' + SPS.円(c.shortfallMonthly) +
+        ' 足りなくなる見込みです。いまのうちに手を打てば、変えられます。';
+    }
+
+    var h = ['<div class="alert-card">'];
+    h.push('<p class="alert-head">' + esc(見出し) + '</p>');
+    h.push('<p class="alert-body">' + esc(説明) + '</p>');
+
+    /* 資格ルートを出したあとの結果を、このカードに反映する */
+    if (t && t.afterIncome > 0) {
+      var 文;
+      if (!t.goesNegative && (c.goesNegative || c.monthlyBalance < 0)) {
+        文 = '<strong>資格を取るルートなら、貯金が底をつきません。</strong>' +
+          (t.crossesOver
+            ? (t.crossoverOffset === 0
+              ? '通いはじめた最初の年から、いまのままの線を追い越します。'
+              : t.crossoverOffset + '年後に、いまのままの線を追い越します。')
+            : '');
+        h.push('<p class="alert-good">' + 文 + '</p>');
+      } else if (t.goesNegative) {
+        文 = '資格を取るルートでも、通っているあいだは苦しくなる計算です' +
+          (t.negativeFromOffset !== null && t.negativeFromOffset < t.years
+            ? '（学校に通っている' + t.years + '年のうちに底をつきます）' : '') +
+          '。この期間は、母子父子寡婦福祉資金の貸付や、生活保護との併用が使えることがあります。' +
+          '通いはじめる前に、必ず窓口で相談してください。';
+        h.push('<p class="alert-warn-more">' + 文 +
+          ' <a href="#prog-fukushi_shikin_kashitsuke">貸付のくわしい説明を見る</a></p>');
+      }
+    }
+
+    h.push('<div class="alert-actions">');
+    if (!(t && t.afterIncome > 0)) {
+      h.push('<button type="button" class="primary alert-cta" id="go-training">' +
+        '資格を取って収入を上げた場合を見る</button>');
+    } else {
+      h.push('<button type="button" class="ghost alert-cta" id="go-training">' +
+        '資格を取るルートの設定を見直す</button>');
+    }
+    h.push('<a class="alert-sub" href="#gap-block">いますぐ月の穴を塞ぐ手を見る</a>');
+    h.push('</div>');
+    h.push('</div>');
+    return h.join('');
+  }
+
+  /** カードのボタンから、資格ルートを出して設定までスクロールする */
+  function 資格ルートを開く() {
+    var 変えた = false;
+    if (!$('training-on').checked) { $('training-on').checked = true; 変えた = true; }
+    if (!数('training-after')) {
+      $('training-after').value = Math.max(Math.round(数('my-income')), 200);
+      変えた = true;
+    }
+    訓練欄を反映();
+    if (変えた && 最新入力) { 最新入力.training = 訓練の入力(); 資産を描く(); }
+    var 先 = $('training-box');
+    if (先 && 先.scrollIntoView) { 先.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    var 入 = $('training-after');
+    if (入 && 入.focus) { try { 入.focus(); } catch (e) { /* 気にしない */ } }
   }
 
   /* ---------- このグラフの前提 ----------

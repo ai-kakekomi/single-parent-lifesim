@@ -344,12 +344,52 @@ server.listen(0, '127.0.0.1', function () {
         /* 赤字の見せ方（例1をもとに、生活費を上げて赤字にする） */
         d.querySelectorAll('#sample-buttons button')[0].click();
         d.getElementById('living-cost').value = '150000';
+        /* 資格ルートはいったん切って、カードのボタンで入ることを確かめる */
+        d.getElementById('training-on').checked = false;
+        d.getElementById('training-after').value = '';
         d.getElementById('calc').click();
         return 待つ(300).then(function () {
           var 本文 = d.getElementById('stage2b-body').textContent;
           ok(本文.indexOf('毎月あと') > 0 && 本文.indexOf('足りない状態です') > 0,
             '赤字のときは、ひと月あたりいくら足りないかを先に出す', 本文.slice(0, 120));
-          ok(d.querySelector('#stage2b-body .deficit-line') !== null, '足りない額が目立つ形で出ている');
+          /* 警告カードになっていること */
+          var カード = d.querySelector('#stage2b-body .alert-card');
+          ok(カード !== null, '足りないことが、枠付きの警告カードで出る');
+          ok(カード.querySelector('.alert-head').textContent.indexOf('毎月あと') >= 0,
+            'カードの見出しに、足りない額が出ている', カード.querySelector('.alert-head').textContent);
+          ok(カード.querySelector('.alert-sub[href="#gap-block"]') !== null,
+            'いますぐ穴を塞ぐ手への副リンクがある');
+          var ボタン = カード.querySelector('#go-training');
+          ok(ボタン !== null, '資格ルートへ誘導する主ボタンがある');
+          ok(ボタン.textContent.indexOf('資格を取って収入を上げた場合を見る') >= 0,
+            '主ボタンの文言が分かりやすい', ボタン.textContent);
+
+          /* 押すと、資格ルートがONになって線が増える */
+          ok(!d.getElementById('training-on').checked, '押す前は資格ルートがOFF');
+          var 前の本数 = d.querySelectorAll('#stage2b-body svg path').length;
+          ボタン.click();
+          ok(d.getElementById('training-on').checked, 'ボタンを押すと資格ルートがONになる');
+          ok(Number(d.getElementById('training-after').value) > 0,
+            '資格を取ったあとの年収に、初期値が入る', d.getElementById('training-after').value);
+          eq(移動先[移動先.length - 1], 'training-box',
+            '資格ルートの設定まで画面が動く', 移動先.join(' / '));
+          var 後の本数 = d.querySelectorAll('#stage2b-body svg path').length;
+          ok(後の本数 > 前の本数, 'グラフの線が増える（資格ルートが描かれる）',
+            前の本数 + ' → ' + 後の本数);
+
+          /* カードの文言が、資格ルートONの結果を反映して切りかわる */
+          var カード2 = d.querySelector('#stage2b-body .alert-card');
+          ok(カード2.querySelector('.alert-good') !== null || カード2.querySelector('.alert-warn-more') !== null,
+            '資格ルートを出したあと、その結果がカードに反映される',
+            カード2.textContent.replace(/\s+/g, ' ').slice(0, 160));
+          ok(カード2.textContent.indexOf('底をつきません') > 0 ||
+             カード2.textContent.indexOf('通っているあいだは苦しくなる') > 0,
+            '底つきが解消するか、しないかが、はっきり書かれる',
+            カード2.textContent.replace(/\s+/g, ' ').slice(0, 160));
+          ok(カード2.querySelector('#go-training').textContent.indexOf('見直す') >= 0,
+            'ONのあとは、ボタンが「設定を見直す」に変わる');
+          d.getElementById('training-on').checked = false;
+          d.getElementById('training-on').dispatchEvent(new w.Event('change', { bubbles: true }));
           ok(本文.indexOf('灰色の網かけから先は、線を描いていません') > 0,
             'このままの前提では成り立たない領域を、描いていないと明記している');
           ok(d.querySelector('#stage2b-body svg [fill="url(#hatch)"]') !== null,

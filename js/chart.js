@@ -97,8 +97,11 @@
       W = 360; H = 470;
       左 = 52; 右 = 58; 上 = 26; 下 = 56;
     } else {
-      W = Math.max(500, 70 + years.length * 42); H = 320;
-      左 = 62; 右 = 66; 上 = 22; 下 = 54;
+      /* パソコンでも、縦を従来より伸ばす（320→430、約1.34倍）。
+         線の傾き・帯・床の関係が読みやすくなるため。
+         画面に収まる範囲でとどめる。 */
+      W = Math.max(500, 70 + years.length * 42); H = 430;
+      左 = 62; 右 = 66; 上 = 24; 下 = 58;
     }
     var 幅 = W - 左 - 右, 高 = H - 上 - 下;
 
@@ -119,7 +122,7 @@
       '" role="img" aria-label="結婚を続けた場合と離婚した場合の、ひと月あたりのお金の推移">');
 
     /* --- 横の目盛り線（きりのいい数だけ。5本くらい） --- */
-    目盛り一覧(下限, 上限, 縦長 ? 6 : 5).forEach(function (v) {
+    目盛り一覧(下限, 上限, 6).forEach(function (v) {
       var yy = Y(v);
       s.push('<line x1="' + 左 + '" y1="' + yy.toFixed(1) + '" x2="' + (左 + 幅) + '" y2="' + yy.toFixed(1) +
         '" stroke="' + (v === 0 ? 色.axis : 色.grid) + '" stroke-width="1"/>');
@@ -239,8 +242,8 @@
       W = 360; H = 470;
       左 = 56; 右 = 60; 上 = 26; 下 = 56;
     } else {
-      W = Math.max(500, 70 + pts.length * 42); H = 320;
-      左 = 66; 右 = 74; 上 = 22; 下 = 54;
+      W = Math.max(500, 70 + pts.length * 42); H = 430;
+      左 = 66; 右 = 74; 上 = 24; 下 = 58;
     }
     var 幅 = W - 左 - 右, 高 = H - 上 - 下;
 
@@ -281,7 +284,7 @@
     }
 
     /* --- 横の目盛り線（きりのいい数だけ。5本くらい） --- */
-    目盛り一覧(下限, 上限, 縦長 ? 6 : 5).forEach(function (v) {
+    目盛り一覧(下限, 上限, 6).forEach(function (v) {
       var yy = Y(v);
       s.push('<line x1="' + 左 + '" y1="' + yy.toFixed(1) + '" x2="' + (左 + 幅) + '" y2="' + yy.toFixed(1) +
         '" stroke="' + (v === 0 ? '#8899a6' : 色.grid) + '" stroke-width="' + (v === 0 ? 1.5 : 1) + '"/>');
@@ -347,13 +350,29 @@
       }).join(' ');
       s.push('<path d="' + td + '" fill="none" stroke="' + 色.training +
         '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>');
-      /* 訓練しているあいだ（谷）を、うすく塗って見せる */
+      /* 学校に通っている期間を、たての帯で示す。
+         期間の情報なので、ラベルはグラフの上のほうに置く。
+         下のほう（生活防衛資金の帯・借りられる上限の線・網かけ）は
+         「金額のしきい目」の情報なので、ぶつからないように上下で分けている。 */
       if (tr.years > 0) {
         var tx = X(Math.min(tr.years, 資格描く数 - 1));
         s.push('<rect x="' + 左 + '" y="' + 上 + '" width="' + Math.max(0, tx - 左).toFixed(1) + '" height="' + 高 +
-          '" fill="' + 色.training + '" opacity="0.07"/>');
-        s.push('<text x="' + (左 + 4) + '" y="' + (上 + 高 - 6) + '" font-size="11" font-weight="700" fill="' + 色.training +
-          '">' + (縦長 ? '通学' + tr.years + '年' : '学校に通う' + tr.years + '年間') + '</text>');
+          '" fill="' + 色.training + '" opacity="0.09"/>');
+        s.push('<line x1="' + tx.toFixed(1) + '" y1="' + 上 + '" x2="' + tx.toFixed(1) + '" y2="' + (上 + 高) +
+          '" stroke="' + 色.training + '" stroke-width="1" stroke-dasharray="2 3" opacity="0.55"/>');
+        s.push('<text x="' + (左 + 4) + '" y="' + (上 + 13) + '" font-size="11" font-weight="700" fill="' + 色.training +
+          '">' + (縦長 ? '通学' + tr.years + '年' : '学校に通う期間（' + tr.years + '年）') + '</text>');
+
+        /* 修了した時点に、小さな印をつける */
+        if (tr.years < 資格描く数) {
+          var my = Y(床(tr.points[tr.years - 1].all));
+          s.push('<circle cx="' + tx.toFixed(1) + '" cy="' + my.toFixed(1) + '" r="4.5" fill="#fff" stroke="' +
+            色.training + '" stroke-width="2.5"/>');
+          if (!縦長) {
+            s.push('<text x="' + (tx + 5).toFixed(1) + '" y="' + (上 + 27) + '" font-size="10" font-weight="700" fill="' +
+              色.training + '">▲資格取得</text>');
+          }
+        }
       }
       /* 追い越す地点に印をつける */
       if (tr.crossoverOffset !== null && tr.crossoverOffset < 資格描く数) {

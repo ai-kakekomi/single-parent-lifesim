@@ -393,6 +393,44 @@
   }
 
   /* ------------------------------------------------------------
+   * 6-1-2. お子さんの成長で、生活費がふえること
+   *
+   *   生活費をずっと同じ金額にしておくと、
+   *   お子さんが中学生・高校生になったあとの姿が甘く出ます。
+   *   実際には、食べる量がふえます。
+   *
+   *   そこで、生活費のうち食費にあたる部分（母子世帯の平均で約31%）だけを、
+   *   年齢ごとに必要なエネルギー量の比で増やします。
+   *   エネルギー量は厚生労働省の「日本人の食事摂取基準（2025年版）」の値です。
+   *
+   *   食費以外（家賃以外の固定費、通信費、日用品など）は増やしません。
+   *   学校にかかるお金は別に計算しているので、ここには入れません（二重に数えないため）。
+   * ---------------------------------------------------------- */
+  function 必要エネルギー(年齢, 表) {
+    if (!表 || !表.energy_bands) { return null; }
+    var b = 表.energy_bands;
+    for (var i = 0; i < b.length; i++) {
+      if (年齢 >= b[i].from && 年齢 <= b[i].to) { return b[i].kcal; }
+    }
+    return b[b.length - 1].kcal;
+  }
+
+  /**
+   * その年の生活費が、入力した時点の何倍になるかを返す。
+   * 入力した時点を1.00とする（金額そのものは利用者が入れた額を基準にする）。
+   */
+  function 生活費の倍率(いまの年齢たち, その年の年齢たち, 表) {
+    if (!表 || !表.energy_bands || !いまの年齢たち.length) { return 1; }
+    var いま = 0, その年 = 0;
+    いまの年齢たち.forEach(function (a) { いま += 必要エネルギー(a, 表); });
+    その年の年齢たち.forEach(function (a) { その年 += 必要エネルギー(a, 表); });
+    if (いま <= 0) { return 1; }
+    var 食費割合 = (表.food_share != null) ? 表.food_share : 0;
+    /* 食費の部分だけが、エネルギー量の比で増える */
+    return (1 - 食費割合) + 食費割合 * (その年 / いま);
+  }
+
+  /* ------------------------------------------------------------
    * 6-2. 貯金のたまり方（資産カーブ）
    *
    *   ひと月の残り ＝ 手取り ＋ 手当 ＋ 養育費 ＋ 親の援助 − 住居費 − 生活費
@@ -454,6 +492,8 @@
 
     var 生活費 = Math.max(0, Math.floor(入力.livingCost || 0));
     var 学費表 = データ.tuition;
+    var 成長表 = データ.living_cost_growth;
+    var いまの子の年齢 = sim.years.length ? sim.years[0].childAges : [];
     var プラン一覧 = 入力.plans || [];
     var 使用中 = {};
     (入力.usedPrograms || []).forEach(function (id) { 使用中[id] = true; });
@@ -487,6 +527,8 @@
       学費の合計 += 学.total;
       いちばん安い学費の合計 += 安.total;
       var 学費月 = Math.round(学.total / 12);
+      /* お子さんが大きくなったぶん、生活費（の食費部分）がふえる */
+      var 今年の生活費 = Math.round(生活費 * 生活費の倍率(いまの子の年齢, y.childAges, 成長表));
 
       /* 使える制度を全部使った場合 */
       var 全部の給付 = d.jidoFuyoTeate + d.jidoTeate + (控除が使える ? 控除の効果 : 0);
@@ -495,7 +537,7 @@
         + (使用中.jido_teate ? d.jidoTeate : 0)
         + ((使用中.hitorioya_kojo && 控除が使える) ? 控除の効果 : 0);
 
-      var 土台 = d.total - d.jidoFuyoTeate - d.jidoTeate - (控除が使える ? 控除の効果 : 0) - 生活費 - 学費月;
+      var 土台 = d.total - d.jidoFuyoTeate - d.jidoTeate - (控除が使える ? 控除の効果 : 0) - 今年の生活費 - 学費月;
       var 月収支全部 = 土台 + 全部の給付;
       var 月収支いま = 土台 + いまの給付;
 
@@ -519,6 +561,7 @@
         childAges: y.childAges,
         tuition: 学.total,
         tuitionCheapest: 安.total,
+        livingCost: 今年の生活費,
         monthlyNow: 月収支いま,
         monthlyAll: 月収支全部,
         now: 貯金いま,
@@ -661,6 +704,8 @@
     var 修了時 = 非課税 ? 訓練表.completion_non_taxable : 訓練表.completion_taxable;
 
     var 生活費 = Math.max(0, Math.floor(入力.livingCost || 0));
+    var 成長表 = データ.living_cost_growth;
+    var いまの子の年齢 = sim.years.length ? sim.years[0].childAges : [];
     var 養育費月 = 入力.divorced_childSupportMonthly || 0;
     var 親支援月 = 入力.parentSupportMonthly || 0;
     var 親の年齢 = 入力.parentAge || 0;
@@ -673,7 +718,7 @@
     var points = [], 月ごと = [];
     var 床 = (データ.borrow_limit && 入力.myIncome > 0)
       ? -Math.floor(入力.myIncome * データ.borrow_limit.ratio) : null;
-    var 床に当たる年 = null, 谷の底 = null;
+    var 床に当たる年 = null, 谷の底 = null, 赤字になる年 = null;
 
     sim.years.forEach(function (y, i) {
       var 訓練中 = (i < 年数);
@@ -706,6 +751,7 @@
       if (i === 年数 - 1) { 貯金 += 修了時; }
 
       if (谷の底 === null || 貯金 < 谷の底) { 谷の底 = 貯金; }
+      if (赤字になる年 === null && 貯金 < 0) { 赤字になる年 = i; }
 
       points.push({
         offset: i, youngestAge: y.youngestAge,
@@ -741,6 +787,8 @@
       crossesOver: 逆転 !== null,
       reachSafetyOffset: 帯到達,
       valleyBottom: 谷の底,
+      goesNegative: 赤字になる年 !== null,
+      negativeFromOffset: 赤字になる年,
       hitsBorrowFloorAtOffset: 床に当たる年,
       hitsBorrowFloor: 床に当たる年 !== null,
       borrowFloor: 床,
@@ -860,6 +908,8 @@
     等価所得: 等価所得,
     シミュレーション: シミュレーション,
     資産カーブ: 資産カーブ,
+    必要エネルギー: 必要エネルギー,
+    生活費の倍率: 生活費の倍率,
     資格ルート: 資格ルート,
     学費: 学費,
     その年の学費: その年の学費,

@@ -282,6 +282,7 @@ eq(資産F.startSavings, 0, 'いまの貯金を入れなければ0円から始�
 /* ひと月の残り ＝ 使えるお金 − 生活費 − その年の学費 */
 var 学0 = SPS.その年の学費(simF.years[0].childAges, [], 学費表).total;
 eq(資産F.points[0].tuition, 学0, 'その年の学校にかかるお金が出ている');
+eq(資産F.points[0].livingCost, 105000, '1年目の生活費は、入力した額そのまま');
 eq(資産F.points[0].monthlyAll, simF.years[0].divorced.total - 105000 - Math.round(学0 / 12),
   'ひと月の残りは、使えるお金から生活費と学校のお金を引いた額');
 eq(資産F.points[0].all, 資産F.points[0].monthlyAll * 12, '1年目の貯金は、ひと月の残りの12倍');
@@ -409,6 +410,12 @@ ok(訓表.track_record.indexOf('看護師945人') > 0, '職種の内訳が書い
 ok(訓表.track_record_source.url.indexOf('cfa.go.jp') > 0, '実績の出典はこども家庭庁');
 ok(/^\d{4}-\d{2}-\d{2}$/.test(訓表.track_record_source.last_verified), '実績の出典に最終確認日がある');
 ok(訓表.non_taxable_note.indexOf('非課税') > 0, '給付金が非課税であることが書いてある');
+/* 窓口がどこかを、誤解なく書いてある（909市区等という数字だけだと「半分の自治体では使えない」と読まれる） */
+ok(訓表.window_note.indexOf('町村') > 0 && 訓表.window_note.indexOf('都道府県') > 0,
+  '町村にお住まいの場合の窓口が書いてある');
+ok(訓表.window_note.indexOf('市・区にお住まいの場合') > 0, '市・区にお住まいの場合の窓口も書いてある');
+ok(訓表.window_note.indexOf('ひとり親相談窓口で聞けば') > 0, '分からないときの聞き方が書いてある');
+ok(訓表.track_record.indexOf('実施率は97.2%') > 0, '実施率は率として書き、母数だけが目立たないようにしている');
 
 var 訓入力 = Object.assign({}, 入力F, {
   myIncome: 1500000, livingCost: 95000, currentSavings: 80000,
@@ -465,10 +472,69 @@ ok(SPS.資産カーブ(Object.assign({}, 訓入力, { training: null }), デー�
 var 訓svg = Chart.資産を描く(SPS.資産カーブ(訓入力, データ));
 ok((訓svg.match(/<path /g) || []).length === 3, '線が3本になる（いまのまま・全部使う・資格を取る）');
 ok(訓svg.indexOf('資格を取る') > 0, '3本目に名前が付いている');
-ok(訓svg.indexOf('学校に通う2年間') > 0, '通っている期間が示されている');
+ok(訓svg.indexOf('学校に通う期間（2年）') > 0, '通っている期間が、帯のラベルとして示されている');
+ok(訓svg.indexOf('▲資格取得') > 0, '修了した時点に印がついている');
+/* 期間の情報は上、金額のしきい目は下、に分けて置く */
+var 期間ラベル = /<text x="[\d.]+" y="([\d.]+)"[^>]*>学校に通う期間/.exec(訓svg);
+var 帯ラベル = /<text x="[\d.]+" y="([\d.]+)"[^>]*>まずここまで貯める/.exec(訓svg);
+ok(期間ラベル !== null, '期間のラベルが引ける');
+if (期間ラベル && 帯ラベル) {
+  ok(Number(期間ラベル[1]) < Number(帯ラベル[1]),
+    '期間のラベルは、金額のしきい目のラベルより上にある',
+    期間ラベル[1] + ' / ' + 帯ラベル[1]);
+}
 ok(Chart.資産の凡例(true).indexOf('資格を取るルート') > 0, '凡例にも出る');
 ok(Chart.資産の凡例(false).indexOf('資格を取るルート') === -1, '使わないときは凡例に出さない');
 ok(重なり(訓svg).length === 0, '資格ルートを出しても、文字がかぶらない', 重なり(訓svg).join(' / '));
+
+/* ------------------------------------------------------------ */
+見出し('8-3-3. お子さんの成長で、生活費がふえること');
+
+var 成長 = データ.living_cost_growth;
+ok(!!成長, '成長にあわせた生活費のデータがある');
+ok(成長.source_energy.url.indexOf('mhlw.go.jp') > 0, 'エネルギー量の出典は厚生労働省');
+ok(成長.source_share.url.indexOf('stat.go.jp') > 0, '食費の割合の出典は総務省統計局');
+ok(/^\d{4}-\d{2}-\d{2}$/.test(成長.source_energy.last_verified), '出典に最終確認日がある');
+eq(成長.energy_bands.length, 7, '年齢の区分は7つ');
+
+eq(SPS.必要エネルギー(1, 成長), 925, '1歳のエネルギー量（男950・女900の平均）');
+eq(SPS.必要エネルギー(4, 成長), 1275, '4歳（男1,300・女1,250の平均）');
+eq(SPS.必要エネルギー(7, 成長), 1500, '7歳');
+eq(SPS.必要エネルギー(9, 成長), 1775, '9歳');
+eq(SPS.必要エネルギー(11, 成長), 2175, '11歳');
+eq(SPS.必要エネルギー(13, 成長), 2500, '13歳');
+eq(SPS.必要エネルギー(16, 成長), 2575, '16歳');
+eq(SPS.必要エネルギー(20, 成長), 2575, '18歳以上は15〜17歳と同じ量として扱う');
+ok(SPS.必要エネルギー(13, 成長) / SPS.必要エネルギー(4, 成長) > 1.9,
+  '中学生は幼児の約2倍食べる（厚生労働省の値どおり）',
+  (SPS.必要エネルギー(13, 成長) / SPS.必要エネルギー(4, 成長)).toFixed(2) + '倍');
+
+eq(SPS.生活費の倍率([5], [5], 成長), 1, '同じ年齢なら倍率は1');
+ok(SPS.生活費の倍率([5], [13], 成長) > 1, 'お子さんが大きくなると倍率は1より大きい');
+ok(SPS.生活費の倍率([5], [13], 成長) < 1.4, 'ふえるのは食費の部分だけなので、倍率は大きくなりすぎない',
+  SPS.生活費の倍率([5], [13], 成長).toFixed(3));
+/* 食費の部分だけがふえていることの確認 */
+var 比 = SPS.必要エネルギー(13, 成長) / SPS.必要エネルギー(5, 成長);
+ok(Math.abs(SPS.生活費の倍率([5], [13], 成長) - ((1 - 成長.food_share) + 成長.food_share * 比)) < 0.0001,
+  '倍率は「食費以外はそのまま＋食費だけエネルギー量の比でふえる」で計算されている');
+eq(SPS.生活費の倍率([], [], 成長), 1, 'お子さんがいなければ倍率は1');
+eq(SPS.生活費の倍率([5], [13], null), 1, 'データがなければ倍率は1（増やさない）');
+
+/* 資産カーブに反映されていること */
+var 成長入力 = Object.assign({}, 入力F, { children: [5], livingCost: 100000 });
+var 成長c = SPS.資産カーブ(成長入力, データ);
+eq(成長c.points[0].livingCost, 100000, '1年目は入力した生活費');
+ok(成長c.points[8].livingCost > 成長c.points[0].livingCost,
+  '8年後（13歳）には生活費がふえている',
+  成長c.points[0].livingCost + ' → ' + 成長c.points[8].livingCost);
+eq(成長c.points[8].livingCost,
+  Math.round(100000 * SPS.生活費の倍率([5], [13], 成長)), 'ふえ方が倍率どおり');
+/* 学費とは別勘定であること（二重に数えていない） */
+ok(成長c.points[8].tuition > 0, 'その年は学費もかかっている');
+eq(成長c.points[8].monthlyAll,
+  SPS.シミュレーション(成長入力, データ).years[8].divorced.total
+    - 成長c.points[8].livingCost - Math.round(成長c.points[8].tuition / 12),
+  '生活費と学費は、それぞれ1回ずつだけ引かれている');
 
 /* ------------------------------------------------------------ */
 見出し('8-4. 学校にかかるお金');
@@ -521,8 +587,9 @@ var 学費の年合計 = 0;
 学費ゼロ.points.forEach(function (pt) { 学費の年合計 += pt.tuition; });
 eq(学費ゼロ.tuitionTotal, 学費の年合計, '学校のお金の合計が、各年の合計と一致する（重複して足していない）');
 学費ゼロ.points.forEach(function (pt, i) {
-  eq(pt.monthlyAll, simF.years[i].divorced.total - 105000 - Math.round(pt.tuition / 12),
+  eq(pt.monthlyAll, simF.years[i].divorced.total - pt.livingCost - Math.round(pt.tuition / 12),
     'どの年でも、生活費と学校のお金が1回ずつだけ引かれている');
+  ok(pt.livingCost >= 105000, 'その年の生活費は、入力した額以上になる（お子さんの成長ぶん）');
 });
 
 /* 学費データそのものの点検 */
@@ -898,6 +965,12 @@ function 大きさ(svg) {
 var たてA = 大きさ(縦A), よこA = 大きさ(横A), たてB = 大きさ(縦B);
 eq(たてA.w, 360, 'スマホのときの横幅は360（画面にそのまま収まる大きさ）');
 ok(たてA.h > よこA.h, 'スマホのときは、パソコンのときより縦に長い', たてA.h + ' / ' + よこA.h);
+/* パソコンでも、以前（320）より縦を伸ばしている */
+eq(よこA.h, 430, 'パソコンのときの高さは430（以前の320から約1.34倍）');
+ok(よこA.h / 320 >= 1.3 && よこA.h / 320 <= 1.4,
+  'パソコンの高さは、以前の1.3〜1.4倍におさまっている', (よこA.h / 320).toFixed(2) + '倍');
+ok(よこA.h <= 520, 'パソコンでも、画面に収まる高さでとどめている', よこA.h + 'px');
+eq(大きさ(Chart.資産を描く(資産F, false)).h, 430, '貯金のグラフも、パソコンで430');
 ok(たてA.h / たてA.w > 1.2, 'スマホのときは、たてがよこの1.2倍より長い',
   (たてA.h / たてA.w).toFixed(2) + '倍');
 ok(たてA.h / たてA.w < 1.6, 'ただし、たてに長すぎない', (たてA.h / たてA.w).toFixed(2) + '倍');
@@ -939,7 +1012,8 @@ app.replace(/\$\('([a-z0-9-]+)'\)/g, function (_, id) { 使っているid.push(i
   .filter(function (id) {
     /* 画面のうごきの中で作られる欄は、index.html には書かれていない */
     return id.indexOf('child-age-') !== 0 && id.indexOf('pr-') !== 0 &&
-      id.indexOf('msg-') !== 0 && id.indexOf('copy-todo') !== 0 && id.indexOf('copy-rule') !== 0;
+      id.indexOf('msg-') !== 0 && id.indexOf('copy-todo') !== 0 && id.indexOf('copy-rule') !== 0 &&
+      id !== 'go-training';
   })
   .forEach(function (id) {
     ok(html.indexOf('id="' + id + '"') > 0, '画面に「' + id + '」の欄がある');

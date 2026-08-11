@@ -388,3 +388,29 @@ ul.cost-ref .cost-ref-b { color: var(--ink-sub); }
   #form-area input, #form-area select, #form-area .inline-choice label { transition: none; }
   #form-area .flash { background-color: transparent; }
 }
+
+/* ---- 足りないことのお知らせカード ---- */
+.alert-card {
+  background: var(--danger-soft); border: 2px solid #e4a9a9;
+  border-radius: var(--radius); padding: .9rem 1rem; margin: .8rem 0 1rem;
+}
+.alert-head {
+  margin: 0 0 .35rem; font-size: 1.08rem; font-weight: 700; line-height: 1.6; color: var(--danger);
+}
+.alert-head::before { content: '！ '; }
+.alert-body { margin: 0 0 .5rem; font-size: .9rem; line-height: 1.75; }
+.alert-good {
+  background: var(--ok-soft); border-left: 4px solid var(--ok); border-radius: 0 6px 6px 0;
+  padding: .5rem .7rem; margin: .5rem 0; font-size: .89rem; line-height: 1.75; color: var(--ok);
+}
+.alert-warn-more {
+  background: var(--warn-soft); border-left: 4px solid #e0b860; border-radius: 0 6px 6px 0;
+  padding: .5rem .7rem; margin: .5rem 0; font-size: .87rem; line-height: 1.75;
+}
+.alert-actions { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; margin-top: .6rem; }
+.alert-actions .alert-cta { width: auto; margin: 0; padding: .7rem 1.1rem; font-size: .95rem; }
+.alert-actions .alert-sub { font-size: .86rem; color: var(--accent-dark); font-weight: 700; }
+@media (max-width: 599px) {
+  .alert-actions .alert-cta { width: 100%; }
+  .alert-actions { gap: .55rem; }
+}
