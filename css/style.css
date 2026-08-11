@@ -445,3 +445,11 @@ ul.cost-ref .cost-ref-b { color: var(--ink-sub); }
   .chart-box path.draw-in { animation: none; stroke-dasharray: none !important; stroke-dashoffset: 0 !important; }
   .chart-box .fade-in { animation: none; opacity: 1; }
 }
+
+/* ベータ版の表示 */
+.beta-badge {
+  display: inline-block; font-size: 0.55em; font-weight: 700;
+  color: #fff; background: #e8710a; border-radius: 6px;
+  padding: 2px 8px; vertical-align: middle; margin-left: 6px;
+}
+.beta-note { font-size: 0.85rem; color: #666; margin-top: 2px; }
