@@ -295,11 +295,12 @@ eq(起点あり.startSavings, 500000, 'いまの貯金が起点として記録�
 eq(起点あり.points[0].all, 資産F.points[0].all + 500000, '起点のぶんだけ、線がまるごと上に上がる');
 eq(起点あり.finalAll, 資産F.finalAll + 500000, '最後まで起点のぶんだけ上');
 eq(起点あり.finalDiff, 資産F.finalDiff, '起点をずらしても、2本の線の開きは変わらない');
-ok(SPS.資産カーブ(Object.assign({}, 入力F, { currentSavings: 105000 * 3 }), データ).alreadyReachedSafety,
-  '3か月分をすでに持っていれば、帯の中に入っていると判定する');
-ok(SPS.資産カーブ(Object.assign({}, 入力F, { currentSavings: 105000 * 6 }), データ).alreadyAboveSafety,
-  '6か月分をすでに持っていれば、帯の上にいると判定する');
-ok(!資産F.alreadyReachedSafety, '貯金0円なら、まだ帯にとどいていない');
+eq(資産F.safetyTarget, 105000 * 6, '生活防衛資金の目標は、生活費の半年分（1本の線）');
+ok(!SPS.資産カーブ(Object.assign({}, 入力F, { currentSavings: 105000 * 3 }), データ).alreadyReachedSafety,
+  '3か月分では、まだ生活防衛資金にとどいていない');
+ok(SPS.資産カーブ(Object.assign({}, 入力F, { currentSavings: 105000 * 6 }), データ).alreadyReachedSafety,
+  '半年分をすでに持っていれば、とどいていると判定する');
+ok(!資産F.alreadyReachedSafety, '貯金0円なら、まだとどいていない');
 
 /* すでに使っている制度 */
 eq(資産F.points[0].monthlyNow,
@@ -383,7 +384,14 @@ eq(黒字.borrowFloor, -Math.floor(3200000 / 3), '黒字でも床の値そのも
 /* グラフの縦軸が、床より深くならないこと */
 var 床svg = Chart.資産を描く(赤字);
 ok(床svg.indexOf('法律上、これ以上は借りられません（年収の3分の1）') > 0, '床のラベルがグラフに出る');
-ok(/stroke="#a32020" stroke-width="2" stroke-dasharray="7 4"/.test(床svg), '床の赤い破線が引かれている');
+ok(/stroke="#a32020" stroke-width="1.5"/.test(床svg), '床は、細い実線で引かれている（データの線と紛れないよう点線にしない）');
+ok(/<rect x="\d+" y="[\d.]+" width="[\d.]+" height="[\d.]+" fill="#a32020" opacity="0.13"/.test(床svg),
+  '床から下が、赤く塗られている（存在しない領域だと一目で分かるように）');
+var 床ラベル = /<text x="([\d.]+)" y="([\d.]+)"[^>]*>法律上、これ以上/.exec(床svg);
+ok(床ラベル !== null, '床のラベルが引ける');
+var 床線 = /<line x1="\d+" y1="([\d.]+)"[^>]*stroke="#a32020"/.exec(床svg);
+ok(床線 !== null && Number(床ラベル[2]) > Number(床線[1]),
+  '床のラベルは、線より下（赤い領域の中）にある', 床ラベル && 床ラベル[2]);
 var 目盛りの値 = [];
 床svg.replace(/text-anchor="end" font-size="12" fill="[^"]*">(-?[\d.]+)(万|千万|0)</g, function (_, v, u) {
   目盛りの値.push(parseFloat(v) * (u === '千万' ? 10000000 : u === '万' ? 10000 : 1));
@@ -473,7 +481,7 @@ var 訓svg = Chart.資産を描く(SPS.資産カーブ(訓入力, データ));
 ok((訓svg.match(/<path /g) || []).length === 3, '線が3本になる（いまのまま・全部使う・資格を取る）');
 ok(訓svg.indexOf('資格を取る') > 0, '3本目に名前が付いている');
 ok(訓svg.indexOf('学校に通う期間（2年）') > 0, '通っている期間が、帯のラベルとして示されている');
-ok(訓svg.indexOf('▲資格取得') > 0, '修了した時点に印がついている');
+ok(訓svg.indexOf('▲資格取得') === -1, '修了の印は置かない（帯の右はしが同じことを示しており、枠外に出ることもあるため）');
 /* 期間の情報は上、金額のしきい目は下、に分けて置く */
 var 期間ラベル = /<text x="[\d.]+" y="([\d.]+)"[^>]*>学校に通う期間/.exec(訓svg);
 var 帯ラベル = /<text x="[\d.]+" y="([\d.]+)"[^>]*>まずここまで貯める/.exec(訓svg);
@@ -510,7 +518,30 @@ ok(SPS.必要エネルギー(13, 成長) / SPS.必要エネルギー(4, 成長) 
   (SPS.必要エネルギー(13, 成長) / SPS.必要エネルギー(4, 成長)).toFixed(2) + '倍');
 
 eq(SPS.生活費の倍率([5], [5], 成長), 1, '同じ年齢なら倍率は1');
-ok(SPS.生活費の倍率([5], [13], 成長) > 1, 'お子さんが大きくなると倍率は1より大きい');
+
+/* 向きと大きさを、数値で固定する（「変わること」だけでは、逆数のまちがいを見つけられない） */
+var 倍率実測 = SPS.生活費の倍率([5, 8], [13, 16], 成長);
+ok(倍率実測 >= 1.20 && 倍率実測 <= 1.21,
+  '5歳・8歳 → 13歳・16歳 の倍率が 1.20〜1.21 におさまる', 倍率実測.toFixed(4));
+var 手計算 = (1 - 成長.food_share) + 成長.food_share *
+  ((SPS.必要エネルギー(13, 成長) + SPS.必要エネルギー(16, 成長)) /
+   (SPS.必要エネルギー(5, 成長) + SPS.必要エネルギー(8, 成長)));
+ok(Math.abs(倍率実測 - 手計算) < 0.0001, '倍率が、式のとおりの値になっている（分子と分母が逆になっていない）',
+  倍率実測.toFixed(4) + ' / ' + 手計算.toFixed(4));
+
+/* 子が育つにつれて、倍率が1.0から単調にふえていくこと */
+var 前の倍率 = 0, 単調にふえる = true, 全部1以上 = true;
+for (var 歳 = 3; 歳 <= 17; 歳++) {
+  var v = SPS.生活費の倍率([3], [歳], 成長);
+  if (v < 前の倍率 - 1e-9) { 単調にふえる = false; }
+  if (v < 1 - 1e-9) { 全部1以上 = false; }
+  前の倍率 = v;
+}
+ok(単調にふえる, 'お子さんが育つにつれて、倍率は下がらずにふえていく');
+ok(全部1以上, '基準より年上の年では、倍率がかならず1.0以上になる');
+ok(SPS.生活費の倍率([13, 16], [5, 8], 成長) < 1,
+  '逆に、時間を巻き戻す向きに渡したときだけ1未満になる（引数の順番の確認）',
+  SPS.生活費の倍率([13, 16], [5, 8], 成長).toFixed(4));
 ok(SPS.生活費の倍率([5], [13], 成長) < 1.4, 'ふえるのは食費の部分だけなので、倍率は大きくなりすぎない',
   SPS.生活費の倍率([5], [13], 成長).toFixed(3));
 /* 食費の部分だけがふえていることの確認 */
@@ -883,11 +914,16 @@ var 資産svg = Chart.資産を描く(資産F);
 ok(資産svg.indexOf('<svg') === 0, '貯金のたまり方の絵ができる');
 ok((資産svg.match(/<path /g) || []).length === 2, '線は2本（申請あり・申請なし）');
 ok(資産svg.indexOf('全部使う') > 0 && 資産svg.indexOf('いまのまま') > 0, '線のはしに名前が直接書いてある');
-ok(資産svg.indexOf('まずここまで貯める（生活費の3〜6か月分）') > 0, '生活防衛資金の帯に説明が入っている');
-ok(/<rect x="66" y="[\d.]+" width="[\d.]+" height="[\d.]+" fill="#dff0e6"/.test(資産svg),
-  '生活防衛資金の帯そのものが描かれている');
+ok(資産svg.indexOf('生活防衛資金（生活費の半年分）') > 0, '生活防衛資金の線に説明が入っている');
+ok(資産svg.indexOf('#dff0e6') === -1, '帯（塗り）はもう使っていない');
+ok(/<line x1="66" y1="[\d.]+"[^>]*stroke="#1c7a4a" stroke-width="1.5"/.test(資産svg),
+  '生活防衛資金は、実線1本で描かれている');
 ok(Chart.資産を描く(null).indexOf('<svg') === -1, 'データがないときは絵を描かない');
-ok(Chart.資産の凡例().indexOf('生活防衛資金のゾーン') > 0, '凡例に帯の説明がある');
+ok(Chart.資産の凡例().indexOf('生活防衛資金（生活費の半年分）') > 0, '凡例に生活防衛資金の説明がある');
+ok(Chart.資産の凡例().indexOf('借りられない領域') > 0, '凡例に赤い領域の説明がある');
+ok(Chart.資産の凡例(false, true).indexOf('いまの見通し') > 0, '線が1本のときは、凡例も1本ぶんになる');
+ok(Chart.資産の凡例(false, true).indexOf('いまのまま') === -1, '1本のときに2本ぶんの説明を出さない');
+ok(Chart.資産の凡例(false, false).indexOf('太い実線') > 0, '2本のときは、太さの違いも説明する');
 ok(Chart.資産を描く(起点あり).indexOf('いまの貯金') > 0, 'いまの貯金の位置が、グラフの左はしに出る');
 var 赤字svg = Chart.資産を描く(赤字);
 ok(赤字svg.indexOf('<svg') === 0, '赤字のときも絵は描ける');
@@ -974,6 +1010,78 @@ var 動かないsvg = Chart.資産を描く(SPS.資産カーブ(訓入力, デ�
 ok(動かないsvg.indexOf('draw-in') === -1, 'ふだんの描き直しでは、動きをつけない（毎回動くとうるさいため）');
 ok(動かないsvg.indexOf('fade-in') === -1, 'ラベルも同様');
 ok((動かないsvg.match(/<path /g) || []).length === 3, '動きがなくても線は3本ある');
+
+/* 2本がほとんど重なるときは、1本にまとめる */
+var 重なる = SPS.資産カーブ(Object.assign({}, 入力F,
+  { usedPrograms: ['jido_fuyo_teate', 'jido_teate', 'hitorioya_kojo'] }), データ);
+ok(Chart.一本にまとめるか(重なる), '制度を使いきっていれば、線は1本にまとめる');
+var 一本svg = Chart.資産を描く(重なる);
+eq((一本svg.match(/<path /g) || []).length, 1, '線は1本だけ描かれる');
+ok(一本svg.indexOf('いまの見通し') > 0, '1本のときの名前は「いまの見通し」');
+ok(一本svg.indexOf('いまのまま') === -1, '重なった線が2本あるように見せない');
+
+ok(!Chart.一本にまとめるか(資産F), '取りこぼしが大きければ、2本のまま');
+var 二本svg = Chart.資産を描く(資産F);
+eq((二本svg.match(/<path /g) || []).length, 2, '2本のときは2本描く');
+ok(/stroke-width="2.5"/.test(二本svg), '主役（全部使った場合）は太い');
+ok(/stroke-width="1.6"[^>]*opacity="0.8"/.test(二本svg), 'いまのままは細く薄い（階層をつける）');
+ok(二本svg.indexOf('いまのまま') > 0 && 二本svg.indexOf('全部使う') > 0, '2本それぞれに名前がつく');
+
+/* しきい目は、縦の目盛りはばの2% */
+function 作り物(差) {
+  return { safetyTarget: 0, startSavings: 0, drawUntilOffset: 1,
+    points: [{ all: 0, now: 0 }, { all: 1000000, now: 1000000 - 差 }] };
+}
+ok(Chart.一本にまとめるか(作り物(19000)), '差が2%未満なら1本にまとめる');
+ok(!Chart.一本にまとめるか(作り物(30000)), '差が2%をこえたら2本のまま');
+var わずか = SPS.資産カーブ(Object.assign({}, 入力F,
+  { usedPrograms: ['jido_fuyo_teate', 'jido_teate'] }), データ);
+ok(わずか.gaps.length > 0, 'ひとり親控除だけ取りこぼしている状態を作れる');
+ok(!Chart.一本にまとめるか(わずか), 'ひとり親控除ぶんの差は見てわかる大きさなので、2本のまま');
+
+/* 大事な地点の印 */
+function 印の位置(svg) {
+  var 出 = [];
+  svg.replace(/<path d="M ([\d.]+) [\d.]+ L [\d.]+ [\d.]+ L [\d.]+ [\d.]+ L [\d.]+ [\d.]+ Z" fill="#a32020"/g,
+    function (_, x) { 出.push(Number(x)); return _; });
+  return 出;
+}
+var 印svg = Chart.資産を描く(赤字);
+ok(印svg.indexOf('底をつく') > 0, '貯金が0円を割るところに「底をつく」の印がある');
+ok(印の位置(印svg).length >= 1, 'ひし形の印が描かれている（データの線と形で区別できる）');
+ok(赤字.hitsBorrowFloorAtOffset === null || 印svg.indexOf('借りられる上限') > 0,
+  '床に当たるところにも印がある');
+
+/* 印の年と、警告カードの文言が同じ年を指すこと */
+var 底の年 = 赤字.points[赤字.negativeFromOffset].youngestAge;
+ok(赤字.negativeFromOffset !== null, '底をつく年が計算されている');
+ok(底の年 > 0, '底をつく年のお子さんの年齢が出せる', String(底の年));
+/* 印は、警告カードが使うのと同じ negativeFromOffset の位置に置いている */
+var 期待x = null;
+(function () {
+  var 数 = (赤字.drawUntilOffset != null ? 赤字.drawUntilOffset : 赤字.points.length - 1) + 1;
+  if (赤字.negativeFromOffset < 数) { 期待x = 赤字.negativeFromOffset; }
+}());
+ok(期待x !== null, '底をつく年が、描いている範囲の中にある');
+
+/* 黒字で底つきなしなら、印は出さない */
+var 印なしsvg = Chart.資産を描く(黒字);
+eq(印の位置(印なしsvg).length, 0, '底をつかないケースでは、余計な印を出さない');
+ok(印なしsvg.indexOf('底をつく') === -1, '「底をつく」の文字も出さない');
+
+/* 資格ルートで底つきが消えると、印も消える（世界が変わった演出の一部） */
+var 消える入力 = Object.assign({}, 入力F, {
+  myIncome: 1500000, livingCost: 95000, currentSavings: 80000,
+  training: { enabled: true, years: 2, afterIncome: 3200000 }
+});
+var 消える = SPS.資産カーブ(消える入力, データ);
+ok(消える.goesNegative, 'いまのままだと底をつく');
+ok(消える.training && !消える.training.goesNegative, '資格を取るルートなら底をつかない');
+var 消えたsvg = Chart.資産を描く(消える);
+eq(印の位置(消えたsvg).length, 0, '資格ルートで底つきが消えると、印も消える');
+ok(消えたsvg.indexOf('底をつく') === -1, '「底をつく」の文字も消える');
+var 消える前 = SPS.資産カーブ(Object.assign({}, 消える入力, { training: { enabled: false } }), データ);
+ok(印の位置(Chart.資産を描く(消える前)).length >= 1, '資格ルートを出す前は、印が出ている');
 
 /* ------------------------------------------------------------ */
 見出し('13-3. スマートフォンでの縦長のグラフ');

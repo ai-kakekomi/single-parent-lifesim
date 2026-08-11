@@ -21,7 +21,7 @@
     { "text": "「かんたんに稼げる」のDM・広告には返信しない", "pit": "yami_baito" },
     { "text": "荷物の受け取り、口座や携帯の貸し出しは犯罪だと知っている", "pit": "yami_baito" },
     { "text": "SNSで知り合った人から来たお金の話には、お金を出さない", "pit": "toushi_sagi" },
-    { "text": "生活防衛資金（生活費の3〜6か月分）が貯まるまで、投資はしない", "pit": "high_risk_toushi" },
+    { "text": "生活防衛資金（生活費の半年分）が貯まるまで、投資はしない", "pit": "high_risk_toushi" },
     { "text": "FX・暗号資産・信用取引はやらない", "pit": "high_risk_toushi" },
     { "text": "保険に入るなら掛け捨てから考える。貯蓄型をすすめられたら一度持ち帰る", "pit": "chochiku_hoken" },
     { "text": "足りないぶんをカードローンやリボ払いで埋めない", "pit": null },

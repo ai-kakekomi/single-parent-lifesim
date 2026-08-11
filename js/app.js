@@ -551,21 +551,20 @@
     }
 
     var 到達;
-    if (c.alreadyAboveSafety) {
-      到達 = '<strong>緑の帯（生活防衛資金）は、すでに貯め終えています。</strong>' +
-        '次の段階を考えはじめてもよい段階です。';
-    } else if (c.alreadyReachedSafety) {
-      到達 = 'いまの貯金は、緑の帯（生活防衛資金）の中に入っています。' +
-        'まずは帯の上（' + SPS.円(c.safetyMax) + '）を目指してください。';
+    if (c.alreadyReachedSafety) {
+      到達 = '<strong>生活防衛資金（生活費の半年分 ' + SPS.円(c.safetyTarget) +
+        '）は、すでに貯め終えています。</strong>次の段階を考えはじめてもよい段階です。';
     } else if (c.reachMonths !== null) {
-      到達 = '緑の帯（生活防衛資金 ' + SPS.円(c.safetyMin) + '）にとどくまで、いまのペースで <strong>約' +
+      到達 = '生活防衛資金（生活費の半年分 ' + SPS.円(c.safetyTarget) + '）にとどくまで、いまのペースで <strong>約' +
         SPS.年月表示(c.reachMonths) + '</strong> です。';
     } else {
-      到達 = '緑の帯（生活防衛資金 ' + SPS.円(c.safetyMin) + '）には、いまのペースではとどきません。';
+      到達 = '生活防衛資金（生活費の半年分 ' + SPS.円(c.safetyTarget) + '）には、いまのペースではとどきません。';
     }
 
     $('stage2b-body').innerHTML =
-      伸びしろ + 頭 + SPSChart.資産の凡例(!!(c.training && c.training.afterIncome > 0)) +
+      伸びしろ + 頭 +
+      SPSChart.資産の凡例(!!(c.training && c.training.afterIncome > 0), SPSChart.一本にまとめるか(c)) +
+      線の本数の注記(c) +
       '<div class="chart-box">' + SPSChart.資産を描く(c, 狭い画面()) + '</div>' +
       打ち切りの注記(c) + 資格ルートの説明(c) +
       道筋を描く(道筋(入力, データ, c, 最新判定)) +
@@ -619,7 +618,7 @@
         if (早まる && 早まる > 0) {
           文 += '<strong>生活防衛資金にとどくのが、' + SPS.年月表示(早まる) + ' 早まります。</strong>';
         } else if (c.reachMonthsNow === null && c.reachMonths !== null) {
-          文 += '<strong>いまのままでは生活防衛資金にとどきませんが、申請すれば ' +
+          文 += '<strong>いまのままでは生活防衛資金（生活費の半年分）にとどきませんが、申請すれば ' +
             SPS.年月表示(c.reachMonths) + ' でとどきます。</strong>';
         }
         足す('まだ受け取れるお金があります', 文, '#stage1', '申請先を見る');
@@ -905,6 +904,16 @@
     return h.join('');
   }
 
+  function 線の本数の注記(c) {
+    if (!SPSChart.一本にまとめるか(c)) { return ''; }
+    if (c.gaps.length) {
+      return '<p class="hint">「いまのまま」と「使える制度を全部使った場合」の差がごくわずかなので、' +
+        '線は1本にしています。</p>';
+    }
+    return '<p class="hint"><strong>制度はすでに使いきっています。線は1本です。</strong>' +
+      'このツールが自動で判定できる制度に、取りこぼしは見あたりませんでした。</p>';
+  }
+
   function 打ち切りの注記(c) {
     if (!c.truncated) { return ''; }
     var h = '<p class="hint cutoff">灰色の網かけから先は、線を描いていません。' +
@@ -1066,8 +1075,8 @@
 
   function 防衛資金の説明() {
     return '<div class="notice">' +
-      '<h4>緑の帯は「生活防衛資金」です</h4>' +
-      '<p style="margin:.3rem 0"><strong>まずはこの帯にとどくまで貯めることだけ考えれば大丈夫です。' +
+      '<h4>緑の線は「生活防衛資金」です</h4>' +
+      '<p style="margin:.3rem 0"><strong>まずはこの線にとどくまで貯めることだけ考えれば大丈夫です。' +
       'ここにとどくまで、投資のことは考えなくていいです。</strong></p>' +
       '<p style="margin:.3rem 0">仕事を失ったとき、体をこわしたとき、家電がこわれたとき。' +
       'このお金があれば、借金をせずに乗りきれます。ひとり親家庭は収入が一人分なので、ここがいちばん効きます。</p>' +
@@ -1079,10 +1088,9 @@
       '<a href="https://www.shiruporuto.jp/public/document/container/shinkon/" target="_blank" rel="noopener">知るぽると</a>' +
       '／アーカイブ。最終確認 8/11(火)）。</p>' +
       '<div class="stance" style="background:#fff"><span class="stance-tag">ここからは、私たちの立場の表明です（事実ではありません）</span>' +
-      '私たちAIかけこみ寺は、ひとり親家庭にとっては生活費の3か月分から6か月分を手元に置くことが、' +
-      'どんな資産運用よりも先に来ると考えます。3か月分でもまず十分に効きます。' +
-      'この帯にとどくまでは、投資のことは考えなくていい、というのが私たちの立場です。' +
-      'なお「3か月分から6か月分」という幅は、私たちが目安として置いたものです。</div>' +
+      '私たちAIかけこみ寺は、ひとり親家庭にとっては生活費の半年分を手元に置くことが、' +
+      'どんな資産運用よりも先に来ると考えます。半年分に届く前でも、貯まっているぶんだけ確実に効きます。' +
+      'この線にとどくまでは、投資のことは考えなくていい、というのが私たちの立場です。</div>' +
       '</div>';
   }
 

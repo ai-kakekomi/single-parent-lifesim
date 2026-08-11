@@ -184,7 +184,7 @@ server.listen(0, '127.0.0.1', function () {
         欄.value = '40';
         欄.dispatchEvent(new w.Event('input', { bubbles: true }));
         eq(d.getElementById('sample-note').textContent, '', '次の操作でお知らせが消える');
-        eq(d.querySelectorAll('#stage2b-body svg path').length, 2, '貯金のグラフの線が2本');
+        eq(d.querySelectorAll('#stage2b-body svg path[fill="none"]').length, 2, '貯金のグラフの線が2本');
         ok(d.querySelector('#stage2b-body a[href="#stage1"]') !== null,
           '差の中身（制度の一覧）へ行くリンクがある');
         ok(d.getElementById('stage2b-body').textContent.indexOf('学校にかかるお金') > 0,
@@ -198,8 +198,11 @@ server.listen(0, '127.0.0.1', function () {
         ok(d.getElementById('stage2b-body').textContent.indexOf('ここにとどくまで、投資のことは考えなくていいです') > 0,
           '帯の説明が、断言の形で書かれている');
         var 帯文 = d.getElementById('stage2b-body').textContent;
-        ok(帯文.indexOf('とどくまで 約') > 0 || 帯文.indexOf('帯（') > 0 || 帯文.indexOf('すでに貯まっています') > 0,
-          '帯にとどくまでの時期、または もう貯まっていることが出る', 帯文.slice(0, 160));
+        ok(帯文.indexOf('にとどくまで、いまのペースで') > 0 ||
+           帯文.indexOf('すでに貯め終えています') > 0 ||
+           帯文.indexOf('とどきません') > 0,
+          '生活防衛資金にとどくまでの時期、または もう貯まっていることが出る', 帯文.slice(0, 160));
+        ok(帯文.indexOf('生活費の半年分') > 0, '生活防衛資金は半年分で書かれている');
         ok(d.querySelector('#stage2b-body .stance') !== null,
           '3〜6か月分という幅が、私たちの立場の表明として分けて書かれている');
         ok(d.querySelector('#stage2b-body a[href*="fsa.go.jp"]') !== null, '金融庁の出典リンクがある');
@@ -251,7 +254,7 @@ server.listen(0, '127.0.0.1', function () {
         /* 資格ルートは、はじめは切れている（まず現実だけを見せる） */
         ok(!d.getElementById('training-on').checked, '記入例を入れても、資格ルートは切れたまま');
         eq(d.getElementById('training-box').style.display, 'none', '資格ルートの設定も、はじめは出さない');
-        eq(d.querySelectorAll('#stage2b-body svg path').length, 2,
+        eq(d.querySelectorAll('#stage2b-body svg path[fill="none"]').length, 2,
           'はじめのグラフは2本（いまのまま・全部使う）だけ');
 
         /* 資格ルート: 働き方の3択 */
@@ -267,9 +270,14 @@ server.listen(0, '127.0.0.1', function () {
         ok(!帯たたみ.open, 'はじめは閉じている');
         ok(帯たたみ.querySelector('summary').textContent.indexOf('生活防衛資金って？') >= 0,
           '閉じた状態の見出しが分かりやすい', 帯たたみ.querySelector('summary').textContent);
-        ok(d.querySelector('#stage2b-body .band-line') !== null, '帯についての1行だけは、いつも見えている');
+        ok(d.querySelector('#stage2b-body .band-line') !== null, '生活防衛資金についての1行だけは、いつも見えている');
+        ok(d.querySelector('#stage2b-body .band-line').textContent.indexOf('半年分') > 0,
+          'その1行も「半年分」で書かれている');
         ok(帯たたみ.textContent.indexOf('ここにとどくまで、投資のことは考えなくていいです') > 0,
           '断言そのものは、折りたたみの中に残っている');
+        ok(帯たたみ.textContent.indexOf('生活費の半年分') > 0,
+          '生活防衛資金は「半年分」で統一されている');
+        ok(帯たたみ.textContent.indexOf('3か月分から6か月分') === -1, '古い「3〜6か月」の表現が残っていない');
         ok(帯たたみ.querySelector('a[href*="fsa.go.jp"]') !== null, '出典も折りたたみの中にある');
         ok(帯たたみ.querySelector('.stance') !== null, '立場表明も折りたたみの中にある');
 
@@ -316,7 +324,7 @@ server.listen(0, '127.0.0.1', function () {
         eq(d.querySelectorAll('#stage3-body .danger-list input[type="checkbox"]').length, rules.length,
           'どの項目にもチェックの四角が付いている');
         ok(d.getElementById('copy-rule') !== null, '落とし穴チェックにもコピーのボタンがある');
-        ok(d.getElementById('stage3-body').textContent.indexOf('生活防衛資金（生活費の3〜6か月分）が貯まるまで、投資はしない') > 0,
+        ok(d.getElementById('stage3-body').textContent.indexOf('生活防衛資金（生活費の半年分）が貯まるまで、投資はしない') > 0,
           '投資は生活防衛資金のあと、という項目がある');
         ok(d.getElementById('stage3-body').textContent.indexOf('FX・暗号資産・信用取引はやらない') > 0,
           'FXなどをやらない、という項目がある');
@@ -373,19 +381,25 @@ server.listen(0, '127.0.0.1', function () {
 
           /* 押すと、資格ルートがONになって線が増える */
           ok(!d.getElementById('training-on').checked, '押す前は資格ルートがOFF');
-          var 前の本数 = d.querySelectorAll('#stage2b-body svg path').length;
+          var 前の本数 = d.querySelectorAll('#stage2b-body svg path[fill="none"]').length;
           ボタン.click();
           ok(d.getElementById('training-on').checked, 'ボタンを押すと資格ルートがONになる');
           ok(Number(d.getElementById('training-after').value) > 0,
             '資格を取ったあとの年収に、初期値が入る', d.getElementById('training-after').value);
           eq(移動先[移動先.length - 1], 'training-box',
             '資格ルートの設定まで画面が動く', 移動先.join(' / '));
-          var 後の本数 = d.querySelectorAll('#stage2b-body svg path').length;
+          var 後の本数 = d.querySelectorAll('#stage2b-body svg path[fill="none"]').length;
           ok(後の本数 > 前の本数, 'グラフの線が増える（資格ルートが描かれる）',
             前の本数 + ' → ' + 後の本数);
           /* 押した瞬間だけ、線が伸びる動きがつく */
           ok(d.querySelector('#stage2b-body path.draw-in') !== null,
             '押した瞬間、線が伸びる動きで描かれる');
+          /* 資格ルートで底つきが消えるなら、印も消える */
+          var カード3 = d.querySelector('#stage2b-body .alert-card');
+          if (カード3 && カード3.querySelector('.alert-good')) {
+            ok(d.querySelector('#stage2b-body svg').textContent.indexOf('底をつく') === -1,
+              '資格ルートで底をつかなくなったら、グラフの印も消える');
+          }
           d.getElementById('training-years').dispatchEvent(new w.Event('change', { bubbles: true }));
           ok(d.querySelector('#stage2b-body path.draw-in') === null,
             'そのあとの描き直しでは、動きをくり返さない');
@@ -407,6 +421,14 @@ server.listen(0, '127.0.0.1', function () {
             'このままの前提では成り立たない領域を、描いていないと明記している');
           ok(d.querySelector('#stage2b-body svg [fill="url(#hatch)"]') !== null,
             'グラフに網かけが出ている');
+          /* 印と、カードの文言が同じ年を指していること */
+          var svg文 = d.querySelector('#stage2b-body svg').textContent;
+          var 頭文 = カード.querySelector('.alert-head').textContent;
+          if (頭文.indexOf('底をつく') > 0) {
+            ok(svg文.indexOf('底をつく') >= 0, 'カードが底つきを言うときは、グラフにも印が出る');
+          }
+          ok(svg文.indexOf('借りられる上限') >= 0 || svg文.indexOf('底をつく') >= 0,
+            '大事な地点に印が出ている', svg文.slice(0, 80));
           /* 借りられる上限が、グラフの床になっている */
           ok(d.querySelector('#stage2b-body svg').textContent.indexOf('法律上、これ以上は借りられません') > 0,
             '借りられる上限の線に、説明が付いている');
