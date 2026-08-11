@@ -489,11 +489,11 @@
     var 値 = (グラフの見方 === 'total') ? 'total' : 'perPerson';
     var 差 = y.length ? (y[0].divorced[値] - y[0].married[値]) : 0;
 
-    var 頭 = 入力.isSingleParent
-      ? '<p>すでにひとり親の方は、「離婚した場合」の線がいまの姿です。「結婚を続けた場合」の線は、配偶者の年収を入れたときの参考です。</p>'
-      : '<p><strong>いま（お子さん' + y[0].youngestAge + '歳）の時点では、離婚した場合のほうが ひと月あたり ' +
-        (差 >= 0 ? '約' + SPS.円(差) + ' 多く' : '約' + SPS.円(-差) + ' 少なく') + 'なる見込みです。</strong>' +
-        (値 === 'perPerson' ? 'ひとりあたりに直した金額での比較です。' : '家ぜんたいの金額での比較です。') + '</p>';
+    /* この章は、離婚を考えている段階の方にだけ出す
+       （すでにひとり親の方に「結婚を続けた場合」との比較は要らないため） */
+    var 頭 = '<p><strong>いま（お子さん' + y[0].youngestAge + '歳）の時点では、離婚した場合のほうが ひと月あたり ' +
+      (差 >= 0 ? '約' + SPS.円(差) + ' 多く' : '約' + SPS.円(-差) + ' 少なく') + 'なる見込みです。</strong>' +
+      (値 === 'perPerson' ? 'ひとりあたりに直した金額での比較です。' : '家ぜんたいの金額での比較です。') + '</p>';
 
     $('stage2-body').innerHTML =
       頭 + 見方の切りかえ() + 見方の説明() + SPSChart.凡例() +
@@ -926,8 +926,11 @@
     }
 
     var h = ['<div class="alert-card">'];
+    /* 見出しは、ふつうの文字だけなのでエスケープする。
+       説明のほうは、こちらが書いた <strong> を含むので、そのままHTMLとして出す。
+       （エスケープすると、タグが文字として画面に出てしまう） */
     h.push('<p class="alert-head">' + esc(見出し) + '</p>');
-    h.push('<p class="alert-body">' + esc(説明) + '</p>');
+    h.push('<p class="alert-body">' + 説明 + '</p>');
 
     /* 資格ルートを出したあとの結果を、このカードに反映する */
     if (t && t.afterIncome > 0) {
@@ -1781,6 +1784,19 @@
     });
   }
 
+  /* ---------- 見出しの番号 ----------
+     出している章だけに、上から順に番号をふる。
+     離婚のくらべ方をしまうと番号が飛ぶので、そのつど数え直す。 */
+  function 見出しの番号をふり直す() {
+    var n = 0;
+    document.querySelectorAll('h2[data-label]').forEach(function (h) {
+      var 章 = h.closest('.stage');
+      if (章 && !章.classList.contains('shown')) { h.textContent = h.getAttribute('data-label'); return; }
+      n++;
+      h.textContent = n + '. ' + h.getAttribute('data-label');
+    });
+  }
+
   /* ---------- 計算して全部出す ---------- */
   function 計算する(スクロールする) {
     最新入力 = 入力を読む();
@@ -1790,11 +1806,16 @@
     }
     最新判定 = SPS.制度判定(最新入力, データ);
     制度を描く(最新判定);
-    グラフを描く();
+    /* すでにひとり親の方に「結婚を続けた場合」との比較は要らない。
+       これから決める人のためのものなので、離婚を考えている段階のときだけ出す。 */
+    var 比較を出す = !最新入力.isSingleParent;
+    if (比較を出す) { グラフを描く(); } else { $('stage2-body').innerHTML = ''; }
     資産を描く();
     落とし穴を描く(最新入力, 最新判定);
     プロンプトを描く(最新入力, 最新判定);
-    ['stage1', 'stage2', 'stage2b', 'stage3', 'stage4'].forEach(function (id) { $(id).classList.add('shown'); });
+    ['stage1', 'stage2b', 'stage3', 'stage4'].forEach(function (id) { $(id).classList.add('shown'); });
+    $('stage2').classList.toggle('shown', 比較を出す);
+    見出しの番号をふり直す();
     /* 記入例を入れたときは、画面を動かさない。
        いきなり飛ばされると、どこに何が入ったのか分からなくなるため。
        自分で「この内容で見てみる」を押したときだけ、結果まで送る。 */
@@ -1837,7 +1858,10 @@
       使っている制度欄を作る();
       進路欄を作る([]);
       document.querySelectorAll('input[name="status"]').forEach(function (r) {
-        r.addEventListener('change', 婚姻状態を反映);
+        r.addEventListener('change', function () {
+          婚姻状態を反映();
+          if (最新入力) { 計算する(false); }
+        });
       });
       婚姻状態を反映();
 
@@ -1868,6 +1892,7 @@
       $('calc').addEventListener('click', function () { 計算する(true); });
       コピー設定();
       飛び先を開く();
+      見出しの番号をふり直す();
       $('loading').style.display = 'none';
       $('form-area').style.display = '';
     } catch (err) {

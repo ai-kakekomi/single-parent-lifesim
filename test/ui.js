@@ -35,6 +35,76 @@ var 型 = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charse
 
 /* ============================================================
  * 受け入れ条件:
+ *   画面に出た文章の中に、HTMLのタグが「文字として」出てこないこと。
+ *   （<strong> などをうっかりエスケープすると、記号がそのまま見えてしまう）
+ *   同時に、利用者が自分で打ちこんだ文字は、
+ *   かならずエスケープされて、そのまま動く指示にならないこと。
+ * ============================================================ */
+function タグ漏れのチェック() {
+  return JSDOM.fromFile(path.join(ROOT, 'index.html'), {
+    runScripts: 'dangerously', resources: 'usable', pretendToBeVisual: true
+  }).then(function (dom) {
+    var w = dom.window, d = w.document;
+    w.Element.prototype.scrollIntoView = function () {};
+
+    /* 画面じゅうの文章から、タグらしき文字列を探す */
+    function 生タグを探す() {
+      var 見つかった = [];
+      d.querySelectorAll('body *').forEach(function (el) {
+        if (el.children.length) return;                 /* 末端の要素だけ見る */
+        if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') return;
+        var t = el.textContent || '';
+        var m = t.match(/<\/?[a-zA-Z][a-zA-Z0-9]*(\s[^<>]{0,60})?>/);
+        if (m) 見つかった.push(el.tagName + ': ' + m[0] + ' … ' + t.slice(0, 60));
+      });
+      return 見つかった;
+    }
+
+    return 待つ(2200).then(function () {
+      var 見本 = require(path.join(ROOT, 'data', 'samples.js')).samples;
+      var 全部 = [];
+      /* 6つの例をひと通り開き、途中の折りたたみも全部あける */
+      見本.forEach(function (sm, i) {
+        d.querySelectorAll('#sample-buttons button')[i].click();
+        d.querySelectorAll('details').forEach(function (x) { x.open = true; });
+        全部 = 全部.concat(生タグを探す());
+      });
+      ok(全部.length === 0,
+        '6つの例のどれでも、HTMLのタグが文字として画面に出ない', 全部.slice(0, 3).join(' / '));
+
+      /* 赤字の世帯（警告カードが出る条件）でも同じことを確かめる */
+      d.querySelectorAll('#sample-buttons button')[0].click();
+      d.getElementById('living-cost').value = '200000';
+      d.getElementById('calc').click();
+      d.querySelectorAll('details').forEach(function (x) { x.open = true; });
+      var 赤字 = 生タグを探す();
+      ok(赤字.length === 0,
+        '足りないと出る警告カードでも、タグが文字として出ない', 赤字.slice(0, 3).join(' / '));
+      var 本文 = d.querySelector('#stage2b-body .alert-body');
+      ok(!!本文, '足りないときは警告カードの本文が出る');
+      ok(本文 && 本文.querySelector('strong'),
+        '警告カードの太字は、ちゃんと太字として効いている');
+
+      /* 逆に、利用者が打ちこんだ文字は、そのまま動かないこと */
+      var 危ない = '<img src=x onerror=1>名古屋';
+      d.getElementById('area').value = 危ない;
+      d.getElementById('calc').click();
+      return 待つ(200);
+    }).then(function () {
+      var 前 = d.querySelectorAll('#stage4-body textarea').length;
+      ok(前 === 6, 'あぶない文字を入れても、画面はこわれない');
+      ok(d.querySelectorAll('#stage4-body img').length === 0,
+        '打ちこんだ文字が、そのまま画像などの部品になってしまわない');
+      var 文章 = Array.prototype.map.call(d.querySelectorAll('#stage4-body textarea'),
+        function (t) { return t.value; }).join('\n');
+      ok(文章.indexOf('名古屋') >= 0, '打ちこんだ地域名は、AIへの相談文にちゃんと入る');
+      w.close();
+    });
+  });
+}
+
+/* ============================================================
+ * 受け入れ条件:
  *   どの入力でも、脱出ルート（良くなる道筋）が
  *   かならず1つ以上、数字つきで見えること。
  * ============================================================ */
@@ -132,6 +202,13 @@ server.listen(0, '127.0.0.1', function () {
         ok(d.querySelector('#stage1-body .prog .amount').textContent.indexOf('13,870円') > 0,
           '一部支給の金額（13,870円）が画面に出る', d.querySelector('#stage1-body .prog .amount').textContent);
 
+        /* 離婚のくらべ方は「離婚を考えている」ときだけ出るので、
+           この区間だけ状態を切りかえて確かめる */
+        (function () {
+          var el = d.querySelector('input[name="status"][value="married"]');
+          el.checked = true;
+          el.dispatchEvent(new w.Event('change', { bubbles: true }));
+        }());
         eq(d.querySelectorAll('#stage2-body svg path').length, 2, 'グラフの線が2本');
         ok(d.querySelectorAll('#stage2-body table.compare tr').length > 2, '数字だけの表も出る');
 
@@ -175,6 +252,8 @@ server.listen(0, '127.0.0.1', function () {
           '貯金のグラフが、制度の一覧より前に出ている');
         ok(d.getElementById('stage1').compareDocumentPosition(d.getElementById('stage2')) & 4,
           '制度の一覧が、離婚の比較グラフより前に出ている');
+
+
         /* 記入例では画面を動かさない。ユーザーは自分のペースで下りていく */
         eq(移動先.length, 0,
           '記入例を押しても、画面が勝手にスクロールしない', 移動先.join(' / '));
@@ -538,6 +617,13 @@ server.listen(0, '127.0.0.1', function () {
         高校.value = 'private';
         高校.dispatchEvent(new w.Event('change'));
 
+        /* 離婚のくらべ方の確認はここまで。状態をひとり親に戻す */
+        (function () {
+          var el = d.querySelector('input[name="status"][value="single"]');
+          el.checked = true;
+          el.dispatchEvent(new w.Event('change', { bubbles: true }));
+        }());
+
         /* まずやること（チェックリスト） */
         var todo = d.querySelectorAll('#stage3-body .checklist:not(.danger-list) li');
         ok(todo.length >= 5 && todo.length <= 7, 'まずやることが5〜7個に絞られている', todo.length + '個');
@@ -749,8 +835,50 @@ server.listen(0, '127.0.0.1', function () {
         d.querySelector('input[name="training-work"][value="half"]')
           .dispatchEvent(new w.Event('change', { bubbles: true }));
 
-        /* 6番目の例：親の援助が終わる崖 */
+        /* すでにひとり親なら、離婚のくらべ方は出さない */
+        (function () {
+          function 単親にする(単親) {
+            var v = 単親 ? 'single' : 'married';
+            var el = d.querySelector('input[name="status"][value="' + v + '"]');
+            el.checked = true;
+            el.dispatchEvent(new w.Event('change', { bubbles: true }));
+          }
+          function 番号() {
+            return [].map.call(d.querySelectorAll('h2[data-label]'), function (h) { return h.textContent; });
+          }
+          単親にする(true);
+          ok(!d.getElementById('stage2').classList.contains('shown'),
+            'すでにひとり親なら、離婚のくらべ方の章は出さない');
+          eq(d.getElementById('stage2-body').innerHTML, '',
+            '出さないときは、中身も作らない');
+          var 単親番号 = 番号();
+          ok(単親番号[単親番号.length - 1].indexOf('5.') === 0,
+            'ひとり親のときは、章の番号が5までになる', 単親番号.join(' / '));
+          ok(単親番号.some(function (t) { return t.indexOf('4. 気をつけてほしいこと') === 0; }),
+            '番号が飛ばずに、つめて振り直される');
+
+          単親にする(false);
+          ok(d.getElementById('stage2').classList.contains('shown'),
+            '離婚を考えている段階なら、くらべ方の章を出す');
+          ok(d.querySelectorAll('#stage2-body svg path').length >= 2,
+            'そのときはグラフも描かれる');
+          var 婚姻番号 = 番号();
+          ok(婚姻番号[婚姻番号.length - 1].indexOf('6.') === 0,
+            '離婚を考えているときは、章の番号が6まである', 婚姻番号.join(' / '));
+          ok(婚姻番号.some(function (t) { return t.indexOf('4. 続けた場合と、離婚した場合') === 0; }),
+            'くらべ方の章に4番がふられる');
+
+          /* もとに戻す */
+          単親にする(true);
+        }());
+
+        /* 6番目の例：親の援助が終わる崖（くらべ方の章なので、離婚を考えている状態で見る） */
         d.querySelectorAll('#sample-buttons button')[5].click();
+        (function () {
+          var el = d.querySelector('input[name="status"][value="married"]');
+          el.checked = true;
+          el.dispatchEvent(new w.Event('change', { bubbles: true }));
+        }());
         return 待つ(300);
       }).then(function () {
         var 崖 = d.querySelector('#stage2-body .cliff-list').textContent;
@@ -794,7 +922,7 @@ server.listen(0, '127.0.0.1', function () {
         w.close();
       });
     });
-  }).then(道筋のチェック).then(function () {
+  }).then(道筋のチェック).then(タグ漏れのチェック).then(function () {
     server.close();
     console.log('\n============================================');
     console.log('  画面のチェック: 成功 ' + 成功 + ' 件 ／ 失敗 ' + 失敗 + ' 件');
