@@ -1,0 +1,13 @@
+{
+  "name": "single-parent-lifesim",
+  "version": "1.0.0",
+  "description": "ひとり親ライフチョイス・シミュレータ（AIかけこみ寺）",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "test": "node test/run.js && node test/ui.js"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.0"
+  }
+}
