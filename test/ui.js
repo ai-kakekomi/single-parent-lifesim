@@ -206,6 +206,9 @@ server.listen(0, '127.0.0.1', function () {
           '学校にかかるお金の説明が出る');
         ok(d.getElementById('stage2b-body').textContent.indexOf('すべて全国の平均値です') > 0,
           '平均値であることが画面に書いてある');
+        ok(d.getElementById('stage2b-body').textContent.indexOf('制度が助けてくれます') > 0,
+          '学費のうち、制度が助けてくれる額が出ている');
+        ok(d.querySelector('#stage2b-body .support-amount') !== null, '助けてくれる額が目立つ形で出る');
         ok(d.querySelector('#stage2b-body a[href*="mext.go.jp"]') !== null, '文部科学省の出典リンクがある');
         ok(d.querySelector('#stage2b-body a[href*="jasso.go.jp"]') !== null, '日本学生支援機構の出典リンクがある');
         ok(d.getElementById('stage2b-body').textContent.indexOf('生活防衛資金') > 0,
@@ -264,6 +267,12 @@ server.listen(0, '127.0.0.1', function () {
         ok(前提文.indexOf('毎年その年のお子さんの年齢で計算し直しています') > 0,
           '手当が毎年計算し直されることが書いてある');
         ok(前提文.indexOf('物価の上昇') > 0, '物価と制度改正を入れていないことが書いてある');
+        ok(前提文.indexOf('返さなくていいお金だけです') > 0,
+          'グラフに入れているのは給付だけ、と書いてある');
+        ok(前提文.indexOf('二重には引いていません') > 0,
+          '高校の就学支援金を二重に引いていないことが書いてある');
+        ok(前提文.indexOf('小学校・中学校の就学援助は、差し引いていません') > 0,
+          '小中の就学援助を入れていないことが書いてある');
         ok(前提.querySelector('.warn-inline') !== null, '甘く出るところが目立つ形になっている');
 
         /* 資格ルートは、はじめは切れている（まず現実だけを見せる） */
@@ -303,6 +312,19 @@ server.listen(0, '127.0.0.1', function () {
         ok(利用中[0].querySelector('.badge.used').textContent.indexOf('利用中') > 0, '利用中のしるしが出ている');
         ok(d.getElementById('stage1-summary').textContent.indexOf('すでに2件を使っている') >= 0,
           'まとめにも、すでに使っている件数が出る', d.getElementById('stage1-summary').textContent);
+
+        /* 返さなくていいお金と、あとで返すお金の区別 */
+        eq(d.querySelectorAll('#stage1-body .badge.grant').length + d.querySelectorAll('#stage1-body .badge.loan').length,
+          18, 'すべての制度カードに、返すか返さないかのしるしが付く');
+        eq(d.querySelectorAll('#stage1-body .badge.loan').length, 1, '「あとで返す」は1件だけ');
+        ok(d.querySelector('#prog-fukushi_shikin_kashitsuke .badge.loan') !== null,
+          '福祉資金貸付が「あとで返す」になっている');
+        ok(d.querySelector('#prog-koutou_kyoiku_shugaku_shien .badge.grant') !== null,
+          '修学支援新制度が「返さなくていい」になっている');
+        ok(d.querySelector('#prog-koutou_kyoiku_shugaku_shien .misunderstanding') !== null,
+          '修学支援新制度に、誤解を解く一文が出ている');
+        ok(d.querySelector('#prog-koutou_kyoiku_shugaku_shien .misunderstanding').textContent.indexOf('返す必要がありません') > 0,
+          'その一文に「返す必要がありません」と書いてある');
 
         /* 進路プラン: 私立にすると、その場でグラフが変わる */
         var 進路 = d.querySelectorAll('.plan-select');

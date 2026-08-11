@@ -414,13 +414,15 @@
       var p = r.program;
       出力.push(
         '<div class="prog ' + (使用中[p.id] ? 'used' : r.status) + '" id="prog-' + esc(p.id) + '">' +
-        '<h4>' + esc(p.name) +
+        '<h4>' + esc(p.name) + 返済バッジ(p) +
         (使用中[p.id] ? ' <span class="badge used">✓ 利用中</span>'
                       : ' <span class="badge ' + r.status + '">' + esc(r.label) + '</span>') + '</h4>' +
         '<p>' + esc(p.summary) + '</p>' +
         (r.amountText ? '<p class="amount">' + esc(r.amountText) + '</p>' : '') +
         (r.status !== 'unlikely' ? '<p>' + esc(p.benefit_summary) + '</p>' : '') +
         (r.note ? '<p class="hint">' + esc(r.note) + '</p>' : '') +
+        (p.misunderstanding_note ? '<p class="misunderstanding">' + esc(p.misunderstanding_note) + '</p>' : '') +
+        (p.repayment_note ? '<p class="hint">' + esc(p.repayment_note) + '</p>' : '') +
         (r.status !== 'unlikely' && p.cautions ? '<ul class="hint">' + p.cautions.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ul>' : '') +
         '<p class="apply">申請するところ: ' + esc(p.how_to_apply) + '</p>' +
         '<p class="src">根拠: ' + esc(p.source.law) + '／' +
@@ -437,6 +439,17 @@
       (利用中 ? 'すでに<strong>' + 利用中 + '件</strong>を使っていると答えていただきました。そのうえで、' : '') +
       'まだ使っていないもののうち<strong>' + 該当 + '件</strong>が対象になりそうです。あわせて<strong>' + 要確認 + '件</strong>は、' +
       'お住まいの市区町村によってあつかいが違うため、窓口での確認が必要です。';
+  }
+
+  /** 返さなくていいお金か、あとで返すお金かを、ひと目で分かるようにする */
+  function 返済バッジ(p) {
+    if (p.repayment === 'loan') {
+      return ' <span class="badge loan">あとで返す</span>';
+    }
+    if (p.repayment === 'none') {
+      return ' <span class="badge grant">返さなくていい</span>';
+    }
+    return '';
   }
 
   function 日付表示(iso) {
@@ -929,6 +942,15 @@
       'また、1年ぶんの金額を<strong>12か月に等分して</strong>引いています。' +
       '入学金のように実際は一度に出ていくお金も、ならして引いているので、' +
       '入学の月の落ち込みは実際よりゆるやかに出ます。</li>');
+    h.push('<li><strong>グラフに入れているのは、返さなくていいお金だけです。</strong>' +
+      '貸付（あとで返すお金）は、収入として数えていません。' +
+      '借りれば一時的に貯金はふえますが、あとで返すぶん、実際には楽になっていないからです。</li>');
+    h.push('<li><strong>高校の学費は、就学支援金を引いたあとの金額です。</strong>' +
+      'もとにしている調査の金額が、保護者が実際に払った額だからです。二重には引いていません。' +
+      '大学の学費からは、修学支援新制度の減免と給付型奨学金を引いています（申請した場合の線のみ）。</li>');
+    h.push('<li><strong>小学校・中学校の就学援助は、差し引いていません。</strong>' +
+      '市区町村ごとに金額が違い、国の目安を確かめられなかったためです。' +
+      '実際の負担は、ここに出る金額より軽くなります。</li>');
     h.push('<li><strong>生活防衛資金の線も、右肩上がりです。</strong>' +
       '生活費の半年分なので、お子さんが大きくなって生活費が上がると、目標の額も上がります。</li>');
     h.push('<li><strong>手当は、毎年その年のお子さんの年齢で計算し直しています。</strong>' +
@@ -980,8 +1002,19 @@
     if (!t) { return ''; }
     var h = ['<div class="panel tight">'];
     h.push('<h3 style="margin-top:0">学校にかかるお金</h3>');
-    h.push('<p>いまの進路の見込みだと、これから <strong>合計およそ ' +
-      Math.round(c.tuitionTotal / 10000).toLocaleString('ja-JP') + '万円</strong> かかる計算です。</p>');
+    if (c.tuitionSupportTotal > 0) {
+      h.push('<p>いまの進路の見込みだと、学校にかかるお金は これから合計およそ <strong>' +
+        Math.round(c.tuitionGrossTotal / 10000).toLocaleString('ja-JP') + '万円</strong>。' +
+        'そのうち <strong class="support-amount">およそ ' +
+        Math.round(c.tuitionSupportTotal / 10000).toLocaleString('ja-JP') + '万円は制度が助けてくれます</strong>ので、' +
+        '実際の負担は <strong>およそ ' + Math.round(c.tuitionTotal / 10000).toLocaleString('ja-JP') + '万円</strong> です。</p>');
+      h.push('<p class="hint">助けてくれるのは、高校生等奨学給付金と、高等教育の修学支援新制度（授業料・入学金の減免＋返さなくてよい給付型奨学金）です。' +
+        '<strong>どちらも自分で申し込む必要があります。</strong>収入が低い世帯ほど手厚くなります。' +
+        '<a href="#prog-koutou_kyoiku_shugaku_shien">修学支援新制度のくわしい説明を見る</a></p>');
+    } else {
+      h.push('<p>いまの進路の見込みだと、これから <strong>合計およそ ' +
+        Math.round(c.tuitionTotal / 10000).toLocaleString('ja-JP') + '万円</strong> かかる計算です。</p>');
+    }
     if (c.tuitionExtra > 0) {
       h.push('<p><strong>全部公立（大学は国立で自宅から通う）を選んだ場合との差は、累計で約' +
         Math.round(c.tuitionExtra / 10000).toLocaleString('ja-JP') + '万円です。</strong>' +
@@ -991,7 +1024,8 @@
     }
     h.push('<p class="hint"><strong>ここの金額は、すべて全国の平均値です。</strong>まん中の人の金額ではありません。' +
       '塾や習いごとにたくさんかける家庭が平均を押し上げるので、多くの家庭の実感より高めに出ます。</p>');
-    h.push('<p class="hint">' + esc(t.note_high_school) + '</p>');
+    h.push('<p class="hint">' + esc(t.support.high_school.shugaku_shienkin_note) + '</p>');
+    h.push('<p class="hint">' + esc(t.support.elementary_junior.note) + '</p>');
     h.push('<p class="hint">' + esc(t.note_kindergarten) + '</p>');
     h.push('<p class="hint">' + esc(t.note_university) + '</p>');
     h.push('<p class="src">出典: ' +
@@ -1089,8 +1123,10 @@
       '来月からは返済も足されて、もっと足りなくなります。下の手を1つずつ試してください。</p>');
     h.push('<ol class="gap-list">');
     手.forEach(function (o) {
+      var 制度 = o.prog ? データ.programs_by_id[o.prog] : null;
       h.push('<li' + (o.strong ? ' class="strong"' : '') + '>' +
-        '<strong>' + esc(o.head) + '</strong>' + (o.strong ? ' <span class="badge info">大きく効きます</span>' : '') +
+        '<strong>' + esc(o.head) + '</strong>' + (制度 ? 返済バッジ(制度) : '') +
+        (o.strong ? ' <span class="badge info">大きく効きます</span>' : '') +
         '<br>' + o.body +
         (o.prog ? '<br><a href="#prog-' + esc(o.prog) + '">この制度のくわしい説明を見る</a>' : '') + '</li>');
     });
@@ -1223,7 +1259,9 @@
       '<p class="hint">上から順に、ひとつずつで大丈夫です。全部やらなくても、1つ進めば前に進みます。</p>',
       '<ul>'];
     一覧.forEach(function (it, i) {
+      var 制度2 = it.prog ? データ.programs_by_id[it.prog] : null;
       h.push('<li><label><input type="checkbox" id="todo-' + i + '"><span>' + esc(it.text) + '</span></label>' +
+        (制度2 ? 返済バッジ(制度2) : '') +
         (it.prog ? ' <a class="jump" href="#prog-' + esc(it.prog) + '">くわしく</a>' : '') + '</li>');
     });
     h.push('</ul>',

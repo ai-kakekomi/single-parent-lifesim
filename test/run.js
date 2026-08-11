@@ -311,8 +311,11 @@ ok(!資産F.alreadyReachedSafety, '貯金0円なら、まだとどいていな�
 eq(資産F.points[0].monthlyNow,
    資産F.points[0].monthlyAll - 資産F.gapMonthly, '何も申告しなければ、いまの線は伸びしろのぶんだけ低い');
 ok(資産F.gaps.length === 3, 'まだ使っていない制度が3つ見つかる', JSON.stringify(資産F.gaps));
+/* 学費を助ける制度も「利用中」に入れないと、2本の線は重ならない
+   （修学支援新制度と奨学給付金は自分で申し込むものなので） */
 var 全部使用中 = SPS.資産カーブ(Object.assign({}, 入力F,
-  { usedPrograms: ['jido_fuyo_teate', 'jido_teate', 'hitorioya_kojo'] }), データ);
+  { usedPrograms: ['jido_fuyo_teate', 'jido_teate', 'hitorioya_kojo',
+    'koukou_shugaku_shienkin', 'koutou_kyoiku_shugaku_shien'] }), データ);
 eq(全部使用中.gaps.length, 0, '全部使っていると答えれば、伸びしろはゼロ');
 eq(全部使用中.finalDiff, 0, '全部使っていれば、2本の線は重なる');
 eq(全部使用中.points[0].monthlyNow, 全部使用中.points[0].monthlyAll, 'ひと月の残りも同じになる');
@@ -729,7 +732,11 @@ var 私立高 = SPS.資産カーブ(Object.assign({}, 入力F, { plans: [{ high:
 eq(私立高.tuitionCheapestTotal, 資産F.tuitionTotal, '基準の道の合計は、全部公立のときの合計と同じ');
 eq(資産F.tuitionExtra, 0, '全部公立なら、基準との差はゼロ');
 eq(私立高.tuitionExtra, 私立高.tuitionTotal - 資産F.tuitionTotal, '私立を選んだぶんだけ、基準との差が出る');
-eq(私立高.tuitionExtra, (1179261 - 596954) * 3, '公立と私立の高校の差が、3年ぶん出る');
+/* 私立を選んだぶんの差は、学費を助ける制度のぶんを引いたあとの実質の差になる */
+var 私立差の見込み = (1179261 - 596954) * 3 - (152000 - 143700) * 3;
+ok(Math.abs(私立高.tuitionExtra - 私立差の見込み) < 20000,
+  '公立と私立の高校の差が、支援を引いたあとの実質の差になっている',
+  私立高.tuitionExtra + ' / ' + 私立差の見込み);
 ok(私立高.finalAll < 資産F.finalAll, '私立を選ぶと、最後の貯金は少なくなる');
 ok(Math.abs((資産F.finalAll - 私立高.finalAll) - 私立高.tuitionExtra) < 100,
   '私立を選んだぶんの学費は、そのまま最後の貯金の差になる（1円未満のまるめの差をのぞく）',
@@ -919,6 +926,106 @@ ok(食.source.url.indexOf('cfa.go.jp') > 0, '出典にこども家庭庁があ�
 ok(食.source.url_detail.indexOf('maff.go.jp') > 0, '出典に農林水産省がある');
 ok(データ.programs_by_id.shugaku_enjo.cautions.some(function (c) { return c.indexOf('食の支援') > 0; }),
   '就学援助のカードからも、食の支援に触れている（相互に行き来できる）');
+
+/* ------------------------------------------------------------ */
+見出し('10-2. 学費を助ける制度');
+
+var 支 = データ.tuition.support;
+ok(!!支, '学費を助ける制度のデータがある');
+var 状況 = function (収入, 子, 申請) {
+  return { income: 収入, children: 子, taxFree: SPS.給与所得(収入) <= 1350000,
+    grants: { kyufukin: 申請, university: 申請 } };
+};
+
+/* 高校: 就学支援金は二重に引かない */
+eq(支.high_school.shugaku_shienkin_already_deducted, true,
+  '就学支援金は、学習費調査の金額にすでに反映されている');
+eq(SPS.学費の支援(15, {}, データ.tuition, 状況(1500000, 2, false)), 0,
+  '申請していなければ、高校の学費の支援は0円（就学支援金を重ねて引かない）');
+ok(支.high_school.shugaku_shienkin_note.indexOf('45,272円') > 0,
+  '二重に引かない理由が、実際の数字とともにデータに書いてある');
+eq(SPS.学費の支援(15, {}, データ.tuition, 状況(1500000, 2, true)), 143700,
+  '非課税世帯なら、公立高校で奨学給付金143,700円');
+eq(SPS.学費の支援(15, { high: 'private' }, データ.tuition, 状況(1500000, 2, true)), 152000,
+  '私立高校なら152,000円');
+eq(SPS.学費の支援(15, { high: 'private' }, データ.tuition, 状況(3500000, 2, true)), 50670,
+  '年収350万円なら、拡充された区分の50,670円');
+eq(SPS.学費の支援(15, { high: 'private' }, データ.tuition, 状況(6000000, 2, true)), 0,
+  '年収600万円なら、奨学給付金はなし');
+
+/* 大学: 修学支援新制度 */
+var u = 支.university;
+eq(u.full.national.tuition, 535800, '国公立の授業料減免の上限');
+eq(u.full.national.entrance, 282000, '国公立の入学金の減免');
+eq(u.full.private.tuition, 700000, '私立の授業料減免の上限');
+eq(u.full.private.entrance, 260000, '私立の入学金の減免');
+eq(u.full.private.grant_away, 909600, '私立・自宅外の給付型奨学金（月75,800円の12か月ぶん）');
+eq(u.full.national.grant_home, 350400, '国公立・自宅の給付型奨学金（月29,200円の12か月ぶん）');
+
+eq(SPS.学費の支援(19, { university: 'private_away' }, データ.tuition, 状況(1500000, 2, false)), 0,
+  '申請していなければ、大学の支援は入らない（申請制のため）');
+eq(SPS.学費の支援(19, { university: 'private_away' }, データ.tuition, 状況(1500000, 2, true)),
+  700000 + 909600, '第Ⅰ区分（満額）は、授業料減免＋給付型奨学金の満額');
+eq(SPS.学費の支援(18, { university: 'private_away' }, データ.tuition, 状況(1500000, 2, true)),
+  700000 + 260000 + 909600, '入学した年は、入学金の減免も入る');
+/* 区分の境目 */
+eq(SPS.学費の支援(19, { university: 'national_home' }, データ.tuition, 状況(3000000, 2, true)),
+  535800 + 350400, '年収300万円ちょうどは満額');
+ok(SPS.学費の支援(19, { university: 'national_home' }, データ.tuition, 状況(3000001, 2, true)) <
+   535800 + 350400, '300万円を1円こえると、支援が減る');
+eq(SPS.学費の支援(19, { university: 'national_home' }, データ.tuition, 状況(4600001, 2, true)), 0,
+  '460万円をこえると、お子さん2人なら支援なし');
+/* お子さん3人以上（多子世帯） */
+ok(SPS.学費の支援(19, { university: 'private_away' }, データ.tuition, 状況(6000000, 3, true)) > 0,
+  'お子さん3人なら、年収600万円でも支援がある');
+eq(SPS.学費の支援(19, { university: 'private_home' }, データ.tuition, 状況(9000000, 3, true)), 700000,
+  'お子さん3人なら、収入が高くても授業料の減免は満額（給付型奨学金はなし）');
+eq(SPS.学費の支援(19, { university: 'none' }, データ.tuition, 状況(1500000, 2, true)), 0,
+  '大学に進まないなら支援もない');
+
+/* 支援が学費をこえないこと */
+[[1500000, 2], [3500000, 2], [6000000, 3]].forEach(function (組) {
+  [6, 12, 15, 18, 19, 22].forEach(function (歳) {
+    ['public', 'private'].forEach(function (種) {
+      var プ = { elementary: 種, junior: 種, high: 種, university: 種 === 'private' ? 'private_away' : 'national_home' };
+      var 合 = SPS.その年の学費([歳], [プ], データ.tuition, 状況(組[0], 組[1], true));
+      ok(合.net >= 0,歳 + '歳・' + 種 + '・年収' + 組[0] + 'で、支援を引いた学費がマイナスにならない', String(合.net));
+      ok(合.support <= 合.total, '支援は、かかるお金をこえない');
+    });
+  });
+});
+
+/* 小中学校の就学援助は入れていないことを、データに明記 */
+eq(支.elementary_junior.modeled, false, '小中の就学援助は、計算に入れていない');
+ok(支.elementary_junior.note.indexOf('市区町村ごと') > 0, '入れていない理由が書いてある');
+
+/* 出典 */
+[支.high_school.source, 支.university.source].forEach(function (src) {
+  ok(src.url.indexOf('https://') === 0 && 官公庁か(src.url), '学費支援の出典が官公庁', src.url);
+  ok(/^\d{4}-\d{2}-\d{2}$/.test(src.last_verified), '最終確認日がある');
+});
+
+/* ------------------------------------------------------------ */
+見出し('10-3. 返さなくていいお金と、あとで返すお金');
+
+var 給付の数 = 0, 貸付の数 = 0;
+データ.programs.forEach(function (p) {
+  ok(p.repayment === 'none' || p.repayment === 'loan',
+    '「' + p.name + '」に、返すか返さないかが書いてある', p.repayment);
+  if (p.repayment === 'none') { 給付の数++; } else { 貸付の数++; }
+});
+eq(貸付の数, 1, 'あとで返すお金は1件（母子父子寡婦福祉資金）');
+eq(データ.programs_by_id.fukushi_shikin_kashitsuke.repayment, 'loan', '福祉資金貸付は「あとで返す」');
+ok(データ.programs_by_id.fukushi_shikin_kashitsuke.repayment_note.indexOf('無利子') > 0,
+  '貸付には、利率のことわりが書いてある');
+eq(データ.programs_by_id.koutou_kyoiku_shugaku_shien.repayment, 'none',
+  '修学支援新制度は「返さなくていい」');
+var 誤解 = データ.programs_by_id.koutou_kyoiku_shugaku_shien.misunderstanding_note;
+ok(!!誤解, '修学支援新制度に、誤解を解く一文がある');
+ok(誤解.indexOf('返す必要がありません') > 0, '返さなくていいと明言している');
+ok(誤解.indexOf('第一種') > 0 && 誤解.indexOf('第二種') > 0,
+  '日本学生支援機構の貸与型が別物であることに触れている');
+ok(データ.programs_by_id.jido_fuyo_teate.repayment === 'none', '児童扶養手当は返さなくていい');
 
 /* ------------------------------------------------------------ */
 見出し('11. 気をつけたいことのデータの点検');
@@ -1152,7 +1259,8 @@ ok((動かないsvg.match(/stroke-linejoin="round"/g) || []).length === 3, '動�
 
 /* 2本がほとんど重なるときは、1本にまとめる */
 var 重なる = SPS.資産カーブ(Object.assign({}, 入力F,
-  { usedPrograms: ['jido_fuyo_teate', 'jido_teate', 'hitorioya_kojo'] }), データ);
+  { usedPrograms: ['jido_fuyo_teate', 'jido_teate', 'hitorioya_kojo',
+    'koukou_shugaku_shienkin', 'koutou_kyoiku_shugaku_shien'] }), データ);
 ok(Chart.一本にまとめるか(重なる), '制度を使いきっていれば、線は1本にまとめる');
 var 一本svg = Chart.資産を描く(重なる);
 eq((一本svg.match(/stroke-linejoin="round"/g) || []).length, 1, '線は1本だけ描かれる');
