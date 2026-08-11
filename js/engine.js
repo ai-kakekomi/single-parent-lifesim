@@ -522,12 +522,20 @@
     var 防衛下限 = 生活費 * 3, 防衛上限 = 生活費 * 6;
     var 目標 = 防衛上限;
 
+    /* 月ごとの並び。いちばん最初（month 0）は「いまの貯金」そのもの。
+       グラフはこの並びで線を描くので、底をつく位置が月の精度で出る。 */
     var 月ごと = [];
     var 貯金いま = 起点, 貯金全部 = 起点;
     var 到達月 = null, 到達月いま = null, 赤字になる月 = null;
-    var 最初から帯の中 = (目標 > 0 && 起点 >= 目標);
-    var 最初から帯の上 = (目標 > 0 && 起点 >= 目標);
-    if (目標 > 0 && 起点 >= 目標) { 到達月 = 0; 到達月いま = 0; }
+    var 床に当たる月 = null, 目標を割り直す月 = null;
+    /* 借りられる上限（貸金業法の総量規制。年収の3分の1）。
+       ここより下は、そもそも実在しない金額なので、線も目盛りもそこで止める。
+       年収150万円の人に「マイナス500万円」の目盛りを見せても、
+       そんなお金は借りられないので、意味のない数字になるため。 */
+    var 床 = (データ.borrow_limit && 入力.myIncome > 0)
+      ? -Math.floor(入力.myIncome * データ.borrow_limit.ratio) : null;
+
+
 
     var points = [], 学費の合計 = 0, いちばん安い学費の合計 = 0;
     var 大学で赤字 = null;
@@ -559,6 +567,17 @@
       var 月収支全部 = 土台 + 全部の給付;
       var 月収支いま = 土台 + いまの給付;
 
+      /* 生活防衛資金は「その年の生活費の半年分」。
+         お子さんが大きくなると生活費が上がるので、この目標も上がっていく。 */
+      var 今年の目標 = 今年の生活費 * 6;
+
+      /* 月ごとの並びの、いちばん最初の1点（いまの貯金）を置く */
+      if (i === 0) {
+        月ごと.push({ month: 0, now: 貯金いま, all: 貯金全部, target: 今年の目標 });
+        if (今年の目標 > 0 && 貯金全部 >= 今年の目標) { 到達月 = 0; }
+        if (今年の目標 > 0 && 貯金いま >= 今年の目標) { 到達月いま = 0; }
+      }
+
       /* まず、いまの時点の貯金を点として置く */
       points.push({
         offset: i,
@@ -567,6 +586,7 @@
         tuition: 学.total,
         tuitionCheapest: 安.total,
         livingCost: 今年の生活費,
+        safetyTarget: 今年の目標,
         monthlyNow: 月収支いま,
         monthlyAll: 月収支全部,
         now: 貯金いま,
@@ -582,10 +602,19 @@
       for (var m = 0; m < 12; m++) {
         貯金いま += 月収支いま;
         貯金全部 += 月収支全部;
-        月ごと.push({ month: 月ごと.length + 1, now: 貯金いま, all: 貯金全部 });
-        if (到達月 === null && 目標 > 0 && 貯金全部 >= 目標) { 到達月 = 月ごと.length; }
-        if (到達月いま === null && 目標 > 0 && 貯金いま >= 目標) { 到達月いま = 月ごと.length; }
-        if (赤字になる月 === null && 貯金全部 < 0) { 赤字になる月 = 月ごと.length; }
+        /* 次の年に入る月は、次の年の目標で見る */
+        var 次の目標 = (m === 11 && sim.years[i + 1])
+          ? Math.round(生活費 * 生活費の倍率(いまの子の年齢, sim.years[i + 1].childAges, 成長表)) * 6
+          : 今年の目標;
+        月ごと.push({ month: 月ごと.length, now: 貯金いま, all: 貯金全部, target: 次の目標 });
+        var いま番号 = 月ごと.length - 1;
+        if (到達月 === null && 次の目標 > 0 && 貯金全部 >= 次の目標) { 到達月 = いま番号; }
+        if (到達月いま === null && 次の目標 > 0 && 貯金いま >= 次の目標) { 到達月いま = いま番号; }
+        /* いちど届いたあとに、生活費が上がって届かなくなることもある */
+        if (到達月 !== null && 目標を割り直す月 === null && 次の目標 > 0 && 貯金全部 < 次の目標
+            && いま番号 > 到達月) { 目標を割り直す月 = いま番号; }
+        if (赤字になる月 === null && 貯金全部 < 0) { 赤字になる月 = いま番号; }
+        if (床 != null && 床に当たる月 === null && 貯金全部 <= 床) { 床に当たる月 = いま番号; }
       }
 
       /* 大学に通う年で赤字になっていないか */
@@ -604,13 +633,8 @@
       if (points[k].all < 0) { 赤字の年 = k; break; }
     }
 
-    /* 借りられる上限（貸金業法の総量規制。年収の3分の1）。
-       ここより下は、そもそも実在しない金額なので、線も目盛りもそこで止める。
-       年収150万円の人に「マイナス500万円」の目盛りを見せても、
-       そんなお金は借りられないので、意味のない数字になるため。 */
-    var 借入上限 = null, 上限に達する年 = null;
-    if (データ.borrow_limit && 入力.myIncome > 0) {
-      借入上限 = -Math.floor(入力.myIncome * データ.borrow_limit.ratio);
+    var 借入上限 = 床, 上限に達する年 = null;
+    if (借入上限 != null) {
       for (var b = 0; b < points.length; b++) {
         if (points[b].all <= 借入上限) { 上限に達する年 = b; break; }
       }
@@ -649,11 +673,17 @@
       livingCost: 生活費,
       safetyMin: 防衛下限,
       safetyMax: 防衛上限,
-      safetyTarget: 目標,
-      alreadyReachedSafety: 最初から帯の中,
-      alreadyAboveSafety: 最初から帯の上,
+      safetyTarget: (月ごと.length ? 月ごと[0].target : 目標),
+      alreadyReachedSafety: (到達月 === 0),
+      alreadyAboveSafety: (到達月 === 0),
+      monthly: 月ごと,
       reachMonths: 到達月,
       reachMonthsNow: 到達月いま,
+      fallsBelowSafetyAgainAtMonth: 目標を割り直す月,
+      fallsBelowSafetyAgain: 目標を割り直す月 !== null,
+      hitsBorrowFloorAtMonth: 床に当たる月,
+      safetyTargetNow: (月ごと.length ? 月ごと[0].target : 0),
+      safetyTargetEnd: (月ごと.length ? 月ごと[月ごと.length - 1].target : 0),
       negativeFromMonth: 赤字になる月,
       negativeFromOffset: 赤字の年,
       borrowFloor: 借入上限,
@@ -745,6 +775,7 @@
     var 床 = (データ.borrow_limit && 入力.myIncome > 0)
       ? -Math.floor(入力.myIncome * データ.borrow_limit.ratio) : null;
     var 床に当たる年 = null, 谷の底 = null, 赤字になる年 = null;
+    var 床に当たる月 = null, 赤字になる月 = null;
 
     sim.years.forEach(function (y, i) {
       var 訓練中 = (i < 年数);
@@ -783,14 +814,18 @@
       if (赤字になる年 === null && 貯金 < 0) { 赤字になる年 = i; }
       if (床 != null && 床に当たる年 === null && 貯金 <= 床) { 床に当たる年 = i; }
 
+      if (i === 0) { 月ごと.push({ month: 0, all: 貯金 }); }
       if (i >= sim.years.length - 1) { return; }
 
       for (var m = 0; m < 12; m++) {
         貯金 += 月収支;
-        月ごと.push(貯金);
+        /* 修了したその年の最後の月に、修了支援給付金が1回入る */
+        if (m === 11 && i === 年数 - 1) { 貯金 += 修了時; }
+        月ごと.push({ month: 月ごと.length, all: 貯金 });
+        if (床 != null && 床に当たる月 === null && 貯金 <= 床) { 床に当たる月 = 月ごと.length - 1; }
+        if (赤字になる月 === null && 貯金 < 0) { 赤字になる月 = 月ごと.length - 1; }
+        if (谷の底 === null || 貯金 < 谷の底) { 谷の底 = 貯金; }
       }
-      /* 修了したその年の終わりに、修了支援給付金が1回入る */
-      if (i === 年数 - 1) { 貯金 += 修了時; }
     });
 
     /* 「いまのまま」を追い越す年。
@@ -810,6 +845,9 @@
 
     return {
       points: points,
+      monthly: 月ごと,
+      negativeFromMonth: 赤字になる月,
+      hitsBorrowFloorAtMonth: 床に当たる月,
       years: 年数,
       duringIncome: 訓練中年収,
       afterIncome: 修了後年収,

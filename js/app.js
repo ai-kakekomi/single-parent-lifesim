@@ -550,15 +550,23 @@
         '<a href="#stage1">確認したい制度の一覧を見る</a></p></div>';
     }
 
+    var 上がる = (c.safetyTargetEnd > c.safetyTargetNow)
+      ? 'この金額は、お子さんが大きくなって生活費が上がるにつれて、末子22歳のころには ' +
+        SPS.円(c.safetyTargetEnd) + ' まで上がります。' : '';
     var 到達;
     if (c.alreadyReachedSafety) {
-      到達 = '<strong>生活防衛資金（生活費の半年分 ' + SPS.円(c.safetyTarget) +
-        '）は、すでに貯め終えています。</strong>次の段階を考えはじめてもよい段階です。';
+      到達 = '<strong>生活防衛資金（いまなら生活費の半年分 ' + SPS.円(c.safetyTargetNow) +
+        '）は、すでに貯め終えています。</strong>次の段階を考えはじめてもよい段階です。' + 上がる;
     } else if (c.reachMonths !== null) {
-      到達 = '生活防衛資金（生活費の半年分 ' + SPS.円(c.safetyTarget) + '）にとどくまで、いまのペースで <strong>約' +
-        SPS.年月表示(c.reachMonths) + '</strong> です。';
+      到達 = '生活防衛資金（いまなら生活費の半年分 ' + SPS.円(c.safetyTargetNow) +
+        '）にとどくまで、いまのペースで <strong>約' + SPS.年月表示(c.reachMonths) + '</strong> です。' + 上がる;
     } else {
-      到達 = '生活防衛資金（生活費の半年分 ' + SPS.円(c.safetyTarget) + '）には、いまのペースではとどきません。';
+      到達 = '生活防衛資金（いまなら生活費の半年分 ' + SPS.円(c.safetyTargetNow) +
+        '）には、いまのペースではとどきません。' + 上がる;
+    }
+    if (c.fallsBelowSafetyAgain) {
+      到達 += '<br><strong>いちど届いたあと、' + (月を年齢で(c, c.fallsBelowSafetyAgainAtMonth) || '') +
+        'にまた下回ります。</strong>生活費が上がって、必要な額のほうが先に伸びるからです。';
     }
 
     $('stage2b-body').innerHTML =
@@ -802,6 +810,15 @@
 
   /* ---------- 足りないことのお知らせカード ----------
      数字を言いっぱなしにせず、その場から次の一手に進めるようにする。 */
+  /** 何か月後かを「◯歳◯か月ごろ」に直す（いちばん下のお子さんの年齢で言う） */
+  function 月を年齢で(c, 月番号) {
+    if (月番号 == null || !c.points.length) { return null; }
+    var 年 = Math.floor(月番号 / 12), か月 = 月番号 % 12;
+    var 歳 = c.points[0].youngestAge + 年;
+    if (か月 === 0) { return 歳 + '歳になるころ'; }
+    return 歳 + '歳' + か月 + 'か月ごろ';
+  }
+
   function 不足の警告カード(c) {
     var t = c.training;
     var 不足あり = (c.monthlyBalance < 0) || (c.goesNegative && c.shortfallMonthly);
@@ -817,8 +834,8 @@
       見出し = 'いま、毎月あと ' + SPS.円(-c.monthlyBalance) + ' 足りない状態です';
       説明 = '使える制度を全部使ったとしても、です。ただし、ここからできることがあります。';
     } else {
-      見出し = 'いちばん下のお子さんが' + c.points[c.negativeFromOffset].youngestAge +
-        '歳のころに、貯金が底をつく計算です';
+      見出し = 'いちばん下のお子さんが' + (月を年齢で(c, c.negativeFromMonth) || '') +
+        '、貯金が底をつく計算です';
       説明 = 'いまは足りています。その時期に、毎月あと ' + SPS.円(c.shortfallMonthly) +
         ' 足りなくなる見込みです。いまのうちに手を打てば、変えられます。';
     }
@@ -890,7 +907,12 @@
       '<span class="warn-inline">その分、後半の線は甘め（実際より良く）に出ます。</span>' +
       'お子さんが大きくなったときの姿を見たいときは、生活費の欄を多めに入れて試してください。</li>');
     h.push('<li><strong>学校にかかるお金は、全国の平均値です。</strong>まん中の人の金額ではありません。' +
-      '塾に通わせるかどうかだけでも、年に数十万円変わります。</li>');
+      '塾に通わせるかどうかだけでも、年に数十万円変わります。' +
+      'また、1年ぶんの金額を<strong>12か月に等分して</strong>引いています。' +
+      '入学金のように実際は一度に出ていくお金も、ならして引いているので、' +
+      '入学の月の落ち込みは実際よりゆるやかに出ます。</li>');
+    h.push('<li><strong>生活防衛資金の線も、右肩上がりです。</strong>' +
+      '生活費の半年分なので、お子さんが大きくなって生活費が上がると、目標の額も上がります。</li>');
     h.push('<li><strong>手当は、毎年その年のお子さんの年齢で計算し直しています。</strong>' +
       '児童扶養手当も児童手当も、年齢で切れるところがあります。そこがグラフの段差になります。</li>');
     h.push('<li><strong>物価の上昇と、これから先の制度改正は入れていません。</strong></li>');

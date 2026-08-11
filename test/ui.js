@@ -48,7 +48,7 @@ function 道筋のチェック() {
       var 見本 = require(path.join(ROOT, 'data', 'samples.js')).samples;
       var 期待 = {
         part_two_kids: ['黒字になります', '資格を取って抜ける道'],
-        seishain_one_kid: ['早まります'],
+        seishain_one_kid: ['申請すれば'],
         over_limit: ['学費の山'],
         considering_divorce: ['養育費を取り決めると'],
         on_the_edge: ['手当が減りはじめます'],
@@ -199,7 +199,7 @@ server.listen(0, '127.0.0.1', function () {
         欄.value = '40';
         欄.dispatchEvent(new w.Event('input', { bubbles: true }));
         eq(d.getElementById('sample-note').textContent, '', '次の操作でお知らせが消える');
-        eq(d.querySelectorAll('#stage2b-body svg path[fill="none"]').length, 2, '貯金のグラフの線が2本');
+        eq(d.querySelectorAll('#stage2b-body svg path[stroke-linejoin]').length, 2, '貯金のグラフの線が2本');
         ok(d.querySelector('#stage2b-body a[href="#stage1"]') !== null,
           '差の中身（制度の一覧）へ行くリンクがある');
         ok(d.getElementById('stage2b-body').textContent.indexOf('学校にかかるお金') > 0,
@@ -269,7 +269,7 @@ server.listen(0, '127.0.0.1', function () {
         /* 資格ルートは、はじめは切れている（まず現実だけを見せる） */
         ok(!d.getElementById('training-on').checked, '記入例を入れても、資格ルートは切れたまま');
         eq(d.getElementById('training-box').style.display, 'none', '資格ルートの設定も、はじめは出さない');
-        eq(d.querySelectorAll('#stage2b-body svg path[fill="none"]').length, 2,
+        eq(d.querySelectorAll('#stage2b-body svg path[stroke-linejoin]').length, 2,
           'はじめのグラフは2本（いまのまま・全部使う）だけ');
 
         /* 資格ルート: 働き方の3択 */
@@ -396,14 +396,14 @@ server.listen(0, '127.0.0.1', function () {
 
           /* 押すと、資格ルートがONになって線が増える */
           ok(!d.getElementById('training-on').checked, '押す前は資格ルートがOFF');
-          var 前の本数 = d.querySelectorAll('#stage2b-body svg path[fill="none"]').length;
+          var 前の本数 = d.querySelectorAll('#stage2b-body svg path[stroke-linejoin]').length;
           ボタン.click();
           ok(d.getElementById('training-on').checked, 'ボタンを押すと資格ルートがONになる');
           ok(Number(d.getElementById('training-after').value) > 0,
             '資格を取ったあとの年収に、初期値が入る', d.getElementById('training-after').value);
           eq(移動先[移動先.length - 1], 'training-box',
             '資格ルートの設定まで画面が動く', 移動先.join(' / '));
-          var 後の本数 = d.querySelectorAll('#stage2b-body svg path[fill="none"]').length;
+          var 後の本数 = d.querySelectorAll('#stage2b-body svg path[stroke-linejoin]').length;
           ok(後の本数 > 前の本数, 'グラフの線が増える（資格ルートが描かれる）',
             前の本数 + ' → ' + 後の本数);
           /* 押した瞬間だけ、線が伸びる動きがつく */

@@ -486,7 +486,9 @@ ok(SPS.資産カーブ(Object.assign({}, 訓入力, { training: null }), デー�
 
 /* グラフに3本目の線が出る */
 var 訓svg = Chart.資産を描く(SPS.資産カーブ(訓入力, データ));
-ok((訓svg.match(/<path /g) || []).length === 3, '線が3本になる（いまのまま・全部使う・資格を取る）');
+ok((訓svg.match(/stroke-linejoin="round"/g) || []).length === 3,
+  '線が3本になる（いまのまま・全部使う・資格を取る）',
+  String((訓svg.match(/stroke-linejoin="round"/g) || []).length));
 ok(訓svg.indexOf('資格を取る') > 0, '3本目に名前が付いている');
 ok(訓svg.indexOf('学校に通う期間（2年）') > 0, '通っている期間が、帯のラベルとして示されている');
 ok(訓svg.indexOf('▲資格取得') === -1, '修了の印は置かない（帯の右はしが同じことを示しており、枠外に出ることもあるため）');
@@ -597,6 +599,95 @@ eq(起点そろえ.training.points[5].all - 起点ゼロ.training.points[5].all,
   '資格ルートの線も同じだけ平行移動する');
 /* いちばん右の点は、末子22歳の時点 */
 eq(起点そろえ.points[起点そろえ.points.length - 1].youngestAge, 22, 'いちばん右の点は末子22歳');
+
+/* ------------------------------------------------------------ */
+見出し('8-3-4. 月ごとの並びと、動く生活防衛資金');
+
+var 月c = SPS.資産カーブ(Object.assign({}, 入力F, { currentSavings: 200000 }), データ);
+ok(Array.isArray(月c.monthly), '月ごとの並びを持っている');
+eq(月c.monthly.length, (月c.points.length - 1) * 12 + 1,
+  '月ごとの点数は（年数−1）×12＋1', 月c.monthly.length + '点');
+eq(月c.monthly[0].all, 200000, '月ごとの並びも、いちばん最初は入力した貯金額');
+eq(月c.monthly[0].now, 200000, '「いまのまま」も同じ');
+eq(月c.monthly[12].all, 月c.points[1].all, '12か月後の値が、1年後の点と一致する');
+eq(月c.monthly[24].all, 月c.points[2].all, '24か月後の値が、2年後の点と一致する');
+eq(月c.monthly[月c.monthly.length - 1].all, 月c.points[月c.points.length - 1].all,
+  'いちばん最後の月が、いちばん右の点と一致する');
+/* 月ごとに、ちゃんと1か月ぶんずつ動いている */
+eq(月c.monthly[1].all - 月c.monthly[0].all, 月c.points[0].monthlyAll,
+  '1か月で、その年のひと月ぶんだけ動く');
+
+/* 底をつく月・床に当たる月が、月ごとの並びと合っている */
+if (月c.negativeFromMonth !== null) {
+  ok(月c.monthly[月c.negativeFromMonth].all < 0, '底をつく月の値は、たしかにマイナス');
+  ok(月c.monthly[月c.negativeFromMonth - 1].all >= 0, 'そのひとつ前の月は、まだマイナスではない');
+}
+if (月c.hitsBorrowFloorAtMonth !== null) {
+  ok(月c.monthly[月c.hitsBorrowFloorAtMonth].all <= 月c.borrowFloor, '床に当たる月の値は、床以下');
+  ok(月c.monthly[月c.hitsBorrowFloorAtMonth - 1].all > 月c.borrowFloor, 'そのひとつ前の月は、まだ床の上');
+}
+
+/* 生活防衛資金の目標が、お子さんの成長についていく */
+var 目標たち = 月c.monthly.map(function (q) { return q.target; });
+var 目標が下がらない = true;
+for (var t2 = 1; t2 < 目標たち.length; t2++) {
+  if (目標たち[t2] < 目標たち[t2 - 1]) { 目標が下がらない = false; }
+}
+ok(目標が下がらない, '生活防衛資金の線は、下がることがない（単調非減少）');
+ok(月c.safetyTargetEnd > 月c.safetyTargetNow,
+  'お子さんが大きくなるぶん、目標の額は上がっていく',
+  月c.safetyTargetNow + ' → ' + 月c.safetyTargetEnd);
+eq(月c.safetyTargetNow, 月c.points[0].livingCost * 6, 'いまの目標は、いまの生活費の半年分');
+eq(月c.safetyTargetEnd, 月c.monthly[月c.monthly.length - 1].target, '最後の目標も並びと一致する');
+月c.points.forEach(function (pt) {
+  eq(pt.safetyTarget, pt.livingCost * 6, 'どの年でも、目標はその年の生活費の半年分');
+});
+
+/* 到達の判定が、その時点の目標との比べ方になっている */
+var 判定用 = SPS.資産カーブ(Object.assign({}, 入力F, { currentSavings: 月c.safetyTargetNow }), データ);
+eq(判定用.reachMonths, 0, 'いまの目標ちょうどを持っていれば、その時点で到達と判定する');
+ok(判定用.alreadyReachedSafety, 'すでに到達していると分かる');
+var 少し足りない = SPS.資産カーブ(Object.assign({}, 入力F, { currentSavings: 月c.safetyTargetNow - 1 }), データ);
+ok(!少し足りない.alreadyReachedSafety, '1円足りなければ、まだ到達していない');
+
+/* いちど届いても、生活費が上がって再び下回るケースを見つけられる */
+var 再び = SPS.資産カーブ(Object.assign({}, 入力F, {
+  children: [3], livingCost: 100000, currentSavings: 620000, myIncome: 2100000
+}), データ);
+ok(再び.reachMonths !== null, 'いちどは生活防衛資金にとどく');
+ok(typeof 再び.fallsBelowSafetyAgain === 'boolean', '再び下回るかどうかを持っている');
+if (再び.fallsBelowSafetyAgain) {
+  ok(再び.fallsBelowSafetyAgainAtMonth > 再び.reachMonths, '下回るのは、とどいたあとの月');
+  ok(再び.monthly[再び.fallsBelowSafetyAgainAtMonth].all <
+     再び.monthly[再び.fallsBelowSafetyAgainAtMonth].target, 'その月は、たしかに目標を下回っている');
+}
+
+/* 資格ルートも月ごとに持つ */
+var 訓月 = SPS.資産カーブ(Object.assign({}, 訓入力, { currentSavings: 200000 }), データ).training;
+ok(Array.isArray(訓月.monthly), '資格ルートも月ごとの並びを持っている');
+eq(訓月.monthly[0].all, 200000, '資格ルートの並びも、最初は入力した貯金額');
+eq(訓月.monthly.length, 月c.monthly.length, '本体と同じ月数');
+eq(訓月.monthly[12].all, 訓月.points[1].all, '12か月後が1年後の点と一致する');
+/* 訓練中の谷が、月の精度で見える */
+var 訓練中の値 = 訓月.monthly.slice(0, 訓月.years * 12 + 1).map(function (q) { return q.all; });
+eq(訓練中の値.length, 訓月.years * 12 + 1, '訓練期間ぶんの月の値がある');
+
+/* グラフが月ごとに描かれている（点の数がふえている） */
+var 月svg = Chart.資産を描く(月c);
+var 線の点数 = (月svg.match(/L\d/g) || []).length;
+ok(線の点数 > 月c.points.length * 2, 'グラフの線が、年ごとより細かい点で描かれている', 線の点数 + '点');
+ok(/生活防衛資金 \d+万円（生活費の半年分）/.test(月svg),
+  'ラベルに金額が入っている', (/生活防衛資金 [^<]*/.exec(月svg) || ['見つからず'])[0]);
+/* 生活防衛資金が、水平な直線ではなくなっている */
+var 目標線 = /<path d="(M[^"]+)" fill="none" stroke="#1c7a4a"/.exec(月svg);
+ok(目標線 !== null, '生活防衛資金が線（path）で描かれている');
+var 目標点 = (目標線[1].match(/L[\d.]+ [\d.]+/g) || []);
+ok(目標点.length > 12, '生活防衛資金の線も、月ごとの点で描かれている', 目標点.length + '点');
+var 目標y値 = 目標点.map(function (t3) { return Number(t3.split(' ')[1]); });
+var 下がっていく = true;
+for (var g2 = 1; g2 < 目標y値.length; g2++) { if (目標y値[g2] > 目標y値[g2 - 1] + 0.01) { 下がっていく = false; } }
+ok(下がっていく, '生活防衛資金の線が、右肩上がりに描かれている（画面のyは下ほど大きい）');
+ok(目標y値[目標y値.length - 1] < 目標y値[0], '最後は最初より上にある');
 
 /* ------------------------------------------------------------ */
 見出し('8-4. 学校にかかるお金');
@@ -950,12 +1041,12 @@ eq(近い, 0, '番号の丸どうしが重なっていない');
 /* 貯金のたまり方のグラフ */
 var 資産svg = Chart.資産を描く(資産F);
 ok(資産svg.indexOf('<svg') === 0, '貯金のたまり方の絵ができる');
-ok((資産svg.match(/<path /g) || []).length === 2, '線は2本（申請あり・申請なし）');
+ok((資産svg.match(/stroke-linejoin="round"/g) || []).length === 2, '線は2本（いまのまま・全部使う）');
 ok(資産svg.indexOf('全部使う') > 0 && 資産svg.indexOf('いまのまま') > 0, '線のはしに名前が直接書いてある');
-ok(資産svg.indexOf('生活防衛資金（生活費の半年分）') > 0, '生活防衛資金の線に説明が入っている');
+ok(/生活防衛資金 \d+万円（生活費の半年分）/.test(資産svg), '生活防衛資金の線に、金額つきの説明が入っている');
 ok(資産svg.indexOf('#dff0e6') === -1, '帯（塗り）はもう使っていない');
-ok(/<line x1="66" y1="[\d.]+"[^>]*stroke="#1c7a4a" stroke-width="1.5"/.test(資産svg),
-  '生活防衛資金は、実線1本で描かれている');
+ok(/<path d="M[^"]+" fill="none" stroke="#1c7a4a" stroke-width="1.5"/.test(資産svg),
+  '生活防衛資金は、線1本で描かれている');
 ok(Chart.資産を描く(null).indexOf('<svg') === -1, 'データがないときは絵を描かない');
 ok(Chart.資産の凡例().indexOf('生活防衛資金（生活費の半年分）') > 0, '凡例に生活防衛資金の説明がある');
 ok(Chart.資産の凡例().indexOf('借りられない領域') > 0, '凡例に赤い領域の説明がある');
@@ -1047,20 +1138,20 @@ ok(動くsvg.indexOf('class="fade-in"') > 0, '期間の帯のラベルも、遅�
 var 動かないsvg = Chart.資産を描く(SPS.資産カーブ(訓入力, データ));
 ok(動かないsvg.indexOf('draw-in') === -1, 'ふだんの描き直しでは、動きをつけない（毎回動くとうるさいため）');
 ok(動かないsvg.indexOf('fade-in') === -1, 'ラベルも同様');
-ok((動かないsvg.match(/<path /g) || []).length === 3, '動きがなくても線は3本ある');
+ok((動かないsvg.match(/stroke-linejoin="round"/g) || []).length === 3, '動きがなくても線は3本ある');
 
 /* 2本がほとんど重なるときは、1本にまとめる */
 var 重なる = SPS.資産カーブ(Object.assign({}, 入力F,
   { usedPrograms: ['jido_fuyo_teate', 'jido_teate', 'hitorioya_kojo'] }), データ);
 ok(Chart.一本にまとめるか(重なる), '制度を使いきっていれば、線は1本にまとめる');
 var 一本svg = Chart.資産を描く(重なる);
-eq((一本svg.match(/<path /g) || []).length, 1, '線は1本だけ描かれる');
+eq((一本svg.match(/stroke-linejoin="round"/g) || []).length, 1, '線は1本だけ描かれる');
 ok(一本svg.indexOf('いまの見通し') > 0, '1本のときの名前は「いまの見通し」');
 ok(一本svg.indexOf('いまのまま') === -1, '重なった線が2本あるように見せない');
 
 ok(!Chart.一本にまとめるか(資産F), '取りこぼしが大きければ、2本のまま');
 var 二本svg = Chart.資産を描く(資産F);
-eq((二本svg.match(/<path /g) || []).length, 2, '2本のときは2本描く');
+eq((二本svg.match(/stroke-linejoin="round"/g) || []).length, 2, '2本のときは2本描く');
 ok(/stroke-width="2.5"/.test(二本svg), '主役（全部使った場合）は太い');
 ok(/stroke-width="1.6"[^>]*opacity="0.8"/.test(二本svg), 'いまのままは細く薄い（階層をつける）');
 ok(二本svg.indexOf('いまのまま') > 0 && 二本svg.indexOf('全部使う') > 0, '2本それぞれに名前がつく');

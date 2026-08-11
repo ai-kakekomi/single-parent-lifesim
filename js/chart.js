@@ -304,9 +304,17 @@
     function 床(v) {
       return (curve.borrowFloor != null && v < curve.borrowFloor) ? curve.borrowFloor : v;
     }
-    var 全値 = [0, curve.safetyTarget, curve.startSavings];
-    pts.slice(0, 描く数).forEach(function (p) { 全値.push(床(p.all), 床(p.now)); });
-    if (tr) { tr.points.slice(0, 資格描く数).forEach(function (p) { 全値.push(床(p.all)); }); }
+    var 全値 = [0, curve.startSavings];
+    var 月列 = curve.monthly || [];
+    var 月数見込み = Math.min(月列.length, (描く数 - 1) * 12 + 1);
+    月列.slice(0, 月数見込み).forEach(function (q) {
+      全値.push(床(q.all), 床(q.now), q.target);
+    });
+    if (!月列.length) { pts.slice(0, 描く数).forEach(function (p) { 全値.push(床(p.all), 床(p.now)); }); }
+    if (tr && tr.monthly) {
+      var 資格月数 = Math.min(tr.monthly.length, (資格描く数 - 1) * 12 + 1);
+      tr.monthly.slice(0, 資格月数).forEach(function (q) { 全値.push(床(q.all)); });
+    }
     var 上限 = Math.max.apply(null, 全値), 下限 = Math.min.apply(null, 全値);
     var 余白 = Math.max((上限 - 下限) * 0.1, 100000);
     上限 += 余白; 下限 -= 余白;
@@ -318,7 +326,11 @@
 
     var 幅1 = pts.length > 1 ? 幅 / (pts.length - 1) : 0;
     function X(i) { return 左 + 幅1 * i; }
+    /* 月ごとの位置。12か月で1年ぶん進む */
+    function Xm(m) { return 左 + 幅1 * (m / 12); }
     function Y(v) { return 上 + 高 - (v - 下限) / (上限 - 下限) * 高; }
+    /* 描くのは、打ち切りの年までの月ぶん */
+    var 描く月数 = Math.min((curve.monthly || []).length, (描く数 - 1) * 12 + 1);
 
     var s = [];
     /* グラフの中に置く文字は、いったんためておいて、最後に重ならないよう並べてから描く。
@@ -333,14 +345,26 @@
       '" role="img" aria-label="貯金のたまり方の見通し。生活防衛資金の線と、借りられる上限つき">');
 
     /* --- 生活防衛資金（生活費の半年分）の線 ---
-           帯にすると、データの線と紛れて読みにくいので、実線1本にする。 */
+           帯にすると、データの線と紛れて読みにくいので、1本の線にする。
+           生活費はお子さんの成長で上がるので、この線も右肩上がりになる。 */
     if (curve.safetyTarget > 0) {
-      var ys = Y(curve.safetyTarget);
-      s.push('<line x1="' + 左 + '" y1="' + ys.toFixed(1) + '" x2="' + (左 + 幅) + '" y2="' + ys.toFixed(1) +
-        '" stroke="' + 色.bandLine + '" stroke-width="1.5"/>');
+      var ys;
+      if (月列.length) {
+        var 目標線 = 月列.slice(0, 描く月数).map(function (q, k) {
+          return (k ? 'L' : 'M') + Xm(k).toFixed(1) + ' ' + Y(q.target).toFixed(1);
+        }).join(' ');
+        s.push('<path d="' + 目標線 + '" fill="none" stroke="' + 色.bandLine + '" stroke-width="1.5"/>');
+        ys = Y(月列[0].target);
+      } else {
+        ys = Y(curve.safetyTarget);
+        s.push('<line x1="' + 左 + '" y1="' + ys.toFixed(1) + '" x2="' + (左 + 幅) + '" y2="' + ys.toFixed(1) +
+          '" stroke="' + 色.bandLine + '" stroke-width="1.5"/>');
+      }
       /* 上のほうは、大事な地点の文字を並べる場所として空けておく。
          線がそこにかかるときは、文字を線の下に回す。 */
-      注記追加((縦長 ? '生活防衛資金' : '生活防衛資金（生活費の半年分）'), 左 + 4, ys - 5, 'start', 色.bandLine, 10, 40);
+      var 目標額 = Math.round((月列.length ? 月列[0].target : curve.safetyTarget) / 10000);
+      注記追加((縦長 ? '生活防衛資金 ' + 目標額 + '万円'
+        : '生活防衛資金 ' + 目標額 + '万円（生活費の半年分）'), 左 + 4, ys - 5, 'start', 色.bandLine, 10, 40);
     }
 
     /* --- 横の目盛り線（きりのいい数だけ。5本くらい） --- */
@@ -397,7 +421,9 @@
     /* --- 折れ線 --- */
     var 末 = 描く数 - 1;
     function 線(key, col, dash, 太さ, 濃さ) {
-      var d = pts.slice(0, 描く数).map(function (p, i) { return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(床(p[key])).toFixed(1); }).join(' ');
+      var 元 = 月列.length ? 月列.slice(0, 描く月数) : pts.slice(0, 描く数);
+      var 目盛 = 月列.length ? Xm : X;
+      var d = 元.map(function (p, i) { return (i ? 'L' : 'M') + 目盛(i).toFixed(1) + ' ' + Y(床(p[key])).toFixed(1); }).join(' ');
       s.push('<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + (太さ || 2) +
         '" stroke-linejoin="round" stroke-linecap="round"' +
         (濃さ != null && 濃さ < 1 ? ' opacity="' + 濃さ + '"' : '') +
@@ -411,18 +437,21 @@
     /* 線のはしの名前は、いちばん下（床のラベルを置く帯）には入れない */
     var 下限y = 上 + 高 - 24;
     function 収める(v) { return Math.min(Math.max(v, 上 + 10), 下限y); }
+    var 末の値 = 月列.length ? 月列[描く月数 - 1] : pts[末];
+    var 末x = 月列.length ? Xm(描く月数 - 1) : X(末);
     var ラベル = 一本
-      ? [{ y: 収める(Y(床(pts[末].all)) + 4), col: 色.withProg, 名: 'いまの見通し' }]
+      ? [{ y: 収める(Y(床(末の値.all)) + 4), col: 色.withProg, 名: 'いまの見通し', x: 末x }]
       : [
-        { y: 収める(Y(床(pts[末].now)) + 4), col: 色.withoutProg, 名: 'いまのまま' },
-        { y: 収める(Y(床(pts[末].all)) + 4), col: 色.withProg, 名: '全部使う' }
+        { y: 収める(Y(床(末の値.now)) + 4), col: 色.withoutProg, 名: 'いまのまま', x: 末x },
+        { y: 収める(Y(床(末の値.all)) + 4), col: 色.withProg, 名: '全部使う', x: 末x }
       ];
     if (tr && 資格描く数 > 0) {
       /* 線の長さをだいたい測っておく。
          「左から伸びる」動きをCSSでつけるのに、長さが要るため。 */
-      var 点列 = tr.points.slice(0, 資格描く数).map(function (p, i) {
-        return { x: X(i), y: Y(床(p.all)) };
-      });
+      var 資格月数 = tr.monthly ? Math.min(tr.monthly.length, (資格描く数 - 1) * 12 + 1) : 0;
+      var 点列 = 資格月数
+        ? tr.monthly.slice(0, 資格月数).map(function (q, k) { return { x: Xm(k), y: Y(床(q.all)) }; })
+        : tr.points.slice(0, 資格描く数).map(function (p, i) { return { x: X(i), y: Y(床(p.all)) }; });
       var td = 点列.map(function (q, i) {
         return (i ? 'L' : 'M') + q.x.toFixed(1) + ' ' + q.y.toFixed(1);
       }).join(' ');
@@ -456,7 +485,8 @@
         var cx2 = X(tr.crossoverOffset), cy2 = Y(床(tr.points[tr.crossoverOffset].all));
         s.push('<circle cx="' + cx2.toFixed(1) + '" cy="' + cy2.toFixed(1) + '" r="6" fill="none" stroke="' + 色.training + '" stroke-width="2.5"/>');
       }
-      ラベル.push({ y: 収める(Y(床(tr.points[資格描く数 - 1].all)) + 4), col: 色.training, 名: '資格を取る', x: X(資格描く数 - 1) });
+      ラベル.push({ y: 収める(点列[点列.length - 1].y + 4), col: 色.training, 名: '資格を取る',
+        x: 点列[点列.length - 1].x });
     }
     ラベル.forEach(function (L) {
       var 基点 = (L.x != null) ? L.x : X(末);
@@ -473,12 +503,13 @@
     var 印を出す = !(tr && tr.afterIncome > 0 && !tr.goesNegative);
     var 印の段 = 0;
     if (印を出す) {
-      印(curve.negativeFromOffset, '底をつく');
-      印(curve.hitsBorrowFloorAtOffset, '借りられる上限');
+      印(curve.negativeFromMonth, '底をつく');
+      印(curve.hitsBorrowFloorAtMonth, '借りられる上限');
     }
-    function 印(offset, 名) {
-      if (offset == null || offset < 0 || offset >= 描く数) { return; }
-      var mx = X(offset), my = Y(床(pts[offset].all));
+    /** 月の位置に印を打つ（年の折れ線だと、底をつく場所が最大1年ずれて見えるため） */
+    function 印(月番号, 名) {
+      if (月番号 == null || 月番号 < 0 || !月列.length || 月番号 >= 描く月数) { return; }
+      var mx = Xm(月番号), my = Y(床(月列[月番号].all));
       /* 印はひし形。データの線や点と形で区別できるようにする */
       s.push('<path d="M ' + mx.toFixed(1) + ' ' + (my - 6.5).toFixed(1) +
         ' L ' + (mx + 6.5).toFixed(1) + ' ' + my.toFixed(1) +
