@@ -1192,15 +1192,22 @@
     return 出.slice(0, 4);
   }
 
+  /* グラフの網かけと赤い領域の説明。
+     一目で分かる最低限はグラフの中のラベルに残し、長い説明だけをたたんでおく。 */
   function 打ち切りの注記(c) {
-    if (!c.truncated) { return ''; }
-    var h = '<p class="hint cutoff">灰色の網かけから先は、線を描いていません。' +
-      '<strong>このままの前提では成り立たない領域だからです。</strong>' +
-      '借金をずっと積み増していくことは実際にはできませんし、' +
-      'その前に、支出・収入・受けられる支援のどれかを変えることになります。' +
-      'ここから先を数字で見せると、かえって嘘になります。</p>';
+    var h = '';
+    if (c.truncated) {
+      h += '<p class="hint cutoff">灰色の網かけから先は、線を描いていません。' +
+        '<strong>このままの前提では成り立たない領域だからです。</strong>' +
+        '借金をずっと積み増していくことは実際にはできませんし、' +
+        'その前に、支出・収入・受けられる支援のどれかを変えることになります。' +
+        'ここから先を数字で見せると、かえって嘘になります。</p>';
+    }
+    h += '<p class="hint red-zone-note">0円より下は、赤の濃さで2つに分けています。' +
+      '<strong>うすい赤</strong>は0円から借りられる上限までで、ここから下は<strong>借金</strong>になります。' +
+      '<strong>濃い赤</strong>は借りられる上限より下で、ここは<strong>借りることもできない</strong>金額です。</p>';
     if (c.hitsBorrowFloor && c.borrowFloor != null) {
-      h += '<p class="hint floor-note">赤い破線は、<strong>貸金業者から借りられる上限（' +
+      h += '<p class="hint floor-note">赤い線は、<strong>貸金業者から借りられる上限（' +
         esc(c.borrowFloorLabel || '年収の3分の1') + ' ＝ ' + SPS.円(-c.borrowFloor) + '）</strong>です。' +
         'グラフがこれより下に行かないのは、そこから先は実際には借りられないからです。' +
         '<strong>借りられる上限に先にぶつかる場合、そこから先は本当に打つ手がなくなります。その前に相談窓口へ。</strong>' +
@@ -1209,7 +1216,8 @@
         '<a href="https://www.fsa.go.jp/policy/kashikin/kihon.html" target="_blank" rel="noopener">金融庁「貸金業法のキホン」</a>' +
         '（最終確認 8/11(火)）。銀行からの借入れや住宅ローンなど、対象外のものもあります。</span></p>';
     }
-    return h;
+    return '<details class="explain"><summary>グラフの網かけと赤い線の意味（くわしく）</summary>' +
+      '<div class="explain-body">' + h + '</div></details>';
   }
 
   /* ---------- 学校にかかるお金 ---------- */

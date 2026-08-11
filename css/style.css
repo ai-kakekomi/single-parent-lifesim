@@ -520,3 +520,5 @@ table.balance tr.child-row td { padding-top: .2rem; padding-bottom: .2rem; font-
 table.balance tr.child-row td:first-child { padding-left: 1.2rem; }
 table.balance .child-mark { color: var(--accent); margin-right: .3rem; }
 table.balance .num.subtotal { font-weight: 700; }
+details.explain > .explain-body { padding: .2rem .2rem 0; }
+.red-zone-note { line-height: 1.8; }

@@ -394,8 +394,37 @@ server.listen(0, '127.0.0.1', function () {
         ok(d.getElementById('training-during-row').style.display === 'none',
           '「自分で入れる」以外のときは、金額の欄を出さない');
 
+        /* グラフの網かけと赤い線の説明も、折りたたみに入っている */
+        var 網たたみ = [].filter.call(d.querySelectorAll('#stage2b-body details.explain'), function (x) {
+          return x.querySelector('summary').textContent.indexOf('網かけ') >= 0;
+        })[0];
+        ok(網たたみ !== undefined, 'グラフの網かけと赤い線の説明が、折りたたみになっている');
+        ok(!網たたみ.open, 'はじめは閉じている');
+        eq(網たたみ.querySelector('summary').textContent, 'グラフの網かけと赤い線の意味（くわしく）',
+          '閉じた見出しが1行で分かりやすい');
+        ok(網たたみ.querySelector('.explain-body') !== null, '中身が入れものに入っている');
+        ok(網たたみ.textContent.indexOf('うすい赤') > 0 && 網たたみ.textContent.indexOf('濃い赤') > 0,
+          '2段階の赤の意味が中に書いてある');
+        /* 長い説明はたたんでも、グラフの中の短いラベルは残っている */
+        var 絵の字 = d.querySelector('#curve-chart svg').textContent;
+        ok(絵の字.indexOf('借りられません') > 0, 'グラフの中の「借りられません」のラベルは残っている');
+        if (d.querySelector('#curve-chart svg [fill="url(#hatch)"]')) {
+          ok(絵の字.indexOf('描いていません') > 0 || 絵の字.indexOf('この先は') > 0 || 絵の字.indexOf('なし') > 0,
+            'グラフの中の網かけのラベルも残っている', 絵の字.slice(0, 60));
+        }
+        /* 2つの折りたたみが、同じ見た目のしくみを使っている */
+        var たたみ全部 = d.querySelectorAll('#stage2b-body details.explain');
+        ok(たたみ全部.length >= 2, '折りたたみが2つある（網かけの説明・生活防衛資金の説明）');
+        [].forEach.call(たたみ全部, function (x) {
+          ok(x.classList.contains('explain'), 'どちらも同じ見た目のしくみ（explain）を使っている');
+          ok(x.querySelector('summary').textContent.indexOf('くわしく') > 0,
+            '閉じた見出しに「くわしく」が付いている', x.querySelector('summary').textContent);
+        });
+
         /* 生活防衛資金の長い説明は、折りたたみに入っている */
-        var 帯たたみ = d.querySelector('#stage2b-body details.explain');
+        var 帯たたみ = [].filter.call(d.querySelectorAll('#stage2b-body details.explain'), function (x) {
+          return x.querySelector('summary').textContent.indexOf('生活防衛資金') >= 0;
+        })[0];
         ok(帯たたみ !== null, '生活防衛資金の説明が折りたたみになっている');
         ok(!帯たたみ.open, 'はじめは閉じている');
         ok(帯たたみ.querySelector('summary').textContent.indexOf('生活防衛資金って？') >= 0,
