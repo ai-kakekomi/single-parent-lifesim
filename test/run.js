@@ -27,6 +27,13 @@ var 落とし穴 = 読む('data/pitfalls.js');
 var 児扶 = データ.programs_by_id.jido_fuyo_teate.eligibility;
 var 児手 = データ.programs_by_id.jido_teate.eligibility;
 
+var 官公庁 = ['cfa.go.jp', 'mhlw.go.jp', 'mext.go.jp', 'moj.go.jp', 'fsa.go.jp', 'npa.go.jp',
+  'caa.go.jp', 'nta.go.jp', 'soumu.go.jp', 'mlit.go.jp', 'cao.go.jp', 'gender.go.jp',
+  'nenkin.go.jp', 'jasso.go.jp', 'kokusen.go.jp'];
+function 官公庁か(url) {
+  return 官公庁.some(function (d) { return url.indexOf('//' + d + '/') > 0 || url.indexOf('.' + d + '/') > 0; });
+}
+
 var 成功 = 0, 失敗 = 0;
 function ok(cond, name, extra) {
   if (cond) { 成功++; }
@@ -258,60 +265,152 @@ simE.years.forEach(function (y) {
 
 var 入力F = {
   isSingleParent: true, myIncome: 3200000, spouseIncome: 0,
-  children: [14], housingNow: 90000, housingAfter: 90000, livingCost: 150000,
+  children: [14], housingNow: 90000, housingAfter: 90000, livingCost: 105000,
+  currentSavings: 0, usedPrograms: [], plans: [],
   divorced_childSupportMonthly: 40000, parentSupportMonthly: 0, parentAge: 0
 };
 var 資産F = SPS.資産カーブ(入力F, データ);
 var simF = SPS.シミュレーション(入力F, データ);
+var 学費表 = データ.tuition;
 
 eq(資産F.points.length, simF.years.length, '比較グラフと同じ年数ぶん出る');
-eq(資産F.livingCost, 150000, '入力した生活費がそのまま使われる');
-eq(資産F.safetyMin, 150000 * 3, '生活防衛資金の下は生活費の3か月分');
-eq(資産F.safetyMax, 150000 * 6, '生活防衛資金の上は生活費の6か月分');
+eq(資産F.livingCost, 105000, '入力した生活費がそのまま使われる');
+eq(資産F.safetyMin, 105000 * 3, '生活防衛資金の下は生活費の3か月分');
+eq(資産F.safetyMax, 105000 * 6, '生活防衛資金の上は生活費の6か月分');
+eq(資産F.startSavings, 0, 'いまの貯金を入れなければ0円から始まる');
 
-/* ひと月の残り ＝ 使えるお金 − 生活費 */
-eq(資産F.points[0].monthlyWith, simF.years[0].divorced.total - 150000, 'ひと月の残りは、使えるお金から生活費を引いた額');
-/* 1年目の貯金は、ひと月の残りの12倍 */
-eq(資産F.points[0].withPrograms, 資産F.points[0].monthlyWith * 12, '1年目の貯金は、ひと月の残りの12倍');
-eq(資産F.points[1].withPrograms,
-   資産F.points[0].withPrograms + 資産F.points[1].monthlyWith * 12, '2年目は1年目に積み増される（累積になっている）');
+/* ひと月の残り ＝ 使えるお金 − 生活費 − その年の学費 */
+var 学0 = SPS.その年の学費(simF.years[0].childAges, [], 学費表).total;
+eq(資産F.points[0].tuition, 学0, 'その年の学校にかかるお金が出ている');
+eq(資産F.points[0].monthlyAll, simF.years[0].divorced.total - 105000 - Math.round(学0 / 12),
+  'ひと月の残りは、使えるお金から生活費と学校のお金を引いた額');
+eq(資産F.points[0].all, 資産F.points[0].monthlyAll * 12, '1年目の貯金は、ひと月の残りの12倍');
+eq(資産F.points[1].all, 資産F.points[0].all + 資産F.points[1].monthlyAll * 12,
+  '2年目は1年目に積み増される（累積になっている）');
 
-/* 制度を申請しなかった場合 */
-var d0 = simF.years[0].divorced;
-var 控除の効果 = Math.floor(SPS.手取りめやす(3200000, true) / 12) - Math.floor(SPS.手取りめやす(3200000, false) / 12);
-eq(資産F.points[0].monthlyWithout, d0.total - d0.jidoFuyoTeate - d0.jidoTeate - 控除の効果 - 150000,
-  '申請しなかった場合は、児童扶養手当・児童手当・ひとり親控除の分が入らない');
-ok(資産F.points[0].monthlyWithout < 資産F.points[0].monthlyWith, '申請しないほうが、ひと月の残りは少ない');
-ok(資産F.finalDiff > 0, '申請したほうが、最後には貯金が多い');
-eq(資産F.finalDiff, 資産F.finalWith - 資産F.finalWithout, '差は2本の線の開きそのもの');
+/* いまの貯金が起点になる */
+var 起点あり = SPS.資産カーブ(Object.assign({}, 入力F, { currentSavings: 500000 }), データ);
+eq(起点あり.startSavings, 500000, 'いまの貯金が起点として記録される');
+eq(起点あり.points[0].all, 資産F.points[0].all + 500000, '起点のぶんだけ、線がまるごと上に上がる');
+eq(起点あり.finalAll, 資産F.finalAll + 500000, '最後まで起点のぶんだけ上');
+eq(起点あり.finalDiff, 資産F.finalDiff, '起点をずらしても、2本の線の開きは変わらない');
+ok(SPS.資産カーブ(Object.assign({}, 入力F, { currentSavings: 105000 * 3 }), データ).alreadyReachedSafety,
+  '3か月分をすでに持っていれば、帯の中に入っていると判定する');
+ok(SPS.資産カーブ(Object.assign({}, 入力F, { currentSavings: 105000 * 6 }), データ).alreadyAboveSafety,
+  '6か月分をすでに持っていれば、帯の上にいると判定する');
+ok(!資産F.alreadyReachedSafety, '貯金0円なら、まだ帯にとどいていない');
+
+/* すでに使っている制度 */
+eq(資産F.points[0].monthlyNow,
+   資産F.points[0].monthlyAll - 資産F.gapMonthly, '何も申告しなければ、いまの線は伸びしろのぶんだけ低い');
+ok(資産F.gaps.length === 3, 'まだ使っていない制度が3つ見つかる', JSON.stringify(資産F.gaps));
+var 全部使用中 = SPS.資産カーブ(Object.assign({}, 入力F,
+  { usedPrograms: ['jido_fuyo_teate', 'jido_teate', 'hitorioya_kojo'] }), データ);
+eq(全部使用中.gaps.length, 0, '全部使っていると答えれば、伸びしろはゼロ');
+eq(全部使用中.finalDiff, 0, '全部使っていれば、2本の線は重なる');
+eq(全部使用中.points[0].monthlyNow, 全部使用中.points[0].monthlyAll, 'ひと月の残りも同じになる');
+var 一部使用中 = SPS.資産カーブ(Object.assign({}, 入力F, { usedPrograms: ['jido_teate'] }), データ);
+eq(一部使用中.gaps.length, 2, '児童手当だけ使っていれば、残りは2つ');
+eq(一部使用中.points[0].monthlyNow - 資産F.points[0].monthlyNow,
+   simF.years[0].divorced.jidoTeate, '申告した児童手当のぶんだけ、いまの線が上がる');
+ok(一部使用中.finalDiff < 資産F.finalDiff, '使っている制度がふえるほど、2本の開きは小さくなる');
+
 ok(資産F.diffAtTenYears > 0, '10年でも差がついている');
-ok(資産F.finalDiff >= 資産F.diffAtTenYears, '年数が長いほど、差は開く（または同じ）');
+eq(資産F.finalDiff, 資産F.finalAll - 資産F.finalNow, '差は2本の線の開きそのもの');
 eq(資産F.tenYearsMonths, Math.min(120, 資産F.totalMonths), '10年の差は、120か月時点（足りなければ最後の月）で出す');
 
 /* 生活防衛資金にとどくまで */
-ok(資産F.reachMonths !== null, '黒字ならいつかは生活防衛資金にとどく');
-eq(資産F.reachMonths, Math.ceil(資産F.safetyMin / 資産F.points[0].monthlyWith),
-  'とどくまでの月数が、ひと月の残りから計算した月数と合う');
 eq(SPS.年月表示(1), '1か月', '月数の表示（1か月）');
 eq(SPS.年月表示(12), '1年', '月数の表示（ちょうど1年）');
 eq(SPS.年月表示(28), '2年4か月', '月数の表示（2年4か月）');
 eq(SPS.年月表示(null), null, '月数がないときは何も出さない');
 
 /* 赤字になる場合は、0で止めずマイナスのまま描く */
-var 赤字入力 = Object.assign({}, 入力F, { livingCost: 400000 });
-var 赤字 = SPS.資産カーブ(赤字入力, データ);
-ok(赤字.points[0].monthlyWith < 0, '生活費が多すぎればひと月の残りはマイナス');
+var 赤字 = SPS.資産カーブ(Object.assign({}, 入力F, { livingCost: 400000 }), データ);
+ok(赤字.points[0].monthlyAll < 0, '生活費が多すぎればひと月の残りはマイナス');
 ok(赤字.goesNegative, '貯金がマイナスになることを見つけている');
 eq(赤字.negativeFromMonth, 1, '1か月目からマイナスになる');
-ok(赤字.points[赤字.points.length - 1].withPrograms < 0, '最後までマイナスのまま。0で切っていない');
+ok(赤字.points[赤字.points.length - 1].all < 0, '最後までマイナスのまま。0で切っていない');
 ok(赤字.reachMonths === null, '赤字なら生活防衛資金にはとどかない');
-ok(赤字.safetyMin === 400000 * 3, '赤字でも生活防衛資金の帯は出す');
+eq(赤字.safetyMin, 400000 * 3, '赤字でも生活防衛資金の帯は出す');
 
-/* 生活費が0のとき（未入力） */
 var 生活費なし = SPS.資産カーブ(Object.assign({}, 入力F, { livingCost: 0 }), データ);
 eq(生活費なし.safetyMin, 0, '生活費が未入力なら帯は0');
-ok(生活費なし.reachMonths === null, '生活費が未入力なら、とどく時期は出さない');
 ok(SPS.資産カーブ(Object.assign({}, 入力F, { children: [] }), データ) === null, 'お子さんがいなければ何も返さない');
+
+/* ------------------------------------------------------------ */
+見出し('8-4. 学校にかかるお金');
+
+eq(SPS.学費(3, {}, 学費表), 0, '3歳（幼稚園）は0円。無償化されているため');
+eq(SPS.学費(5, {}, 学費表), 0, '5歳も0円');
+eq(SPS.学費(6, {}, 学費表), 366599, '6歳（公立の小学校）の1年ぶん');
+eq(SPS.学費(11, {}, 学費表), 366599, '11歳まで小学校');
+eq(SPS.学費(6, { elementary: 'private' }, 学費表), 1741516, '私立の小学校を選ぶと金額が変わる');
+eq(SPS.学費(12, {}, 学費表), 542450, '12歳（公立の中学校）');
+eq(SPS.学費(15, {}, 学費表), 596954, '15歳（公立の高校）');
+eq(SPS.学費(15, { high: 'private' }, 学費表), 1179261, '私立の高校');
+eq(SPS.学費(18, {}, 学費表), 639200 + 282000, '18歳（国立・自宅）は、その年だけ入学料も足す');
+eq(SPS.学費(19, {}, 学費表), 639200, '19歳からは授業料などだけ');
+eq(SPS.学費(18, { university: 'none' }, 学費表), 0, '大学に進まないなら0円');
+eq(SPS.学費(22, {}, 学費表), 0, '22歳は数えない');
+eq(SPS.学費(6, {}, null), 0, '学費のデータがなければ0円');
+
+var 二人 = SPS.その年の学費([8, 13], [{}, {}], 学費表);
+eq(二人.total, 366599 + 542450, 'きょうだいがいれば、それぞれの分を足す');
+eq(二人.detail.length, 2, '内訳もそれぞれ出る');
+eq(SPS.その年の学費([4, 5], [{}, {}], 学費表).total, 0, '未就学のお子さんだけなら0円');
+
+var 安 = SPS.いちばん安いプラン(学費表);
+eq(安.elementary, 'public', '基準になる道は公立の小学校');
+eq(安.university, 'national_home', '基準になる道は国立・自宅から');
+
+/* 進路プラン別の累計差 */
+var 私立高 = SPS.資産カーブ(Object.assign({}, 入力F, { plans: [{ high: 'private' }] }), データ);
+eq(私立高.tuitionCheapestTotal, 資産F.tuitionTotal, '基準の道の合計は、全部公立のときの合計と同じ');
+eq(資産F.tuitionExtra, 0, '全部公立なら、基準との差はゼロ');
+eq(私立高.tuitionExtra, 私立高.tuitionTotal - 資産F.tuitionTotal, '私立を選んだぶんだけ、基準との差が出る');
+eq(私立高.tuitionExtra, (1179261 - 596954) * 3, '公立と私立の高校の差が、3年ぶん出る');
+ok(私立高.finalAll < 資産F.finalAll, '私立を選ぶと、最後の貯金は少なくなる');
+ok(Math.abs((資産F.finalAll - 私立高.finalAll) - 私立高.tuitionExtra) < 100,
+  '私立を選んだぶんの学費は、そのまま最後の貯金の差になる（1円未満のまるめの差をのぞく）',
+  (資産F.finalAll - 私立高.finalAll) + ' / ' + 私立高.tuitionExtra);
+
+var 私立大 = SPS.資産カーブ(Object.assign({}, 入力F, { plans: [{ university: 'private_away' }] }), データ);
+ok(私立大.tuitionExtra > 私立高.tuitionExtra, '私立でひとり暮らしの大学のほうが、差はさらに大きい');
+ok(私立大.universityDeficit !== null, '私立でひとり暮らしだと、大学の時期にお金が足りなくなる');
+var 進学なし = SPS.資産カーブ(Object.assign({}, 入力F, { plans: [{ university: 'none' }] }), データ);
+ok(進学なし.tuitionTotal < 資産F.tuitionTotal, '大学に進まない場合は、学校にかかるお金が減る');
+ok(進学なし.finalAll > 資産F.finalAll, '大学に進まない場合は、最後の貯金は多くなる');
+
+/* 二重計上していないこと（生活費と学費が別々に引かれている） */
+var 学費ゼロ = SPS.資産カーブ(Object.assign({}, 入力F,
+  { plans: [{ elementary: 'public', junior: 'public', high: 'public', university: 'none' }] }), データ);
+var 学費の年合計 = 0;
+学費ゼロ.points.forEach(function (pt) { 学費の年合計 += pt.tuition; });
+eq(学費ゼロ.tuitionTotal, 学費の年合計, '学校のお金の合計が、各年の合計と一致する（重複して足していない）');
+学費ゼロ.points.forEach(function (pt, i) {
+  eq(pt.monthlyAll, simF.years[i].divorced.total - 105000 - Math.round(pt.tuition / 12),
+    'どの年でも、生活費と学校のお金が1回ずつだけ引かれている');
+});
+
+/* 学費データそのものの点検 */
+eq(学費表.bands.length, 4, '学校の段階は4つ（小・中・高・大学）');
+学費表.bands.forEach(function (b) {
+  ok(b.from < b.to || b.from === b.to, '「' + b.label + '」の年齢の範囲が正しい');
+  ok(b.costs[b.default] != null, '「' + b.label + '」の既定の選択肢に金額がある');
+  ok(b.costs[b.baseline] != null, '「' + b.label + '」の基準の選択肢に金額がある');
+  b.choices.forEach(function (c) {
+    eq(b.costs[c.value], c.yearly, '「' + c.label + '」の金額が、選択肢と計算で一致している');
+  });
+});
+ok(学費表.bands[0].from === 6, '小学校は6歳から。幼稚園の年齢には金額を置いていない');
+['source_school', 'source_university', 'source_entrance', 'source_free_preschool'].forEach(function (k) {
+  var src = 学費表[k];
+  ok(!!src && !!src.law, '学費データの「' + k + '」に根拠が書いてある');
+  ok(src.url.indexOf('https://') === 0 && 官公庁か(src.url), '「' + k + '」の出典が官公庁のドメイン', src.url);
+  ok(/^\d{4}-\d{2}-\d{2}$/.test(src.last_verified), '「' + k + '」に最終確認日がある');
+});
+ok(学費表.note_average.indexOf('平均値') > 0, '平均値であることが、データの注記に書いてある');
 
 /* 見本すべてで、累積の計算が破綻しないこと */
 見本.samples.forEach(function (s) {
@@ -319,11 +418,19 @@ ok(SPS.資産カーブ(Object.assign({}, 入力F, { children: [] }), データ) 
   var c = SPS.資産カーブ(入, データ);
   ok(c !== null && c.points.length > 0, '[' + s.id + '] 貯金のたまり方が計算できる');
   ok(s.input.livingCost > 0, '[' + s.id + '] 見本に毎月の生活費が入っている');
-  ok(c.finalDiff > 0, '[' + s.id + '] 制度を申請したほうが、必ず貯金が多くなる');
-  var 手 = 0;
-  c.points.forEach(function (pt) { 手 += pt.monthlyWith * 12; });
-  eq(c.points[c.points.length - 1].withPrograms, 手, '[' + s.id + '] 積み上げの合計が合っている');
+  ok(s.input.currentSavings >= 0, '[' + s.id + '] 見本にいまの貯金額が入っている');
+  ok(Array.isArray(s.input.usedPrograms), '[' + s.id + '] 見本にすでに使っている制度が入っている');
+  var 手 = s.input.currentSavings;
+  c.points.forEach(function (pt) { 手 += pt.monthlyAll * 12; });
+  eq(c.points[c.points.length - 1].all, 手, '[' + s.id + '] 積み上げの合計が合っている');
 });
+ok(見本.samples.some(function (s) { return SPS.資産カーブ(
+  Object.assign({}, s.input, { divorced_childSupportMonthly: s.input.childSupportMonthly }), データ).alreadyAboveSafety; }),
+  '見本のうち少なくとも1件は、すでに生活防衛資金を貯め終えている');
+ok(見本.samples.some(function (s) { return (s.input.plans || []).length > 0; }),
+  '見本のうち少なくとも1件は、私立などの進路を選んでいる');
+ok(見本.samples.some(function (s) { return (s.input.usedPrograms || []).length > 0; }),
+  '見本のうち少なくとも1件は、すでに制度を使っている');
 
 /* ------------------------------------------------------------ */
 見出し('9. 見本（画面の「例で試す」と同じ数字）');
@@ -388,12 +495,6 @@ ok(SPS.資産カーブ(Object.assign({}, 入力F, { children: [] }), データ) 
 /* ------------------------------------------------------------ */
 見出し('10. 制度データそのものの点検');
 
-var 官公庁 = ['cfa.go.jp', 'mhlw.go.jp', 'mext.go.jp', 'moj.go.jp', 'fsa.go.jp', 'npa.go.jp',
-  'caa.go.jp', 'nta.go.jp', 'soumu.go.jp', 'mlit.go.jp', 'cao.go.jp', 'gender.go.jp',
-  'nenkin.go.jp', 'jasso.go.jp', 'kokusen.go.jp'];
-function 官公庁か(url) {
-  return 官公庁.some(function (d) { return url.indexOf('//' + d + '/') > 0 || url.indexOf('.' + d + '/') > 0; });
-}
 
 eq(データ.programs.length, 17, '収めている制度は17件');
 var 種別 = { auto: 0, check: 0 };
@@ -531,11 +632,12 @@ ok(Chart.表(simE.years).indexOf(Math.round(y0.married.perPerson).toLocaleString
 var 資産svg = Chart.資産を描く(資産F);
 ok(資産svg.indexOf('<svg') === 0, '貯金のたまり方の絵ができる');
 ok((資産svg.match(/<path /g) || []).length === 2, '線は2本（申請あり・申請なし）');
-ok(資産svg.indexOf('申請あり') > 0 && 資産svg.indexOf('申請なし') > 0, '線のはしに名前が直接書いてある');
+ok(資産svg.indexOf('全部使う') > 0 && 資産svg.indexOf('いまのまま') > 0, '線のはしに名前が直接書いてある');
 ok(資産svg.indexOf('まずここまで貯める（生活費の3〜6か月分）') > 0, '生活防衛資金の帯に説明が入っている');
 ok(資産svg.indexOf('<rect x="74"') > 0, '生活防衛資金の帯そのものが描かれている');
 ok(Chart.資産を描く(null).indexOf('<svg') === -1, 'データがないときは絵を描かない');
 ok(Chart.資産の凡例().indexOf('生活防衛資金のゾーン') > 0, '凡例に帯の説明がある');
+ok(Chart.資産を描く(起点あり).indexOf('いまの貯金') > 0, 'いまの貯金の位置が、グラフの左はしに出る');
 var 赤字svg = Chart.資産を描く(赤字);
 ok(赤字svg.indexOf('<svg') === 0, '赤字のときも絵は描ける');
 

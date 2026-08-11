@@ -35,7 +35,9 @@
         "childSupportMonthly": 0,
         "parentSupportMonthly": 0,
         "parentAge": 0,
-        "livingCost": 130000
+        "livingCost": 95000,
+        "currentSavings": 80000,
+        "usedPrograms": ["jido_teate"]
       },
       "expect": {
         "jidoFuyoTeate": { "status": "full", "monthly": 59400, "income": 670000 },
@@ -61,7 +63,10 @@
         "childSupportMonthly": 40000,
         "parentSupportMonthly": 0,
         "parentAge": 0,
-        "livingCost": 150000
+        "livingCost": 105000,
+        "currentSavings": 600000,
+        "usedPrograms": ["jido_fuyo_teate", "jido_teate", "hitorioya_kojo"],
+        "plans": [{ "high": "private", "university": "private_home" }]
       },
       "expect": {
         "jidoFuyoTeate": { "status": "partial", "monthly": 13870, "income": 2364000 },
@@ -87,7 +92,9 @@
         "childSupportMonthly": 0,
         "parentSupportMonthly": 0,
         "parentAge": 0,
-        "livingCost": 175000
+        "livingCost": 120000,
+        "currentSavings": 1500000,
+        "usedPrograms": ["jido_teate", "hitorioya_kojo"]
       },
       "expect": {
         "jidoFuyoTeate": { "status": "none", "monthly": 0, "income": 2980000 },
@@ -113,7 +120,9 @@
         "childSupportMonthly": 40000,
         "parentSupportMonthly": 0,
         "parentAge": 0,
-        "livingCost": 125000
+        "livingCost": 95000,
+        "currentSavings": 300000,
+        "usedPrograms": ["jido_teate"]
       },
       "expect": {
         "jidoFuyoTeate": { "status": "notApplicableNow" },
@@ -140,7 +149,9 @@
         "childSupportMonthly": 0,
         "parentSupportMonthly": 0,
         "parentAge": 0,
-        "livingCost": 120000
+        "livingCost": 90000,
+        "currentSavings": 150000,
+        "usedPrograms": ["jido_fuyo_teate", "jido_teate"]
       },
       "expect": {
         "jidoFuyoTeate": { "status": "full", "monthly": 48050, "income": 1070000 },
@@ -166,7 +177,9 @@
         "childSupportMonthly": 0,
         "parentSupportMonthly": 30000,
         "parentAge": 68,
-        "livingCost": 150000
+        "livingCost": 100000,
+        "currentSavings": 400000,
+        "usedPrograms": ["jido_teate"]
       },
       "expect": {
         "jidoFuyoTeate": { "status": "partial", "monthly": 56030, "income": 1560000 },

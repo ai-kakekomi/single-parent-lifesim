@@ -412,64 +412,154 @@
    *
    *   生活防衛資金（生活費の3か月分から6か月分）の帯もいっしょに返します。
    * ---------------------------------------------------------- */
+  /** その年齢のお子さん1人に、1年でかかる学校のお金 */
+  function 学費(年齢, プラン, 学費表) {
+    if (!学費表) { return 0; }
+    var p = プラン || {};
+    var b = 学費表.bands;
+    for (var i = 0; i < b.length; i++) {
+      if (年齢 >= b[i].from && 年齢 <= b[i].to) {
+        var 選択 = p[b[i].stage] || b[i].default;
+        var v = b[i].costs[選択];
+        if (v == null) { return 0; }
+        /* 入学のときだけかかるお金（大学の入学料）は、その学校に入る年に足す */
+        if (b[i].entrance && 年齢 === b[i].from && b[i].entrance[選択]) { v += b[i].entrance[選択]; }
+        return v;
+      }
+    }
+    return 0;   // その年齢は、学校にかかるお金を数えない（幼稚園・保育園は無償化のためゼロ）
+  }
+
+  /** ある年に、お子さん全員でかかる学校のお金の合計 */
+  function その年の学費(子の年齢たち, プラン一覧, 学費表) {
+    var 合計 = 0, 明細 = [];
+    (子の年齢たち || []).forEach(function (age, i) {
+      var v = 学費(age, (プラン一覧 || [])[i], 学費表);
+      if (v > 0) { 明細.push({ index: i, age: age, amount: v }); }
+      合計 += v;
+    });
+    return { total: 合計, detail: 明細 };
+  }
+
+  /** 全部いちばん安い道（すべて公立・大学は国公立で自宅から）を選んだときのプラン */
+  function いちばん安いプラン(学費表) {
+    var p = {};
+    (学費表.bands || []).forEach(function (b) { p[b.stage] = b.baseline || b.default; });
+    return p;
+  }
+
   function 資産カーブ(入力, データ) {
     var sim = シミュレーション(入力, データ);
     if (!sim.years.length) { return null; }
 
     var 生活費 = Math.max(0, Math.floor(入力.livingCost || 0));
+    var 学費表 = データ.tuition;
+    var プラン一覧 = 入力.plans || [];
+    var 使用中 = {};
+    (入力.usedPrograms || []).forEach(function (id) { 使用中[id] = true; });
+
     /* ひとり親控除があるときと、ないときの手取りの差（ひと月あたり） */
     var 控除の効果 = Math.floor(手取りめやす(入力.myIncome, true) / 12)
       - Math.floor(手取りめやす(入力.myIncome, false) / 12);
+    var 控除が使える = 入力.isSingleParent
+      && (給与所得(入力.myIncome) <= データ.programs_by_id.hitorioya_kojo.eligibility.income_ceiling);
 
-    var 月ごと = [];   // 1か月ずつの積み上げ
-    var 貯金あり = 0, 貯金なし = 0;
-    var 到達月 = null, 赤字になる月 = null;
+    var 起点 = Math.floor(入力.currentSavings || 0);
     var 防衛下限 = 生活費 * 3, 防衛上限 = 生活費 * 6;
 
-    var points = [];
+    var 月ごと = [];
+    var 貯金いま = 起点, 貯金全部 = 起点;
+    var 到達月 = null, 赤字になる月 = null;
+    var 最初から帯の中 = (防衛下限 > 0 && 起点 >= 防衛下限);
+    var 最初から帯の上 = (防衛上限 > 0 && 起点 >= 防衛上限);
+    if (防衛下限 > 0 && 起点 >= 防衛下限) { 到達月 = 0; }
+
+    var points = [], 学費の合計 = 0, いちばん安い学費の合計 = 0;
+    var 大学で赤字 = null;
+    var 安いプラン = 学費表 ? いちばん安いプラン(学費表) : null;
+
     sim.years.forEach(function (y) {
       var d = y.divorced;
-      var 月収支あり = d.total - 生活費;
-      /* 制度を申請しなかった場合は、手当も控除の効果も入らない */
-      var 月収支なし = d.total - d.jidoFuyoTeate - d.jidoTeate - 控除の効果 - 生活費;
+
+      /* この年の、お子さん全員ぶんの学校のお金 */
+      var 学 = その年の学費(y.childAges, プラン一覧, 学費表);
+      var 安 = その年の学費(y.childAges, y.childAges.map(function () { return 安いプラン; }), 学費表);
+      学費の合計 += 学.total;
+      いちばん安い学費の合計 += 安.total;
+      var 学費月 = Math.round(学.total / 12);
+
+      /* 使える制度を全部使った場合 */
+      var 全部の給付 = d.jidoFuyoTeate + d.jidoTeate + (控除が使える ? 控除の効果 : 0);
+      /* いまのまま（もう使っていると答えたものだけ） */
+      var いまの給付 = (使用中.jido_fuyo_teate ? d.jidoFuyoTeate : 0)
+        + (使用中.jido_teate ? d.jidoTeate : 0)
+        + ((使用中.hitorioya_kojo && 控除が使える) ? 控除の効果 : 0);
+
+      var 土台 = d.total - d.jidoFuyoTeate - d.jidoTeate - (控除が使える ? 控除の効果 : 0) - 生活費 - 学費月;
+      var 月収支全部 = 土台 + 全部の給付;
+      var 月収支いま = 土台 + いまの給付;
 
       for (var m = 0; m < 12; m++) {
-        貯金あり += 月収支あり;
-        貯金なし += 月収支なし;
-        月ごと.push({ month: 月ごと.length + 1, withPrograms: 貯金あり, withoutPrograms: 貯金なし });
-        if (到達月 === null && 防衛下限 > 0 && 貯金あり >= 防衛下限) { 到達月 = 月ごと.length; }
-        if (赤字になる月 === null && 貯金あり < 0) { 赤字になる月 = 月ごと.length; }
+        貯金いま += 月収支いま;
+        貯金全部 += 月収支全部;
+        月ごと.push({ month: 月ごと.length + 1, now: 貯金いま, all: 貯金全部 });
+        if (到達月 === null && 防衛下限 > 0 && 貯金全部 >= 防衛下限) { 到達月 = 月ごと.length; }
+        if (赤字になる月 === null && 貯金全部 < 0) { 赤字になる月 = 月ごと.length; }
+      }
+
+      /* 大学に通う年で赤字になっていないか */
+      if (大学で赤字 === null && 貯金全部 < 0 && 学.detail.some(function (x) { return x.age >= 18; })) {
+        大学で赤字 = { youngestAge: y.youngestAge, offset: y.offset };
       }
 
       points.push({
         offset: y.offset,
         youngestAge: y.youngestAge,
-        monthlyWith: 月収支あり,
-        monthlyWithout: 月収支なし,
-        withPrograms: 貯金あり,
-        withoutPrograms: 貯金なし
+        childAges: y.childAges,
+        tuition: 学.total,
+        tuitionCheapest: 安.total,
+        monthlyNow: 月収支いま,
+        monthlyAll: 月収支全部,
+        now: 貯金いま,
+        all: 貯金全部
       });
     });
 
-    /* 10年後（120か月）の差。届かない場合はいちばん最後の年で */
     var 十年 = 月ごと[Math.min(119, 月ごと.length - 1)];
     var 最後 = 月ごと[月ごと.length - 1];
 
+    /* 伸びしろ（まだ使っていない制度が、ひと月いくらになるか） */
+    var d0 = sim.years[0].divorced;
+    var 伸びしろ = [];
+    if (d0.jidoFuyoTeate > 0 && !使用中.jido_fuyo_teate) { 伸びしろ.push({ id: 'jido_fuyo_teate', monthly: d0.jidoFuyoTeate }); }
+    if (d0.jidoTeate > 0 && !使用中.jido_teate) { 伸びしろ.push({ id: 'jido_teate', monthly: d0.jidoTeate }); }
+    if (控除が使える && !使用中.hitorioya_kojo) { 伸びしろ.push({ id: 'hitorioya_kojo', monthly: 控除の効果 }); }
+
     return {
       points: points,
+      startSavings: 起点,
       livingCost: 生活費,
       safetyMin: 防衛下限,
       safetyMax: 防衛上限,
+      alreadyReachedSafety: 最初から帯の中,
+      alreadyAboveSafety: 最初から帯の上,
       reachMonths: 到達月,
       negativeFromMonth: 赤字になる月,
       goesNegative: 赤字になる月 !== null,
-      monthlyBalance: points.length ? points[0].monthlyWith : 0,
-      finalWith: 最後.withPrograms,
-      finalWithout: 最後.withoutPrograms,
-      finalDiff: 最後.withPrograms - 最後.withoutPrograms,
-      diffAtTenYears: 十年.withPrograms - 十年.withoutPrograms,
+      universityDeficit: 大学で赤字,
+      monthlyBalance: points.length ? points[0].monthlyAll : 0,
+      monthlyBalanceNow: points.length ? points[0].monthlyNow : 0,
+      gaps: 伸びしろ,
+      gapMonthly: 伸びしろ.reduce(function (a, b) { return a + b.monthly; }, 0),
+      finalAll: 最後.all,
+      finalNow: 最後.now,
+      finalDiff: 最後.all - 最後.now,
+      diffAtTenYears: 十年.all - 十年.now,
       tenYearsMonths: Math.min(120, 月ごと.length),
-      totalMonths: 月ごと.length
+      totalMonths: 月ごと.length,
+      tuitionTotal: 学費の合計,
+      tuitionCheapestTotal: いちばん安い学費の合計,
+      tuitionExtra: 学費の合計 - いちばん安い学費の合計
     };
   }
 
@@ -594,6 +684,9 @@
     等価所得: 等価所得,
     シミュレーション: シミュレーション,
     資産カーブ: 資産カーブ,
+    学費: 学費,
+    その年の学費: その年の学費,
+    いちばん安いプラン: いちばん安いプラン,
     年月表示: 年月表示,
     制度判定: 制度判定,
     限度額: 限度額,

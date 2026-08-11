@@ -254,3 +254,25 @@ table.compare caption { padding-bottom: .25rem; }
 /* ---- 落とし穴チェック ---- */
 .checklist.danger-list { background: var(--warn-soft); border-color: #ecd9ac; }
 .checklist.danger-list input[type="checkbox"] { accent-color: var(--warn); }
+
+/* ---- 資産カーブの見出しボックス ---- */
+.headline-box {
+  background: var(--warn-soft); border: 2px solid #e0b860; border-radius: var(--radius);
+  padding: 1rem; margin: 0 0 1rem;
+}
+.headline-box.ok { background: var(--ok-soft); border-color: #9dcdb2; }
+.headline-box .big { font-size: 1.12rem; font-weight: 700; margin: 0 0 .4rem; line-height: 1.6; }
+.headline-box p { margin: .35rem 0; font-size: .92rem; }
+.headline-box a.jump-big { font-weight: 700; }
+
+/* ---- 進路プラン ---- */
+.plan-child { border: 1px solid var(--line); border-radius: 8px; padding: .6rem .7rem; margin-bottom: .5rem; background: #fff; }
+.plan-head { margin: 0 0 .4rem; font-size: .88rem; font-weight: 700; color: var(--ink-sub); }
+.plan-row { display: flex; align-items: center; gap: .6rem; margin-bottom: .35rem; }
+.plan-row .plan-label { flex: 0 0 4rem; font-size: .85rem; font-weight: 600; }
+.plan-row select { flex: 1; font-size: .9rem; padding: .45rem .5rem; }
+
+/* ---- 利用中の制度 ---- */
+.badge.used { background: var(--ok); color: #fff; }
+.prog.used { border-left-color: var(--ok); background: #fbfefc; }
+#used-programs label { text-align: left; font-size: .84rem; flex: 1 1 9rem; }

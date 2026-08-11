@@ -22,8 +22,8 @@
     ink: '#1b2733',
     sub: '#52616f',
     cliff: '#8a5a00',
-    withProg: '#2f6f9f',    // 制度を申請した場合
-    withoutProg: '#c2591a', // 申請しなかった場合
+    withProg: '#2f6f9f',    // 使える制度を全部使った場合
+    withoutProg: '#c2591a', // いまのまま
     band: '#dff0e6',        // 生活防衛資金のゾーン
     bandLine: '#1c7a4a'
   };
@@ -172,8 +172,8 @@
     var 左 = 74, 右 = 84, 上 = 18, 下 = 52;
     var 幅 = W - 左 - 右, 高 = H - 上 - 下;
 
-    var 全値 = [0, curve.safetyMax];
-    pts.forEach(function (p) { 全値.push(p.withPrograms, p.withoutPrograms); });
+    var 全値 = [0, curve.safetyMax, curve.startSavings];
+    pts.forEach(function (p) { 全値.push(p.all, p.now); });
     var 上限 = Math.max.apply(null, 全値), 下限 = Math.min.apply(null, 全値);
     var 余白 = Math.max((上限 - 下限) * 0.1, 100000);
     上限 += 余白; 下限 -= 余白;
@@ -227,15 +227,22 @@
       var 末 = pts.length - 1;
       s.push('<text x="' + (X(末) + 6) + '" y="' + (Y(pts[末][key]) + 4).toFixed(1) + '" font-size="11" font-weight="700" fill="' + col + '">' + 名 + '</text>');
     }
-    線('withoutPrograms', 色.withoutProg, true, '申請なし');
-    線('withPrograms', 色.withProg, false, '申請あり');
+    線('now', 色.withoutProg, true, 'いまのまま');
+    線('all', 色.withProg, false, '全部使う');
+
+    if (curve.startSavings > 0) {
+      s.push('<circle cx="' + 左 + '" cy="' + Y(curve.startSavings).toFixed(1) + '" r="4" fill="#fff" stroke="' + 色.withProg + '" stroke-width="2"/>');
+      s.push('<text x="' + (左 + 7) + '" y="' + (Y(curve.startSavings) - 7).toFixed(1) + '" font-size="10" fill="' + 色.sub + '">いまの貯金</text>');
+    }
 
     pts.forEach(function (p, i) {
       var x0 = X(i) - 幅1 / 2, w = 幅1 || 40;
       s.push('<rect class="hit" x="' + Math.max(左, x0).toFixed(1) + '" y="' + 上 + '" width="' + w.toFixed(1) + '" height="' + 高 +
         '" fill="transparent" style="cursor:crosshair"><title>' +
-        'お子さん' + p.youngestAge + '歳／申請あり ' + Math.round(p.withPrograms).toLocaleString('ja-JP') + '円・申請なし ' +
-        Math.round(p.withoutPrograms).toLocaleString('ja-JP') + '円</title></rect>');
+        'お子さん' + p.youngestAge + '歳／全部使う ' + Math.round(p.all).toLocaleString('ja-JP') + '円・いまのまま ' +
+        Math.round(p.now).toLocaleString('ja-JP') + '円' +
+        (p.tuition ? '（この年の学校のお金 ' + Math.round(p.tuition).toLocaleString('ja-JP') + '円）' : '') +
+        '</title></rect>');
     });
 
     s.push('</svg>');
@@ -244,8 +251,8 @@
 
   function 資産の凡例() {
     return '<div class="legend">' +
-      '<span><span class="swatch" style="background:' + 色.withProg + '"></span>制度を申請した場合（実線）</span>' +
-      '<span><span class="swatch" style="background:' + 色.withoutProg + '"></span>申請しなかった場合（破線）</span>' +
+      '<span><span class="swatch" style="background:' + 色.withProg + '"></span>使える制度を全部使った場合（実線）</span>' +
+      '<span><span class="swatch" style="background:' + 色.withoutProg + '"></span>いまのまま（破線）</span>' +
       '<span><span class="swatch" style="background:' + 色.band + ';height:.7rem;border:1px solid ' + 色.bandLine + '"></span>生活防衛資金のゾーン</span>' +
       '</div>';
   }

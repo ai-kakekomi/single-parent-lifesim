@@ -97,9 +97,13 @@
           <label><input type="radio" name="housing-type" value="公営住宅">公営住宅</label>
           <label><input type="radio" name="housing-type" value="実家・同居">実家・同居</label>
         </div>
-        <label for="living-cost">毎月の生活費（住居費をのぞく・円）</label>
-        <input type="number" id="living-cost" min="0" max="2000000" inputmode="numeric" placeholder="例 130000">
-        <p class="hint">食費・光熱費・通信費・日用品・こどもの習い事など、住居費以外の合計のめやすです。ぴったりでなくて大丈夫です。この数字から「貯金がどうたまるか」と「生活防衛資金の目安」を出します。</p>
+        <label for="living-cost">毎月の生活費（<span class="term" tabindex="0" data-tip="家賃・住宅ローンは「住居費」の欄に、授業料・給食費・教材費・塾代などは別に計算するので、ここには入れないでください。二重に数えないためです。">住居費と、学校にかかるお金をのぞく</span>・円）</label>
+        <input type="number" id="living-cost" min="0" max="2000000" inputmode="numeric" placeholder="例 110000">
+        <p class="hint">食費・光熱費・通信費・日用品・被服費など。<strong>家賃と、学校にかかるお金（授業料・給食費・教材費・塾代）は入れないでください。</strong>それらは別々に計算します。ぴったりでなくて大丈夫です。</p>
+
+        <label for="current-savings">いまの貯金額（円）</label>
+        <input type="number" id="current-savings" min="0" max="100000000" inputmode="numeric" placeholder="例 300000">
+        <p class="hint">これから貯金がどうふえていくかの、出発点になります。だいたいで大丈夫です。ここに入れた数字も、どこにも送られません。</p>
 
         <div class="row">
           <div>
@@ -112,6 +116,18 @@
             <p class="hint">こちらで勝手に見積もることはしません。あなたが考えている金額を入れてください。公営住宅なら、民間の賃貸より月に数万円安くなることがあります。</p>
           </div>
         </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>すでに使っている支援制度</legend>
+        <p class="hint" style="margin-top:0">もう受け取っているものにチェックを入れてください。チェックしなかったもののうち、対象になりそうなものが「まだ使えるお金」として出ます。</p>
+        <div class="inline-choice" id="used-programs"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>お子さんの進路の見込み</legend>
+        <p class="hint" style="margin-top:0">いまの見込みで大丈夫です。あとから変えると、貯金のグラフがその場で変わります。</p>
+        <div id="plan-box"></div>
       </fieldset>
 
       <fieldset>
@@ -146,9 +162,23 @@
       <button type="button" class="primary" id="calc">この内容で見てみる</button>
     </div>
 
+    <!-- ============ 貯金のたまり方 ============ -->
+    <section class="stage" id="stage2b">
+      <h2>2. 貯金は、どうたまっていくか</h2>
+      <p class="lead">
+        ひと月に残るお金を積み上げると、貯金がどうふえていくかが見えます。<br>
+        <strong>制度を申請した場合と、しなかった場合を並べています。</strong>取りこぼしが何年でいくらになるかを見てください。
+      </p>
+      <p class="hint">
+        ひとり親になったあとの姿を出しています（離婚を考えている段階の方は「離婚した場合」の姿です）。
+        3の比較グラフと同じく、年収は変わらないものとして計算しています。
+      </p>
+      <div id="stage2b-body"></div>
+    </section>
+
     <!-- ============ Stage 1 ============ -->
     <section class="stage" id="stage1">
-      <h2>2. 使えるかもしれない制度</h2>
+      <h2>3. 使えるかもしれない制度</h2>
       <p class="lead" id="stage1-summary"></p>
       <div class="notice">
         ここに出しているのは、<strong>全国どこでも共通の制度だけ</strong>です。
@@ -160,7 +190,7 @@
 
     <!-- ============ Stage 2 ============ -->
     <section class="stage" id="stage2">
-      <h2>3. 続けた場合と、離婚した場合のくらべ方</h2>
+      <h2>4. 続けた場合と、離婚した場合のくらべ方</h2>
       <p class="lead">
         いちばん下のお子さんが22歳になるまで、ひと月あたりに使えるお金がどう変わるかを並べています。<br>
         <strong>家族の人数がちがうので、そのまま足した金額では比べられません。ひとりあたりに直した金額で比べています。</strong>
@@ -195,20 +225,6 @@
       </div>
 
       <div id="stage2-body"></div>
-    </section>
-
-    <!-- ============ 貯金のたまり方 ============ -->
-    <section class="stage" id="stage2b">
-      <h2>4. 貯金は、どうたまっていくか</h2>
-      <p class="lead">
-        ひと月に残るお金を積み上げると、貯金がどうふえていくかが見えます。<br>
-        <strong>制度を申請した場合と、しなかった場合を並べています。</strong>取りこぼしが何年でいくらになるかを見てください。
-      </p>
-      <p class="hint">
-        ひとり親になったあとの姿を出しています（離婚を考えている段階の方は「離婚した場合」の姿です）。
-        3の比較グラフと同じく、年収は変わらないものとして計算しています。
-      </p>
-      <div id="stage2b-body"></div>
     </section>
 
     <!-- ============ Stage 3 ============ -->

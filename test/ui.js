@@ -84,21 +84,54 @@ server.listen(0, '127.0.0.1', function () {
         ok(d.querySelector('#stage2-body a[href="#stage3"]') !== null,
           '身の安全のことを見に行くリンクがある');
 
-        /* 貯金のたまり方（資産カーブ） */
+        /* 貯金のたまり方（資産カーブ）が、いちばん最初の出力になっている */
         ok(d.getElementById('stage2b').classList.contains('shown'), '貯金のたまり方の欄が出る');
+        ok(d.getElementById('stage2b').compareDocumentPosition(d.getElementById('stage1')) & 4,
+          '貯金のグラフが、制度の一覧より前に出ている');
+        ok(d.getElementById('stage1').compareDocumentPosition(d.getElementById('stage2')) & 4,
+          '制度の一覧が、離婚の比較グラフより前に出ている');
         eq(d.querySelectorAll('#stage2b-body svg path').length, 2, '貯金のグラフの線が2本');
-        ok(d.getElementById('stage2b-body').textContent.indexOf('10年で約') > 0,
-          '10年でいくら差がつくかが数字で出る');
+        ok(d.querySelector('#stage2b-body a[href="#stage1"]') !== null,
+          '差の中身（制度の一覧）へ行くリンクがある');
+        ok(d.getElementById('stage2b-body').textContent.indexOf('学校にかかるお金') > 0,
+          '学校にかかるお金の説明が出る');
+        ok(d.getElementById('stage2b-body').textContent.indexOf('すべて全国の平均値です') > 0,
+          '平均値であることが画面に書いてある');
+        ok(d.querySelector('#stage2b-body a[href*="mext.go.jp"]') !== null, '文部科学省の出典リンクがある');
+        ok(d.querySelector('#stage2b-body a[href*="jasso.go.jp"]') !== null, '日本学生支援機構の出典リンクがある');
         ok(d.getElementById('stage2b-body').textContent.indexOf('生活防衛資金') > 0,
           '生活防衛資金の説明が出る');
         ok(d.getElementById('stage2b-body').textContent.indexOf('ここにとどくまで、投資のことは考えなくていいです') > 0,
           '帯の説明が、断言の形で書かれている');
-        ok(d.getElementById('stage2b-body').textContent.indexOf('とどくまで 約') > 0,
-          '帯にとどくまでの時期が数字で出る', d.getElementById('stage2b-body').textContent.slice(0, 200));
+        var 帯文 = d.getElementById('stage2b-body').textContent;
+        ok(帯文.indexOf('とどくまで 約') > 0 || 帯文.indexOf('帯（') > 0 || 帯文.indexOf('すでに貯まっています') > 0,
+          '帯にとどくまでの時期、または もう貯まっていることが出る', 帯文.slice(0, 160));
         ok(d.querySelector('#stage2b-body .stance') !== null,
           '3〜6か月分という幅が、私たちの立場の表明として分けて書かれている');
         ok(d.querySelector('#stage2b-body a[href*="fsa.go.jp"]') !== null, '金融庁の出典リンクがある');
         ok(d.querySelector('#stage2b-body a[href*="shiruporuto.jp"]') !== null, '金融広報中央委員会の出典リンクがある');
+
+        /* すでに使っている制度は「利用中」と出る */
+        eq(d.querySelectorAll('#used-programs input.used-prog').length, 9, 'すでに使っている制度を申告する欄が9つある');
+        var 利用中 = d.querySelectorAll('#stage1-body .prog.used');
+        eq(利用中.length, 3, '見本2は3件を利用中と申告しているので、3枚が利用中の表示になる', 利用中.length);
+        ok(利用中[0].querySelector('.badge.used').textContent.indexOf('利用中') > 0, '利用中のしるしが出ている');
+        ok(d.getElementById('stage1-summary').textContent.indexOf('すでに3件を使っている') >= 0,
+          'まとめにも、すでに使っている件数が出る', d.getElementById('stage1-summary').textContent);
+
+        /* 進路プラン: 私立にすると、その場でグラフが変わる */
+        var 進路 = d.querySelectorAll('.plan-select');
+        ok(進路.length >= 2, 'お子さんの進路を選ぶ欄がある', 進路.length);
+        var 高校 = d.querySelector('.plan-select[data-stage="high"]');
+        eq(高校.value, 'private', '見本2は私立の高校を選んでいる');
+        ok(d.getElementById('stage2b-body').textContent.indexOf('全部公立（大学は国立で自宅から通う）を選んだ場合との差は、累計で約') > 0,
+          '公立との差が、累計いくらかで出る');
+        var 前の文 = d.getElementById('stage2b-body').textContent;
+        高校.value = 'public';
+        高校.dispatchEvent(new w.Event('change'));
+        ok(d.getElementById('stage2b-body').textContent !== 前の文, '進路を変えると、その場でグラフが描き直される');
+        高校.value = 'private';
+        高校.dispatchEvent(new w.Event('change'));
 
         /* まずやること（チェックリスト） */
         var todo = d.querySelectorAll('#stage3-body .checklist:not(.danger-list) li');

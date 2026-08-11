@@ -16,6 +16,86 @@
   "version": "1.0.0",
   "generated": "2026-08-11",
   "note": "全国共通の制度だけを収めています。お住まいの市区町村だけの制度は入っていません。",
+  "tuition": {
+    "note": "学校にかかるお金の、1年ぶんの目安です。すべて全国の平均値です。実際にかかる額は、地域や学校、習いごとの有無で大きく変わります。",
+    "note_average": "ここに出している金額は、すべて平均値です。まん中の人の金額（中央値）ではありません。塾や習いごとにたくさんかける家庭が平均を押し上げるため、多くの家庭の実感より高めに出ます。",
+    "note_kindergarten": "幼稚園・保育所・認定こども園は、3歳から5歳のクラスの利用料が無償になっているため、このツールでは0円として計算しています（0歳から2歳は住民税非課税世帯が対象）。ただし、給食の食材料費・通園送迎費・行事費は別にかかります。",
+    "note_high_school": "高校の金額は、授業料をふくむ平均です。高等学校等就学支援金（公立で年118,800円、私立で年457,200円まで）が授業料にあてられるので、実際の負担はこの金額より軽くなります。申請しないと受け取れません。",
+    "note_university": "大学の金額は、自宅から通う場合は「学費」だけ、ひとり暮らしの場合は「学費と生活費の合計」です。自宅から通う場合の食費などは、毎月の生活費のほうに入っているとみなして、二重に数えないようにしています。入学した年には、入学料も足しています。",
+    "bands": [
+      {
+        "stage": "elementary", "label": "小学校", "from": 6, "to": 11,
+        "default": "public", "baseline": "public",
+        "costs": { "public": 366599, "private": 1741516 },
+        "choices": [
+          { "value": "public", "label": "公立の小学校", "yearly": 366599 },
+          { "value": "private", "label": "私立の小学校", "yearly": 1741516 }
+        ]
+      },
+      {
+        "stage": "junior", "label": "中学校", "from": 12, "to": 14,
+        "default": "public", "baseline": "public",
+        "costs": { "public": 542450, "private": 1560359 },
+        "choices": [
+          { "value": "public", "label": "公立の中学校", "yearly": 542450 },
+          { "value": "private", "label": "私立の中学校", "yearly": 1560359 }
+        ]
+      },
+      {
+        "stage": "high", "label": "高校", "from": 15, "to": 17,
+        "default": "public", "baseline": "public",
+        "costs": { "public": 596954, "private": 1179261 },
+        "choices": [
+          { "value": "public", "label": "公立の高校", "yearly": 596954 },
+          { "value": "private", "label": "私立の高校", "yearly": 1179261 }
+        ]
+      },
+      {
+        "stage": "university", "label": "大学", "from": 18, "to": 21,
+        "default": "national_home", "baseline": "national_home",
+        "costs": {
+          "none": 0,
+          "national_home": 639200, "national_away": 1800700,
+          "private_home": 1399100, "private_away": 2689100
+        },
+        "entrance": { "none": 0, "national_home": 282000, "national_away": 282000, "private_home": 240365, "private_away": 240365 },
+        "choices": [
+          { "value": "national_home", "label": "国立・自宅から通う", "yearly": 639200 },
+          { "value": "national_away", "label": "国立・ひとり暮らし", "yearly": 1800700 },
+          { "value": "private_home", "label": "私立・自宅から通う", "yearly": 1399100 },
+          { "value": "private_away", "label": "私立・ひとり暮らし", "yearly": 2689100 },
+          { "value": "none", "label": "大学には進まない", "yearly": 0 }
+        ]
+      }
+    ],
+    "source_school": {
+      "law": "文部科学省「令和5年度 子供の学習費調査」の学習費総額（学校教育費・学校給食費・学校外活動費の合計）の平均値。令和6年12月25日公表、令和8年1月16日の訂正版",
+      "url": "https://www.mext.go.jp/b_menu/toukei/chousa03/gakushuuhi/kekka/k_detail/mext_00002.html",
+      "url_detail": "https://www.mext.go.jp/content/20260116-mxt_chousa01-000039333_3.pdf",
+      "publisher": "文部科学省",
+      "last_verified": "2026-08-11"
+    },
+    "source_university": {
+      "law": "日本学生支援機構「令和6年度 学生生活調査」（令和8年3月31日公表）。自宅から通う場合は設置者別の「学費」、ひとり暮らしの場合は設置者別×居住形態別の「学生生活費」",
+      "url": "https://www.jasso.go.jp/statistics/gakusei_chosa/2024.html",
+      "url_detail": "https://www.jasso.go.jp/statistics/gakusei_chosa/__icsFiles/afieldfile/2026/03/25/data24_1_3.pdf",
+      "publisher": "日本学生支援機構",
+      "last_verified": "2026-08-11"
+    },
+    "source_entrance": {
+      "law": "国立は「国立大学等の授業料その他の費用に関する省令」の標準額282,000円。私立は文部科学省「私立大学等の令和7年度入学者に係る学生納付金等調査結果」（令和7年12月26日公表）の入学料の平均額240,365円",
+      "url": "https://www.mext.go.jp/a_menu/koutou/shinkou/07021403/1412031_00006.htm",
+      "url_detail": "https://www.mext.go.jp/content/20251226-mxt_sigakujo-000046463_1.pdf",
+      "publisher": "文部科学省",
+      "last_verified": "2026-08-11"
+    },
+    "source_free_preschool": {
+      "law": "子ども・子育て支援法（幼児教育・保育の無償化。令和元年10月1日施行）",
+      "url": "https://www.cfa.go.jp/policies/kokoseido/mushouka/gaiyou/",
+      "publisher": "こども家庭庁",
+      "last_verified": "2026-08-11"
+    }
+  },
   "tables": {
     "simulate_until_youngest_age": 22,
     "parent_support_end_age_default": 75,

@@ -69,6 +69,56 @@
     return out;
   }
 
+  /* ---------- すでに使っている制度 ---------- */
+  var 申告できる制度 = ['jido_fuyo_teate', 'jido_teate', 'hitorioya_kojo',
+    'shugaku_enjo', 'koukou_shugaku_shienkin', 'koutou_kyoiku_shugaku_shien',
+    'kokuho_gengaku', 'nenkin_menjo', 'jukyo_kakuho_kyufukin'];
+
+  function 使っている制度欄を作る() {
+    $('used-programs').innerHTML = 申告できる制度.map(function (id) {
+      var p = データ.programs_by_id[id];
+      if (!p) { return ''; }
+      return '<label><input type="checkbox" class="used-prog" value="' + esc(id) + '">' + esc(p.name.replace(/（.*$/, '')) + '</label>';
+    }).join('');
+  }
+  function 使っている制度() {
+    return [].map.call(document.querySelectorAll('.used-prog:checked'), function (el) { return el.value; });
+  }
+
+  /* ---------- 進路プラン ---------- */
+  function 進路欄を作る(年齢たち) {
+    var 帯 = (データ.tuition && データ.tuition.bands) || [];
+    var box = $('plan-box');
+    if (!年齢たち.length) { box.innerHTML = '<p class="hint">お子さんの年齢を入れると、ここに進路の欄が出ます。</p>'; return; }
+    box.innerHTML = 年齢たち.map(function (age, i) {
+      var 行 = 帯.map(function (b) {
+        if (age > b.to) { return ''; }   // もう通り過ぎた段階は聞かない
+        var opts = b.choices.map(function (c) {
+          return '<option value="' + esc(c.value) + '"' + (c.value === b.default ? ' selected' : '') + '>' +
+            esc(c.label) + '（年 ' + Math.round(c.yearly / 10000) + '万円）</option>';
+        }).join('');
+        return '<div class="plan-row"><span class="plan-label">' + esc(b.label) + '</span>' +
+          '<select class="plan-select" data-child="' + i + '" data-stage="' + esc(b.stage) + '">' + opts + '</select></div>';
+      }).join('');
+      return '<div class="plan-child"><p class="plan-head">' + (i + 1) + '人目（' + age + '歳）</p>' +
+        (行 || '<p class="hint">学校にかかるお金の計算は、ここでは出ません。</p>') + '</div>';
+    }).join('');
+    document.querySelectorAll('.plan-select').forEach(function (el) {
+      el.addEventListener('change', function () {
+        if (最新入力) { 最新入力.plans = 進路プラン(); 資産を描く(); }
+      });
+    });
+  }
+  function 進路プラン() {
+    var out = [];
+    document.querySelectorAll('.plan-select').forEach(function (el) {
+      var i = parseInt(el.getAttribute('data-child'), 10);
+      if (!out[i]) { out[i] = {}; }
+      out[i][el.getAttribute('data-stage')] = el.value;
+    });
+    return out;
+  }
+
   /* ---------- 入力をまとめて取り出す ---------- */
   function 入力を読む() {
     var 子 = 子どもの年齢たち();
@@ -82,6 +132,9 @@
       area: $('area').value.trim(),
       housingType: 選択('housing-type'),
       livingCost: 数('living-cost'),
+      currentSavings: 数('current-savings'),
+      usedPrograms: 使っている制度(),
+      plans: 進路プラン(),
       housingNow: 数('housing-now'),
       housingAfter: (選択('status') === 'single') ? 数('housing-now') : 数('housing-after'),
       childSupportState: 選択('cs-state'),
@@ -108,6 +161,17 @@
     var ht = document.querySelector('input[name="housing-type"][value="' + i.housingType + '"]');
     if (ht) { ht.checked = true; }
     $('living-cost').value = i.livingCost;
+    $('current-savings').value = i.currentSavings || 0;
+    document.querySelectorAll('.used-prog').forEach(function (el) {
+      el.checked = (i.usedPrograms || []).indexOf(el.value) >= 0;
+    });
+    進路欄を作る(i.children);
+    (i.plans || []).forEach(function (pl, idx) {
+      Object.keys(pl).forEach(function (st) {
+        var el = document.querySelector('.plan-select[data-child="' + idx + '"][data-stage="' + st + '"]');
+        if (el) { el.value = pl[st]; }
+      });
+    });
     $('housing-now').value = i.housingNow;
     $('housing-after').value = i.housingAfter;
     var cs = document.querySelector('input[name="cs-state"][value="' + i.childSupportState + '"]');
@@ -141,6 +205,8 @@
 
   /* ---------- Stage 1 制度チェック ---------- */
   function 制度を描く(判定) {
+    var 使用中 = {};
+    (最新入力.usedPrograms || []).forEach(function (id) { 使用中[id] = true; });
     var 順 = { likely: 0, check: 1, unlikely: 2 };
     var 並び = 判定.results.slice().sort(function (a, b) { return 順[a.status] - 順[b.status]; });
     var ラベル名 = { likely: '対象の可能性が高い', check: '窓口で確認したいもの', unlikely: '対象外の見込み' };
@@ -152,8 +218,10 @@
       }
       var p = r.program;
       出力.push(
-        '<div class="prog ' + r.status + '" id="prog-' + esc(p.id) + '">' +
-        '<h4>' + esc(p.name) + ' <span class="badge ' + r.status + '">' + esc(r.label) + '</span></h4>' +
+        '<div class="prog ' + (使用中[p.id] ? 'used' : r.status) + '" id="prog-' + esc(p.id) + '">' +
+        '<h4>' + esc(p.name) +
+        (使用中[p.id] ? ' <span class="badge used">✓ 利用中</span>'
+                      : ' <span class="badge ' + r.status + '">' + esc(r.label) + '</span>') + '</h4>' +
         '<p>' + esc(p.summary) + '</p>' +
         (r.amountText ? '<p class="amount">' + esc(r.amountText) + '</p>' : '') +
         (r.status !== 'unlikely' ? '<p>' + esc(p.benefit_summary) + '</p>' : '') +
@@ -167,10 +235,12 @@
       );
     });
     $('stage1-body').innerHTML = 出力.join('');
-    var 該当 = 判定.results.filter(function (r) { return r.status === 'likely'; }).length;
-    var 要確認 = 判定.results.filter(function (r) { return r.status === 'check'; }).length;
+    var 該当 = 判定.results.filter(function (r) { return r.status === 'likely' && !使用中[r.program.id]; }).length;
+    var 要確認 = 判定.results.filter(function (r) { return r.status === 'check' && !使用中[r.program.id]; }).length;
+    var 利用中 = 判定.results.filter(function (r) { return 使用中[r.program.id]; }).length;
     $('stage1-summary').innerHTML =
-      '入力の内容から、<strong>' + 該当 + '件</strong>が対象になりそうです。あわせて<strong>' + 要確認 + '件</strong>は、' +
+      (利用中 ? 'すでに<strong>' + 利用中 + '件</strong>を使っていると答えていただきました。そのうえで、' : '') +
+      'まだ使っていないもののうち<strong>' + 該当 + '件</strong>が対象になりそうです。あわせて<strong>' + 要確認 + '件</strong>は、' +
       'お住まいの市区町村によってあつかいが違うため、窓口での確認が必要です。';
   }
 
@@ -251,51 +321,124 @@
   /* ---------- 貯金のたまり方（資産カーブ） ---------- */
   function 資産を描く() {
     var 入力 = 最新入力;
-    if (!入力.children.length) { return; }
+    if (!入力 || !入力.children.length) { return; }
     if (!入力.livingCost) {
       $('stage2b-body').innerHTML = '<p class="hint">「毎月の生活費」を入れると、貯金のたまり方のグラフが出ます。' +
-        '住居費をのぞいた、食費・光熱費・通信費・日用品などの合計のめやすで大丈夫です。</p>';
+        '食費・光熱費・通信費・日用品などの合計のめやすで大丈夫です（家賃と学校のお金はのぞきます）。</p>';
       return;
     }
     最新資産 = SPS.資産カーブ(入力, データ);
     var c = 最新資産;
 
-    /* 見出しの1行（結論を先に） */
-    var 頭;
-    if (c.monthlyBalance >= 0) {
-      頭 = '<p><strong>いまの入力だと、ひと月に約' + SPS.円(c.monthlyBalance) + ' 残る計算です。</strong></p>';
+    var 頭 = (c.monthlyBalance >= 0)
+      ? '<p><strong>使える制度を全部使うと、ひと月に約' + SPS.円(c.monthlyBalance) + ' 残る計算です。</strong></p>'
+      : '<p><strong>使える制度を全部使っても、ひと月に約' + SPS.円(-c.monthlyBalance) + ' 足りません。</strong></p>';
+
+    /* いちばん見せたい数字: まだ使っていない制度でいくら変わるか */
+    var 伸びしろ = '';
+    if (c.gaps.length) {
+      var 名 = c.gaps.map(function (g) { return データ.programs_by_id[g.id].name.replace(/（.*$/, ''); }).join('・');
+      伸びしろ = '<div class="headline-box">' +
+        '<p class="big">まだ使っていない制度で、<strong>10年で約' +
+        Math.round(c.diffAtTenYears / 10000).toLocaleString('ja-JP') + '万円</strong>変わります</p>' +
+        '<p>いま申告されていないのは <strong>' + esc(名) + '</strong> です。' +
+        'ひと月あたり約' + SPS.円(c.gapMonthly) + '。いちばん下のお子さんが22歳になるまでだと、約' +
+        Math.round(c.finalDiff / 10000).toLocaleString('ja-JP') + '万円の差です。</p>' +
+        '<p><a href="#stage1" class="jump-big">この差の中身を見る（使えるかもしれない制度の一覧へ）</a></p>' +
+        '</div>';
     } else {
-      頭 = '<p><strong>いまの入力だと、ひと月に約' + SPS.円(-c.monthlyBalance) + ' 足りません。</strong></p>';
+      伸びしろ = '<div class="headline-box ok">' +
+        '<p class="big">使えるお金の取りこぼしは、見あたりません</p>' +
+        '<p>このツールが自動で判定できる制度は、すでに使えているようです。' +
+        'あとは市区町村ごとの制度が残っています。' +
+        '<a href="#stage1">確認したい制度の一覧を見る</a></p></div>';
     }
 
-    var 到達 = (c.reachMonths !== null)
-      ? '<p>いまのペースだと、生活防衛資金（' + SPS.円(c.safetyMin) + '）にとどくまで <strong>約' +
-        SPS.年月表示(c.reachMonths) + '</strong> です。</p>'
-      : '<p>いまのペースでは、生活防衛資金（' + SPS.円(c.safetyMin) + '）にとどきません。' +
-        '下の「まずやること」を1つずつ進めて、入る額をふやすことから始めてください。</p>';
-
-    var 差 = '<p><strong>制度を申請するかどうかで、10年で約' +
-      Math.round(c.diffAtTenYears / 10000).toLocaleString('ja-JP') + '万円の差</strong>がつきます。' +
-      'いちばん下のお子さんが22歳になるまでだと、約' +
-      Math.round(c.finalDiff / 10000).toLocaleString('ja-JP') + '万円の差です。</p>';
-
-    var 赤字 = c.goesNegative
-      ? '<div class="pit red"><h4>🔴 このままだと、貯金がマイナスになります</h4>' +
-        '<p>グラフの線が0円より下に行くところがあります。借金をしないと暮らせない、ということです。</p>' +
-        '<p>すぐにできることが3つあります。' +
-        '<a href="#stage3">「まずやること」を上から進める</a>／' +
-        '生活費の内訳を書き出して、減らせるものを探す／' +
-        'お住まいの地域の自立相談支援機関に相談する（' +
-        '<a href="https://minna-tunagaru.jp/ichiran/" target="_blank" rel="noopener">全国の窓口一覧</a>）。</p>' +
-        '<p>ひとりで抱えないでください。滞納してからより、いまのほうが選べる手が多いです。</p></div>'
-      : '';
+    var 到達;
+    if (c.alreadyAboveSafety) {
+      到達 = '<div class="notice"><h4>生活防衛資金は、すでに貯まっています</h4>' +
+        '<p style="margin:.3rem 0">いまの貯金が、生活費の6か月分（' + SPS.円(c.safetyMax) + '）をこえています。' +
+        '<strong>ここまで来た方は、次の段階を考えはじめてもよい段階です。</strong></p>' +
+        '<p style="margin:.3rem 0">ただし、動かす前に学費の山を見てください。下のグラフで、線が帯より下に落ちる年がないかを確かめてください。' +
+        '落ちるなら、そのお金は置いておくほうが安全です。</p>' +
+        '<p style="margin:.3rem 0"><a href="#stage4">下の「2. お金の守り方の相談」の文章を、AIに聞いてみる</a></p></div>';
+    } else if (c.alreadyReachedSafety) {
+      到達 = '<p>いまの貯金は、生活防衛資金の帯（' + SPS.円(c.safetyMin) + 'から' + SPS.円(c.safetyMax) +
+        '）の中に入っています。<strong>まずは帯の上のほう（' + SPS.円(c.safetyMax) + '）を目指してください。</strong></p>';
+    } else if (c.reachMonths !== null) {
+      到達 = '<p>いまのペースだと、生活防衛資金（' + SPS.円(c.safetyMin) + '）にとどくまで <strong>約' +
+        SPS.年月表示(c.reachMonths) + '</strong> です。</p>';
+    } else {
+      到達 = '<p>いまのペースでは、生活防衛資金（' + SPS.円(c.safetyMin) + '）にとどきません。' +
+        '下の制度の一覧と「まずやること」を1つずつ進めて、入る額をふやすことから始めてください。</p>';
+    }
 
     $('stage2b-body').innerHTML =
-      頭 + 差 + 到達 + 防衛資金の説明() + SPSChart.資産の凡例() +
+      伸びしろ + 頭 + 到達 + 防衛資金の説明() + SPSChart.資産の凡例() +
       '<div class="chart-box">' + SPSChart.資産を描く(c) + '</div>' +
-      '<p class="hint">貯金は0円から始まるものとして計算しています。いま持っているお金は聞いていないので、' +
-      '「これからどう増えていくか（減っていくか）」の形だけを見てください。</p>' +
-      赤字;
+      学費の説明(c) +
+      '<p class="hint">' + (c.startSavings > 0
+        ? '「いまの貯金」' + SPS.円(c.startSavings) + ' を出発点にしています。'
+        : 'いまの貯金を入れていないので、0円から始まるものとして描いています。') +
+      '年収は変わらないものとして計算しています。</p>' +
+      赤字の警告(c);
+  }
+
+  /* ---------- 学校にかかるお金 ---------- */
+  function 学費の説明(c) {
+    var t = データ.tuition;
+    if (!t) { return ''; }
+    var h = ['<div class="panel tight">'];
+    h.push('<h3 style="margin-top:0">学校にかかるお金</h3>');
+    h.push('<p>いまの進路の見込みだと、これから <strong>合計およそ ' +
+      Math.round(c.tuitionTotal / 10000).toLocaleString('ja-JP') + '万円</strong> かかる計算です。</p>');
+    if (c.tuitionExtra > 0) {
+      h.push('<p><strong>全部公立（大学は国立で自宅から通う）を選んだ場合との差は、累計で約' +
+        Math.round(c.tuitionExtra / 10000).toLocaleString('ja-JP') + '万円です。</strong>' +
+        '上の入力欄の「お子さんの進路の見込み」を変えると、グラフがその場で変わります。</p>');
+    } else {
+      h.push('<p class="hint">上の入力欄の「お子さんの進路の見込み」を変えると、グラフがその場で変わります。私立を選ぶと、どれだけ変わるかが見られます。</p>');
+    }
+    h.push('<p class="hint"><strong>ここの金額は、すべて全国の平均値です。</strong>まん中の人の金額ではありません。' +
+      '塾や習いごとにたくさんかける家庭が平均を押し上げるので、多くの家庭の実感より高めに出ます。</p>');
+    h.push('<p class="hint">' + esc(t.note_high_school) + '</p>');
+    h.push('<p class="hint">' + esc(t.note_kindergarten) + '</p>');
+    h.push('<p class="hint">' + esc(t.note_university) + '</p>');
+    h.push('<p class="src">出典: ' +
+      '<a href="' + esc(t.source_school.url) + '" target="_blank" rel="noopener">文部科学省「子供の学習費調査」</a>（' +
+      日付表示(t.source_school.last_verified) + '確認）／' +
+      '<a href="' + esc(t.source_university.url) + '" target="_blank" rel="noopener">日本学生支援機構「学生生活調査」</a>／' +
+      '<a href="' + esc(t.source_entrance.url) + '" target="_blank" rel="noopener">文部科学省「私立大学等の学生納付金等調査」</a>／' +
+      '<a href="' + esc(t.source_free_preschool.url) + '" target="_blank" rel="noopener">こども家庭庁「幼児教育・保育の無償化」</a></p>');
+    h.push('</div>');
+    return h.join('');
+  }
+
+  function 赤字の警告(c) {
+    var h = '';
+    if (c.goesNegative) {
+      h += '<div class="pit red"><h4>🔴 このままだと、貯金がマイナスになります</h4>' +
+        '<p>グラフの線が0円より下に行くところがあります。借金をしないと暮らせない、ということです。</p>' +
+        '<p>できることが3つあります。' +
+        '<a href="#stage1">使えていない制度を申請する</a>／' +
+        '生活費や進路の見込みを見直す／' +
+        'お住まいの地域の自立相談支援機関に相談する（' +
+        '<a href="https://minna-tunagaru.jp/ichiran/" target="_blank" rel="noopener">全国の窓口一覧</a>）。</p>' +
+        '<p>ひとりで抱えないでください。滞納してからより、いまのほうが選べる手が多いです。</p></div>';
+    }
+    if (c.universityDeficit) {
+      var 修学 = データ.programs_by_id.koutou_kyoiku_shugaku_shien;
+      h += '<div class="pit red"><h4>🔴 大学に通う時期に、お金が足りなくなります</h4>' +
+        '<p>いちばん下のお子さんが' + c.universityDeficit.youngestAge + '歳のころ、貯金が0円を下回る計算です。</p>' +
+        '<p><strong>進学を決める前に、必ず「' + esc(修学.name) + '」を確認してください。</strong>' +
+        '住民税が非課税の世帯なら、私立・自宅外で返さなくてよい奨学金が年91万円、あわせて授業料が年70万円まで免除されます。' +
+        'ひとり親家庭は満額の対象になることが多い制度です。</p>' +
+        '<p><a href="#prog-koutou_kyoiku_shugaku_shien">この制度のくわしい説明を見る</a>／' +
+        '<a href="' + esc(修学.source.url) + '" target="_blank" rel="noopener">文部科学省のページを開く</a></p>' +
+        '<p class="hint">このグラフの学費には、この制度による減額を入れていません。使えれば、線はこれより上がります。</p>' +
+        '</div>';
+    }
+    return h;
   }
 
   function 防衛資金の説明() {
@@ -602,7 +745,11 @@
       子ども欄を作る(1, [null]);
       $('child-count').addEventListener('change', function () {
         子ども欄を作る(parseInt(this.value, 10) || 0, 子どもの年齢たち());
+        進路欄を作る(子どもの年齢たち());
       });
+      $('children-box').addEventListener('change', function () { 進路欄を作る(子どもの年齢たち()); });
+      使っている制度欄を作る();
+      進路欄を作る([]);
       document.querySelectorAll('input[name="status"]').forEach(function (r) {
         r.addEventListener('change', 婚姻状態を反映);
       });
