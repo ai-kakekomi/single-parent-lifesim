@@ -328,6 +328,35 @@ server.listen(0, '127.0.0.1', function () {
           d.querySelector('#stage2b-body button[data-scenario="all"]').click();
         }());
 
+        /* 子どもごとの内訳（お子さんが2人以上のとき） */
+        (function () {
+          var 年欄2 = d.getElementById('balance-year');
+          年欄2.value = String(Math.min(3, Number(年欄2.max)));
+          年欄2.dispatchEvent(new w.Event('input', { bubbles: true }));
+          var 子行 = d.querySelectorAll('#stage2b-body table.balance tr.child-row');
+          if (子行.length) {
+            ok(true, 'お子さんごとの内訳が出ている（' + 子行.length + '行）');
+            var 文2 = 子行[0].textContent;
+            ok(/上のお子さん|下のお子さん|上から\d人目|お子さん/.test(文2),
+              '内訳に、どの子かの呼び名が入っている', 文2.slice(0, 30));
+            ok(/\d+歳/.test(文2), '内訳に年齢が入っている');
+            ok(/公立|私立|国立|保育園/.test(文2), '内訳に学校の種類が入っている', 文2.slice(0, 40));
+            /* 内訳の合計が、その行の小計と合っている */
+            function 円を数に2(t) { var m = /([\d,]+)円/.exec(t); return m ? Number(m[1].replace(/,/g, '')) : null; }
+            var 行たち2 = [].slice.call(d.querySelectorAll('#stage2b-body table.balance tr'));
+            行たち2.forEach(function (tr, idx) {
+              if (tr.className.indexOf('has-children') < 0) { return; }
+              var 小計 = 円を数に2(tr.cells[1].textContent);
+              var 和 = 0, k = idx + 1;
+              while (k < 行たち2.length && 行たち2[k].className.indexOf('child-row') >= 0) {
+                和 += 円を数に2(行たち2[k].cells[1].textContent) || 0;
+                k++;
+              }
+              eq(和, 小計, '子どもごとの内訳の合計が、その行の小計と一致する（画面上）');
+            });
+          }
+        }());
+
         /* 0円の項目には理由が出る */
         ok(d.querySelector('#stage2b-body table.balance .why') !== null,
           '0円の項目や増えた項目に、理由が書いてある');
@@ -356,7 +385,7 @@ server.listen(0, '127.0.0.1', function () {
         ok(!d.getElementById('training-on').checked, '記入例を入れても、資格ルートは切れたまま');
         eq(d.getElementById('training-box').style.display, 'none', '資格ルートの設定も、はじめは出さない');
         eq(d.querySelectorAll('#stage2b-body svg path[stroke-linejoin]').length, 2,
-          'はじめのグラフは2本（いまのまま・全部使う）だけ');
+          'はじめのグラフは2本（いまのまま・制度活用）だけ');
 
         /* 資格ルート: 働き方の3択 */
         eq(d.querySelectorAll('input[name="training-work"]').length, 4,
@@ -535,14 +564,14 @@ server.listen(0, '127.0.0.1', function () {
             'このままの前提では成り立たない領域を、描いていないと明記している');
           ok(d.querySelector('#stage2b-body svg [fill="url(#hatch)"]') !== null,
             'グラフに網かけが出ている');
-          /* 2段の言い分け（いまのまま／制度を全部使った場合） */
+          /* 2段の言い分け（いまのまま／制度活用） */
           var 頭2 = カード.querySelector('.alert-head').textContent;
           var 体2 = カード.querySelector('.alert-body').textContent;
           ok(頭2.indexOf('いまのままだと') >= 0 || 頭2.indexOf('毎月あと') >= 0,
             'カードの見出しが「いまのまま」か「毎月の不足」から始まる', 頭2);
           if (頭2.indexOf('いまのままだと') >= 0) {
-            ok(体2.indexOf('使える制度を全部使え') >= 0 || 体2.indexOf('使える制度を全部使うと') >= 0,
-              '制度を全部使った場合との違いが、2段目で語られる', 体2.slice(0, 100));
+            ok(体2.indexOf('制度を活用すれ') >= 0 || 体2.indexOf('制度を活用すると') >= 0,
+              '制度活用との違いが、2段目で語られる', 体2.slice(0, 100));
           }
 
           /* 印と、カードの文言が同じ年を指していること */

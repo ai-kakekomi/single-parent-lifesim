@@ -313,12 +313,12 @@ eq(資産F.points[0].monthlyNow,
 ok(資産F.gaps.length === 3, 'まだ使っていない制度が3つ見つかる', JSON.stringify(資産F.gaps));
 /* 学費を助ける制度も「利用中」に入れないと、2本の線は重ならない
    （修学支援新制度と奨学給付金は自分で申し込むものなので） */
-var 全部使用中 = SPS.資産カーブ(Object.assign({}, 入力F,
+var すべて利用中 = SPS.資産カーブ(Object.assign({}, 入力F,
   { usedPrograms: ['jido_fuyo_teate', 'jido_teate', 'hitorioya_kojo',
     'koukou_shugaku_shienkin', 'koutou_kyoiku_shugaku_shien'] }), データ);
-eq(全部使用中.gaps.length, 0, '全部使っていると答えれば、伸びしろはゼロ');
-eq(全部使用中.finalDiff, 0, '全部使っていれば、2本の線は重なる');
-eq(全部使用中.points[0].monthlyNow, 全部使用中.points[0].monthlyAll, 'ひと月の残りも同じになる');
+eq(すべて利用中.gaps.length, 0, 'すべて利用中と答えれば、伸びしろはゼロ');
+eq(すべて利用中.finalDiff, 0, 'すべて利用中なら、2本の線は重なる');
+eq(すべて利用中.points[0].monthlyNow, すべて利用中.points[0].monthlyAll, 'ひと月の残りも同じになる');
 var 一部使用中 = SPS.資産カーブ(Object.assign({}, 入力F, { usedPrograms: ['jido_teate'] }), データ);
 eq(一部使用中.gaps.length, 2, '児童手当だけ使っていれば、残りは2つ');
 eq(一部使用中.points[0].monthlyNow - 資産F.points[0].monthlyNow,
@@ -499,7 +499,7 @@ ok(SPS.資産カーブ(Object.assign({}, 訓入力, { training: null }), デー�
 /* グラフに3本目の線が出る */
 var 訓svg = Chart.資産を描く(SPS.資産カーブ(訓入力, データ));
 ok((訓svg.match(/stroke-linejoin="round"/g) || []).length === 3,
-  '線が3本になる（いまのまま・全部使う・資格を取る）',
+  '線が3本になる（いまのまま・制度活用・資格を取る）',
   String((訓svg.match(/stroke-linejoin="round"/g) || []).length));
 ok(訓svg.indexOf('資格を取る') > 0, '3本目に名前が付いている');
 ok(訓svg.indexOf('学校に通う期間（2年）') > 0, '通っている期間が、帯のラベルとして示されている');
@@ -594,7 +594,7 @@ var 起点そろえ = SPS.資産カーブ(Object.assign({}, 入力F, {
   currentSavings: 200000,
   training: { enabled: true, years: 2, afterIncome: 3200000 }
 }), データ);
-eq(起点そろえ.points[0].all, 200000, '「使える制度を全部使った」線の起点が、入力した貯金額');
+eq(起点そろえ.points[0].all, 200000, '「制度活用」の線の起点が、入力した貯金額');
 eq(起点そろえ.points[0].now, 200000, '「いまのまま」の線の起点も、同じ額');
 eq(起点そろえ.training.points[0].all, 200000, '「資格を取るルート」の起点も、同じ額');
 eq(起点そろえ.training.points[0].youngestAge, 起点そろえ.points[0].youngestAge,
@@ -803,6 +803,33 @@ function 行を点検する(名前, b, 印) {
         行のずれ.push(名前 + ' ' + 印 + ' 保育料にマイナスの数字がある');
       }
     }
+
+    /* お子さんごとの内訳の合計が、その行の金額とぴったり合うこと */
+    if (r.children && r.children.length) {
+      var 子和 = 0, 子元和 = 0;
+      r.children.forEach(function (ch) {
+        子和 += ch.amount;
+        子元和 += (ch.gross || 0);
+        if (ch.gross != null && ch.support != null && ch.gross - ch.support !== ch.amount) {
+          行のずれ.push(名前 + ' ' + 印 + ' ' + r.key + ' の子ども別: ' +
+            ch.gross + ' − ' + ch.support + ' ≠ ' + ch.amount);
+        }
+        if (ch.gross != null && ch.discount != null && ch.gross - ch.discount !== ch.amount) {
+          行のずれ.push(名前 + ' ' + 印 + ' ' + r.key + ' の子ども別(軽減): ' +
+            ch.gross + ' − ' + ch.discount + ' ≠ ' + ch.amount);
+        }
+        if (!ch.stage) { 行のずれ.push(名前 + ' ' + 印 + ' ' + r.key + ' の子どもに学校の名前がない'); }
+        if (ch.index == null || ch.age == null) {
+          行のずれ.push(名前 + ' ' + 印 + ' ' + r.key + ' の子どもに何人目・年齢がない');
+        }
+      });
+      if (子和 !== r.amount) {
+        行のずれ.push(名前 + ' ' + 印 + ' ' + r.key + ' 子ども別の合計 ' + 子和 + ' ≠ 行の金額 ' + r.amount);
+      }
+      if (r.gross != null && 子元和 !== r.gross) {
+        行のずれ.push(名前 + ' ' + 印 + ' ' + r.key + ' もとの額の合計 ' + 子元和 + ' ≠ ' + r.gross);
+      }
+    }
   });
 }
 
@@ -835,10 +862,10 @@ var 混線c = SPS.資産カーブ(Object.assign({}, 入力F, { children: [18], m
 var 混線pt = 混線c.points[0];
 var 全部行 = 混線pt.breakdown.all.expense.filter(function (r) { return r.key === 'tuition'; })[0];
 var いま行 = 混線pt.breakdown.now.expense.filter(function (r) { return r.key === 'tuition'; })[0];
-ok(全部行.support > 0, '「全部使う」では、大学の支援が入っている', String(全部行.support));
+ok(全部行.support > 0, '「制度活用」では、大学の支援が入っている', String(全部行.support));
 eq(いま行.support, 0, '「いまのまま」では、申請していないので支援は0円');
 eq(いま行.amount, いま行.gross, '「いまのまま」の表示額は、もとの額と同じになる');
-ok(全部行.amount < いま行.amount, '「全部使う」のほうが、実際に払う額は少ない');
+ok(全部行.amount < いま行.amount, '「制度活用」のほうが、実際に払う額は少ない');
 eq(全部行.gross, いま行.gross, 'もとの額は、どちらの線でも同じ');
 
 /* ------------------------------------------------------------ */
@@ -1339,8 +1366,8 @@ eq(近い, 0, '番号の丸どうしが重なっていない');
 /* 貯金のたまり方のグラフ */
 var 資産svg = Chart.資産を描く(資産F);
 ok(資産svg.indexOf('<svg') === 0, '貯金のたまり方の絵ができる');
-ok((資産svg.match(/stroke-linejoin="round"/g) || []).length === 2, '線は2本（いまのまま・全部使う）');
-ok(資産svg.indexOf('全部使う') > 0 && 資産svg.indexOf('いまのまま') > 0, '線のはしに名前が直接書いてある');
+ok((資産svg.match(/stroke-linejoin="round"/g) || []).length === 2, '線は2本（いまのまま・制度活用）');
+ok(資産svg.indexOf('制度活用') > 0 && 資産svg.indexOf('いまのまま') > 0, '線のはしに名前が直接書いてある');
 ok(/生活防衛資金 \d+万円（生活費の半年分）/.test(資産svg), '生活防衛資金の線に、金額つきの説明が入っている');
 ok(資産svg.indexOf('#dff0e6') === -1, '帯（塗り）はもう使っていない');
 ok(/<path d="M[^"]+" fill="none" stroke="#1c7a4a" stroke-width="1.5"/.test(資産svg),
@@ -1452,9 +1479,9 @@ ok(一本svg.indexOf('いまのまま') === -1, '重なった線が2本あるよ
 ok(!Chart.一本にまとめるか(資産F), '取りこぼしが大きければ、2本のまま');
 var 二本svg = Chart.資産を描く(資産F);
 eq((二本svg.match(/stroke-linejoin="round"/g) || []).length, 2, '2本のときは2本描く');
-ok(/stroke-width="2.5"/.test(二本svg), '主役（全部使った場合）は太い');
+ok(/stroke-width="2.5"/.test(二本svg), '主役（制度活用）は太い');
 ok(/stroke-width="1.6"[^>]*opacity="0.8"/.test(二本svg), 'いまのままは細く薄い（階層をつける）');
-ok(二本svg.indexOf('いまのまま') > 0 && 二本svg.indexOf('全部使う') > 0, '2本それぞれに名前がつく');
+ok(二本svg.indexOf('いまのまま') > 0 && 二本svg.indexOf('制度活用') > 0, '2本それぞれに名前がつく');
 
 /* しきい目は、縦の目盛りはばの2% */
 function 作り物(差) {
@@ -1517,7 +1544,7 @@ var 印c = SPS.資産カーブ(Object.assign({}, 入力F,
   { myIncome: 1500000, livingCost: 95000, currentSavings: 80000, usedPrograms: [] }), データ);
 ok(印c.negativeFromMonthNow !== null, '「いまのまま」の線が底をつく月が計算されている');
 ok(印c.negativeFromMonthNow <= 印c.negativeFromMonth || 印c.negativeFromMonth === null,
-  '「いまのまま」のほうが、制度を全部使った場合より先に底をつく',
+  '「いまのまま」のほうが、制度活用より先に底をつく',
   印c.negativeFromMonthNow + ' / ' + 印c.negativeFromMonth);
 ok(印c.monthly[印c.negativeFromMonthNow].now < 0, 'その月の「いまのまま」の値は、たしかにマイナス');
 ok(印c.monthly[印c.negativeFromMonthNow - 1].now >= 0, 'そのひとつ前の月は、まだマイナスではない');

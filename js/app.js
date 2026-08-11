@@ -875,10 +875,10 @@
       var 入口 = (t && t.afterIncome > 0) ? ''
         : '<p class="quiet-cta"><button type="button" class="ghost" id="go-training">' +
           '収入を上げるルートも見てみる</button></p>';
-      return '<p><strong>使える制度を全部使うと、ひと月に約' + SPS.円(c.monthlyBalance) + ' 残る計算です。</strong></p>' + 入口;
+      return '<p><strong>制度を活用すると、ひと月に約' + SPS.円(c.monthlyBalance) + ' 残る計算です。</strong></p>' + 入口;
     }
 
-    /* 「いまのまま」と「制度を全部使った場合」を、2段で言い分ける。
+    /* 「いまのまま」と「制度活用」を、2段で言い分ける。
        グラフの印は「いまのまま」の線に打っているので、まずそちらを主語にする。 */
     var いま底 = 月を年齢で(c, c.negativeFromMonthNow);
     var 全部底 = 月を年齢で(c, c.negativeFromMonth);
@@ -886,17 +886,17 @@
 
     if (c.monthlyBalance < 0) {
       見出し = 'いま、毎月あと ' + SPS.円(-c.monthlyBalance) + ' 足りない状態です';
-      説明 = '<strong>使える制度を全部使ったとしても、足りません。</strong>' +
+      説明 = '<strong>制度を活用しても、足りません。</strong>' +
         (全部底 ? 'このままだと、いちばん下のお子さんが' + 全部底 + 'に貯金が底をつきます。' : '') +
         'ただし、ここからできることがあります。';
     } else if (c.goesNegativeNow && !c.goesNegative) {
       見出し = 'いまのままだと、いちばん下のお子さんが' + いま底 + 'に貯金が底をつきます';
-      説明 = '<strong>でも、使える制度を全部使えば、底をつきません。</strong>' +
+      説明 = '<strong>でも、制度を活用すれば、底をつきません。</strong>' +
         'グラフのひし形の印が、いまのままの線が0円を割るところです。' +
         'まだ申請していない制度を出すだけで、この危機はなくなります。';
     } else if (c.goesNegativeNow && c.goesNegative) {
       見出し = 'いまのままだと、いちばん下のお子さんが' + いま底 + 'に貯金が底をつきます';
-      説明 = '使える制度を全部使うと' +
+      説明 = '制度を活用すると' +
         (全部底 ? '、' + 全部底 + 'まで延びます' : '、底をつかなくなります') +
         '。それでも足りない分は、下の手で埋めていきます。';
     } else {
@@ -1004,7 +1004,7 @@
   function 線の本数の注記(c) {
     if (!SPSChart.一本にまとめるか(c)) { return ''; }
     if (c.gaps.length) {
-      return '<p class="hint">「いまのまま」と「使える制度を全部使った場合」の差がごくわずかなので、' +
+      return '<p class="hint">「いまのまま」と「制度活用」の差がごくわずかなので、' +
         '線は1本にしています。</p>';
     }
     return '<p class="hint"><strong>制度はすでに使いきっています。線は1本です。</strong>' +
@@ -1016,7 +1016,19 @@
    *   グラフの「なぜこの年に落ちるのか」を、その年の月ごとの収支で確かめる。
    * ============================================================ */
   var 選んだ年 = 0;
-  var 選んだ線 = 'all';   // 'all' 全部使う ／ 'now' いまのまま ／ 'training' 資格ルート
+  var 選んだ線 = 'all';   // 'all' 制度活用 ／ 'now' いまのまま ／ 'training' 資格ルート
+
+  /** お子さんの呼び名（上のお子さん・下のお子さん・上から◯人目） */
+  function 子の呼び名(index, 年齢たち) {
+    var n = (年齢たち || []).length;
+    if (n <= 1) { return 'お子さん'; }
+    var 順 = 年齢たち.map(function (a, i) { return { a: a, i: i }; })
+      .sort(function (x, y) { return y.a - x.a; });
+    var 位置 = 0;
+    順.forEach(function (o, k) { if (o.i === index) { 位置 = k + 1; } });
+    if (n === 2) { return (位置 === 1) ? '上のお子さん' : '下のお子さん'; }
+    return '上から' + 位置 + '人目';
+  }
 
   /** いま選んでいる年の点の並び（シナリオごと） */
   function 選んだ並び(c) {
@@ -1045,7 +1057,7 @@
     h.push('</div>');
 
     h.push('<div class="balance-scenario">');
-    [['now', 'いまのまま'], ['all', '全部使う']].concat(
+    [['now', 'いまのまま'], ['all', '制度活用']].concat(
       (資格 && 資格.afterIncome > 0) ? [['training', '資格を取る']] : []
     ).forEach(function (o) {
       h.push('<button type="button" class="' + (選んだ線 === o[0] ? 'primary' : 'ghost') +
@@ -1107,8 +1119,25 @@
         追記 = '<span class="why">もとの額は ' + SPS.円(r.gross) +
           '。制度が ' + SPS.円(r.support) + ' 助けてくれた後の額です</span>';
       }
-      h.push('<tr' + (r.amount === 0 ? ' class="zero"' : '') + '><td>' + esc(r.name) + 追記 +
-        '</td><td class="num">' + SPS.円(r.amount) + '</td></tr>');
+      var 小計か = (r.children && r.children.length > 1);
+      h.push('<tr' + (r.amount === 0 ? ' class="zero"' : '') + (小計か ? ' class="has-children"' : '') +
+        '><td>' + esc(r.name) + 追記 +
+        '</td><td class="num' + (小計か ? ' subtotal' : '') + '">' + SPS.円(r.amount) + '</td></tr>');
+      /* お子さんが2人以上いるときは、だれにいくらかかっているかを出す */
+      if (小計か) {
+        r.children.forEach(function (ch) {
+          var 呼び名 = 子の呼び名(ch.index, pt.childAges || []);
+          var 補 = '';
+          if (ch.support > 0) {
+            補 = '<span class="why">もとの額 ' + SPS.円(ch.gross) + ' − 制度の助け ' + SPS.円(ch.support) + '</span>';
+          } else if (ch.discount > 0) {
+            補 = '<span class="why">きょうだいの軽減で ' + SPS.円(ch.discount) + ' 安く（軽減前 ' + SPS.円(ch.gross) + '）</span>';
+          }
+          h.push('<tr class="child-row"><td><span class="child-mark">▸</span>' +
+            esc(呼び名) + '（' + ch.age + '歳・' + esc(ch.stage || '') + '）' + 補 +
+            '</td><td class="num">' + SPS.円(ch.amount) + '</td></tr>');
+        });
+      }
     });
     h.push('<tr class="sum"><td>出ていくお金の合計</td><td class="num">' + SPS.円(支出計) + '</td></tr>');
     h.push('<tr class="total ' + (差引 < 0 ? 'minus' : 'plus') + '"><td>ひと月の残り</td><td class="num">' +

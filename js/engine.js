@@ -488,8 +488,8 @@
    *   分け方
    *     ・高校の就学支援金 … 学校から案内があり、ほぼ全員が手続きするので
    *                          「いまのまま」の線にも入れる
-   *     ・高校の奨学給付金 … 都道府県へ自分で申し込むので「全部使う」側だけ
-   *     ・大学の修学支援新制度 … 自分で申し込むので「全部使う」側だけ
+   *     ・高校の奨学給付金 … 都道府県へ自分で申し込むので「制度活用」側だけ
+   *     ・大学の修学支援新制度 … 自分で申し込むので「制度活用」側だけ
    *
    *   判定できないときは、支援なしの側に倒します（甘く見せないため）。
    * ---------------------------------------------------------- */
@@ -530,7 +530,7 @@
          （公立高校の授業料は年45,272円。法律上の授業料118,800円よりずっと少ない）
          重ねて引くと、高校が実際よりずっと安く見えてしまう。 */
       /* 奨学給付金（授業料以外に充てるお金）は、自分で申し込む必要があり、
-         学習費調査にも反映されていないので、「全部使う」側にだけ入れる */
+         学習費調査にも反映されていないので、「制度活用」側にだけ入れる */
       if ((状況.grants ? 状況.grants.kyufukin : 状況.withRequest) && hs.kyufukin_tiers) {
         var 年収 = 状況.income || 0;
         for (var t = 0; t < hs.kyufukin_tiers.length; t++) {
@@ -568,11 +568,53 @@
       var プラン = (プラン一覧 || [])[i];
       var v = 学費(age, プラン, 学費表);
       var 支 = 状況 ? Math.min(v, 学費の支援(age, プラン, 学費表, 状況)) : 0;
-      if (v > 0) { 明細.push({ index: i, age: age, amount: v, support: 支, net: v - 支 }); }
+      if (v > 0) {
+        明細.push({ index: i, age: age, amount: v, support: 支, net: v - 支,
+          stage: 段階の名前(age, プラン, 学費表) });
+      }
       合計 += v;
       支援合計 += 支;
     });
     return { total: 合計, support: 支援合計, net: Math.max(0, 合計 - 支援合計), detail: 明細 };
+  }
+
+  /** お子さんごとの金額を、行の合計にぴったり合わせる。
+      1人ずつ12で割って丸めると、合計が行の金額と1円ずれることがあるため、
+      最後のひとりで差を吸収する（表の「小計＝内訳の合計」を必ず成り立たせる）。 */
+  function 端数をそろえる(明細, 合計, 欄) {
+    if (!明細.length) { return 明細; }
+    var 和 = 0;
+    明細.forEach(function (x) { 和 += x[欄]; });
+    var 差 = 合計 - 和;
+    if (差 !== 0) { 明細[明細.length - 1][欄] += 差; }
+    return 明細;
+  }
+
+  /** 学費の子ども別明細を、行の合計に合わせてそろえる。
+      実負担ともとの額をそろえたあと、支援額はその差として出し直す
+      （先に丸めた支援額を残すと、引き算が合わなくなる）。 */
+  function 子ども別をそろえる(明細, 実負担合計, 総額合計) {
+    端数をそろえる(明細, 実負担合計, 'amount');
+    端数をそろえる(明細, 総額合計, 'gross');
+    明細.forEach(function (x) {
+      x.support = x.gross - x.amount;
+      if (x.support < 0) { x.support = 0; x.gross = x.amount; }
+    });
+    return 明細;
+  }
+
+  /** その年齢のお子さんが通う学校の名前（「公立の中学校」など） */
+  function 段階の名前(年齢, プラン, 学費表) {
+    if (!学費表) { return null; }
+    var b = 学費表.bands, p = プラン || {};
+    for (var i = 0; i < b.length; i++) {
+      if (年齢 >= b[i].from && 年齢 <= b[i].to) {
+        var 選択 = p[b[i].stage] || b[i].default;
+        var ch = b[i].choices.filter(function (c) { return c.value === 選択; })[0];
+        return ch ? ch.label : b[i].label;
+      }
+    }
+    return null;
   }
 
   /** 全部いちばん安い道（すべて公立・大学は国公立で自宅から）を選んだときのプラン */
@@ -614,8 +656,9 @@
     var 低所得ひとり親 = (ひとり親か && m.single_parent_low_income_max &&
       年収 <= m.single_parent_low_income_max);
 
-    var 合計 = 0, 軽減前 = 0;
-    対象.forEach(function (age) {
+    var 合計 = 0, 軽減前 = 0, 明細 = [];
+    (子の年齢たち || []).forEach(function (age, i) {
+      if (age < 表.applies_from_age || age > 表.applies_to_age) { return; }
       /* 未就学の子のなかで、上から何番目か */
       var 順位 = 未就学.indexOf(age) + 1;
       var 割合 = 1;
@@ -626,18 +669,21 @@
       } else if (順位 === 2) {
         割合 = (m.second_child_ratio != null) ? m.second_child_ratio : 0.5;
       }
+      var 額 = Math.round(基本 * 割合);
       軽減前 += 基本;
-      合計 += Math.round(基本 * 割合);
+      合計 += 額;
+      明細.push({ index: i, age: age, amount: 額, gross: 基本, discount: 基本 - 額,
+        rank: 順位, stage: '保育園・こども園（' + age + '歳児）' });
     });
-    保育料.内訳 = { total: 合計, gross: 軽減前, discount: 軽減前 - 合計 };
+    保育料.内訳 = { total: 合計, gross: 軽減前, discount: 軽減前 - 合計, detail: 明細 };
     return 合計;
   }
 
   /** 保育料の内訳（軽減前の額と、きょうだい軽減の額）を返す */
   function 保育料の内訳(子の年齢たち, 年収, ひとり親か, 表) {
     var 額 = 保育料(子の年齢たち, 年収, ひとり親か, 表);
-    var 内 = 保育料.内訳 || { total: 額, gross: 額, discount: 0 };
-    return { total: 額, gross: 内.gross, discount: 内.discount };
+    var 内 = 保育料.内訳 || { total: 額, gross: 額, discount: 0, detail: [] };
+    return { total: 額, gross: 内.gross, discount: 内.discount, detail: 内.detail || [] };
   }
 
   /** その年、児童扶養手当の対象になる年齢のお子さんがいるか */
@@ -689,7 +735,7 @@
     var 到達月 = null, 到達月いま = null, 赤字になる月 = null;
     var 床に当たる月 = null, 目標を割り直す月 = null;
     /* 「いまのまま」の線でいつ危なくなるか。警告の印は、こちらの線に打つ。
-       （制度を全部使った線に打つと、「いま何が起きるのか」が伝わらないため） */
+       （制度活用の線に打つと、「いま何が起きるのか」が伝わらないため） */
     var 赤字になる月いま = null, 床に当たる月いま = null;
     /* 借りられる上限（貸金業法の総量規制。年収の3分の1）。
        ここより下は、そもそも実在しない金額なので、線も目盛りもそこで止める。
@@ -717,7 +763,7 @@
          学費を助ける制度は、収入が低い世帯ほど手厚い。
          これを入れないと「私立に行ったら終わり」という、実際とちがう絵になる。
            ・就学支援金は学校経由でほぼ全員が手続きするので、両方の線に入れる
-           ・奨学給付金と修学支援新制度は自分で申し込むので「全部使う」側だけ */
+           ・奨学給付金と修学支援新制度は自分で申し込むので「制度活用」側だけ */
       var 状況いま = { income: 入力.myIncome, children: 子の人数, taxFree: 非課税か,
         grants: {
           kyufukin: !!使用中.koukou_shugaku_shienkin,
@@ -733,7 +779,7 @@
       /* お子さんが大きくなったぶん、生活費（の食費部分）がふえる */
       var 今年の生活費 = Math.round(生活費 * 生活費の倍率(いまの子の年齢, y.childAges, 成長表));
 
-      /* 使える制度を全部使った場合 */
+      /* 制度活用（使える制度をすべて使った場合） */
       var 全部の給付 = d.jidoFuyoTeate + d.jidoTeate + (控除が使える ? 控除の効果 : 0);
       /* いまのまま（もう使っていると答えたものだけ） */
       var いまの給付 = (使用中.jido_fuyo_teate ? d.jidoFuyoTeate : 0)
@@ -780,9 +826,17 @@
             baseline: 生活費, increase: 今年の生活費 - 生活費 },
           { key: 'housing', name: '住居費', amount: d.housing },
           { key: 'tuition', name: '学校にかかるお金（支援を引いたあと）', amount: 学費,
-            gross: Math.round(学の元.total / 12), support: Math.round(学の元.total / 12) - 学費 },
+            gross: Math.round(学の元.total / 12), support: Math.round(学の元.total / 12) - 学費,
+            children: 子ども別をそろえる(学の元.detail.map(function (x) {
+              return { index: x.index, age: x.age, stage: x.stage,
+                amount: Math.round(x.net / 12), gross: Math.round(x.amount / 12), support: 0 };
+            }), 学費, Math.round(学の元.total / 12)) },
           { key: 'childcare', name: '保育料（0歳から2歳）', amount: 今年の保育料,
             gross: 保育の内訳.gross, discount: 保育の内訳.discount,
+            children: 保育の内訳.detail.map(function (x) {
+              return { index: x.index, age: x.age, stage: x.stage,
+                amount: x.amount, gross: x.gross, discount: x.discount };
+            }),
             reason: (今年の保育料 === 0 ? (対象の未就学児(y.childAges, データ.childcare)
               ? '住民税が非課税の世帯なので0円、または2人目以降で0円'
               : '3歳から5歳は無償化されているため0円') : null) }
@@ -1077,9 +1131,17 @@
               baseline: 生活費, increase: 今年の生活費 - 生活費 },
             { key: 'housing', name: '住居費', amount: 住居 },
             { key: 'tuition', name: '学校にかかるお金（支援を引いたあと）', amount: Math.round(学 / 12),
-              gross: Math.round(学の総額 / 12), support: Math.round(学の総額 / 12) - Math.round(学 / 12) },
+              gross: Math.round(学の総額 / 12), support: Math.round(学の総額 / 12) - Math.round(学 / 12),
+              children: 子ども別をそろえる(学の全体.detail.map(function (x) {
+                return { index: x.index, age: x.age, stage: x.stage,
+                  amount: Math.round(x.net / 12), gross: Math.round(x.amount / 12), support: 0 };
+              }), Math.round(学 / 12), Math.round(学の総額 / 12)) },
             { key: 'childcare', name: '保育料（0歳から2歳）', amount: 今年の保育料,
-              gross: 保育の内訳2.gross, discount: 保育の内訳2.discount }
+              gross: 保育の内訳2.gross, discount: 保育の内訳2.discount,
+              children: 保育の内訳2.detail.map(function (x) {
+                return { index: x.index, age: x.age, stage: x.stage,
+                  amount: x.amount, gross: x.gross, discount: x.discount };
+              }) }
           ]
         }
       });
@@ -1258,6 +1320,7 @@
     資格ルート: 資格ルート,
     学費: 学費,
     その年の学費: その年の学費,
+    段階の名前: 段階の名前,
     保育料: 保育料,
     保育料の内訳: 保育料の内訳,
     学費の支援: 学費の支援,

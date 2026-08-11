@@ -22,7 +22,7 @@
     ink: '#1b2733',
     sub: '#52616f',
     cliff: '#8a5a00',
-    withProg: '#2f6f9f',    // 使える制度を全部使った場合
+    withProg: '#2f6f9f',    // 制度活用
     withoutProg: '#c2591a', // いまのまま
     band: '#dff0e6',        // 生活防衛資金のゾーン
     bandLine: '#1c7a4a',
@@ -263,7 +263,7 @@
    *   帯 ... 生活防衛資金のゾーン（生活費の3か月分から6か月分）
    *   線 ... 制度を申請した場合 と、申請しなかった場合
    * ============================================================ */
-  /* 「いまのまま」と「使える制度を全部使った場合」が、ほとんど重なるか。
+  /* 「いまのまま」と「制度活用」が、ほとんど重なるか。
      重なった線を2本描くと、にじんで読めなくなるだけなので、その場合は1本にする。 */
   function 一本にまとめるか(curve) {
     if (!curve || !curve.points || !curve.points.length) { return true; }
@@ -460,7 +460,7 @@
       ? [{ y: 収める(Y(床(末の値.all)) + 4), col: 色.withProg, 名: 'いまの見通し', x: 末x }]
       : [
         { y: 収める(Y(床(末の値.now)) + 4), col: 色.withoutProg, 名: 'いまのまま', x: 末x },
-        { y: 収める(Y(床(末の値.all)) + 4), col: 色.withProg, 名: '全部使う', x: 末x }
+        { y: 収める(Y(床(末の値.all)) + 4), col: 色.withProg, 名: '制度活用', x: 末x }
       ];
     if (tr && 資格描く数 > 0) {
       /* 線の長さをだいたい測っておく。
@@ -532,7 +532,7 @@
     if (印を出す) {
       /* 印は「いまのまま」の線に打つ。
          いま何もしなかったらいつ危なくなるか、を指すものだから。
-         （制度を全部使った線に打つと、何の話なのかが伝わらない） */
+         （制度活用の線に打つと、何の話なのかが伝わらない） */
       印(一本 ? curve.negativeFromMonth : curve.negativeFromMonthNow, '底をつく');
       印(一本 ? curve.hitsBorrowFloorAtMonth : curve.hitsBorrowFloorAtMonthNow, '借りられる上限');
     }
@@ -583,7 +583,7 @@
         '" fill="transparent" style="cursor:crosshair"><title>' +
         'お子さん' + p.youngestAge + '歳／' +
         (一本 ? Math.round(p.all).toLocaleString('ja-JP') + '円'
-              : '全部使う ' + Math.round(p.all).toLocaleString('ja-JP') + '円・いまのまま ' +
+              : '制度活用 ' + Math.round(p.all).toLocaleString('ja-JP') + '円・いまのまま ' +
                 Math.round(p.now).toLocaleString('ja-JP') + '円') +
         (p.tuition ? '（この年の学校のお金 ' + Math.round(p.tuition).toLocaleString('ja-JP') + '円）' : '') +
         '</title></rect>');
@@ -615,7 +615,7 @@
     if (一本) {
       h.push('<span><span class="swatch" style="background:' + 色.withProg + '"></span>いまの見通し（実線）</span>');
     } else {
-      h.push('<span><span class="swatch" style="background:' + 色.withProg + '"></span>使える制度を全部使った場合（太い実線）</span>');
+      h.push('<span><span class="swatch" style="background:' + 色.withProg + '"></span>制度活用（太い実線）</span>');
       h.push('<span><span class="swatch" style="background:' + 色.withoutProg + ';opacity:.8"></span>いまのまま（細い破線）</span>');
     }
     h.push('<span><span class="swatch" style="background:' + 色.bandLine + '"></span>生活防衛資金（生活費の半年分）</span>');
