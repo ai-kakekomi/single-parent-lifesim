@@ -101,6 +101,20 @@
         <input type="number" id="living-cost" min="0" max="2000000" inputmode="numeric" placeholder="例 110000">
         <p class="hint">食費・光熱費・通信費・日用品・被服費など。<strong>家賃と、学校にかかるお金（授業料・給食費・教材費・塾代）は入れないでください。</strong>それらは別々に計算します。ぴったりでなくて大丈夫です。</p>
 
+        <details class="explain breakdown">
+          <summary>うちわけを入れる（くわしく・任意）</summary>
+          <p class="hint">入れなくても大丈夫です。入れると、どこが重いかが見えて、見直しの候補が出ます。入れた合計が、上の「毎月の生活費」に自動で入ります。</p>
+          <div class="cost-rows">
+            <div class="cost-row"><label for="cost-food">食費</label><input type="number" id="cost-food" class="cost-item" min="0" max="1000000" inputmode="numeric" placeholder="円"></div>
+            <div class="cost-row"><label for="cost-utility">水道・光熱費</label><input type="number" id="cost-utility" class="cost-item" min="0" max="1000000" inputmode="numeric" placeholder="円"></div>
+            <div class="cost-row"><label for="cost-comm">通信費（スマホ・ネット）</label><input type="number" id="cost-comm" class="cost-item" min="0" max="1000000" inputmode="numeric" placeholder="円"></div>
+            <div class="cost-row"><label for="cost-insurance">保険料</label><input type="number" id="cost-insurance" class="cost-item" min="0" max="1000000" inputmode="numeric" placeholder="円"></div>
+            <div class="cost-row"><label for="cost-other">そのほか（日用品・被服・交通など）</label><input type="number" id="cost-other" class="cost-item" min="0" max="1000000" inputmode="numeric" placeholder="円"></div>
+          </div>
+          <p class="cost-total" id="cost-total"></p>
+          <div id="cost-advice"></div>
+        </details>
+
         <label for="current-savings">いまの貯金額（円）</label>
         <input type="number" id="current-savings" min="0" max="100000000" inputmode="numeric" placeholder="例 300000">
         <p class="hint">これから貯金がどうふえていくかの、出発点になります。だいたいで大丈夫です。ここに入れた数字も、どこにも送られません。</p>

@@ -534,8 +534,24 @@
     for (var k = 0; k < points.length; k++) {
       if (points[k].all < 0) { 赤字の年 = k; break; }
     }
+
+    /* 借りられる上限（貸金業法の総量規制。年収の3分の1）。
+       ここより下は、そもそも実在しない金額なので、線も目盛りもそこで止める。
+       年収150万円の人に「マイナス500万円」の目盛りを見せても、
+       そんなお金は借りられないので、意味のない数字になるため。 */
+    var 借入上限 = null, 上限に達する年 = null;
+    if (データ.borrow_limit && 入力.myIncome > 0) {
+      借入上限 = -Math.floor(入力.myIncome * データ.borrow_limit.ratio);
+      for (var b = 0; b < points.length; b++) {
+        if (points[b].all <= 借入上限) { 上限に達する年 = b; break; }
+      }
+    }
+
     var 描くところまで = (赤字の年 === null) ? points.length - 1
       : Math.min(points.length - 1, 赤字の年 + 3);
+    if (上限に達する年 !== null) {
+      描くところまで = Math.min(描くところまで, 上限に達する年);
+    }
 
     /* ひと月あたり、いくら足りないか（累積ではなく、これを主役にする） */
     var 足りない月額 = null;
@@ -564,6 +580,10 @@
       reachMonths: 到達月,
       negativeFromMonth: 赤字になる月,
       negativeFromOffset: 赤字の年,
+      borrowFloor: 借入上限,
+      borrowFloorLabel: (データ.borrow_limit ? データ.borrow_limit.ratio_label : null),
+      hitsBorrowFloorAtOffset: 上限に達する年,
+      hitsBorrowFloor: 上限に達する年 !== null,
       drawUntilOffset: 描くところまで,
       truncated: 描くところまで < points.length - 1,
       shortfallMonthly: 足りない月額,

@@ -60,8 +60,8 @@ server.listen(0, '127.0.0.1', function () {
       btns[1].click();
       return 待つ(300).then(function () {
         ok(d.getElementById('stage1').classList.contains('shown'), '例を押すと、制度の一覧が出る');
-        eq(d.querySelectorAll('#stage1-body .prog').length, 17, '制度カードが17枚出る');
-        eq(d.querySelectorAll('#stage1-body .prog .src a').length, 17, 'どのカードにも出典のリンクが付いている');
+        eq(d.querySelectorAll('#stage1-body .prog').length, 18, '制度カードが18枚出る');
+        eq(d.querySelectorAll('#stage1-body .prog .src a').length, 18, 'どのカードにも出典のリンクが付いている');
         ok(d.querySelector('#stage1-body .prog .src').textContent.indexOf('最終確認') > 0, '最終確認日が出ている');
         ok(d.querySelector('#stage1-body .prog .amount').textContent.indexOf('13,870円') > 0,
           '一部支給の金額（13,870円）が画面に出る', d.querySelector('#stage1-body .prog .amount').textContent);
@@ -116,6 +116,33 @@ server.listen(0, '127.0.0.1', function () {
           '3〜6か月分という幅が、私たちの立場の表明として分けて書かれている');
         ok(d.querySelector('#stage2b-body a[href*="fsa.go.jp"]') !== null, '金融庁の出典リンクがある');
         ok(d.querySelector('#stage2b-body a[href*="shiruporuto.jp"]') !== null, '金融広報中央委員会の出典リンクがある');
+
+        /* 生活費のうちわけ（任意）*/
+        var うち = d.querySelector('details.breakdown');
+        ok(うち !== null, '生活費のうちわけの欄がある');
+        ok(!うち.open, 'はじめは閉じている（入れなくてもいい）');
+        eq(d.querySelectorAll('.cost-item').length, 5, 'うちわけの費目が5つある');
+        eq(d.getElementById('cost-total').textContent, '', '入れる前は、合計は出ない');
+        var 前の生活費 = d.getElementById('living-cost').value;
+        function 入れる(id, v) {
+          var el = d.getElementById(id); el.value = String(v);
+          el.dispatchEvent(new w.Event('input', { bubbles: true }));
+        }
+        入れる('cost-food', 60000); 入れる('cost-utility', 18000);
+        入れる('cost-comm', 22000); 入れる('cost-insurance', 5000); 入れる('cost-other', 15000);
+        eq(d.getElementById('living-cost').value, '120000', 'うちわけの合計が、毎月の生活費に自動で入る');
+        ok(d.getElementById('cost-total').textContent.indexOf('120,000円') > 0, '合計が表示される');
+        var 見立て = d.getElementById('cost-advice').textContent;
+        ok(d.querySelectorAll('#cost-advice ul.cost-share li').length === 5, '費目ごとの割合が出る');
+        ok(見立て.indexOf('通信費') > 0 && 見立て.indexOf('プランや会社を変えて') > 0,
+          '通信費が重いときは、見直しの候補として出る（断言はしない）');
+        ok(見立て.indexOf('よその家庭の平均とは比べていません') > 0,
+          'よその家庭と比べていないことを明記している');
+        ok(見立て.indexOf('必ず') === -1 && 見立て.indexOf('すべきです') === -1,
+          '断言口調になっていない');
+        /* 入れ直すと、貯金のグラフも追いかけて変わる */
+        入れる('cost-food', 40000);
+        eq(d.getElementById('living-cost').value, '100000', '入れ直すと合計も変わる');
 
         /* 生活防衛資金の長い説明は、折りたたみに入っている */
         var 帯たたみ = d.querySelector('#stage2b-body details.explain');
@@ -212,6 +239,16 @@ server.listen(0, '127.0.0.1', function () {
             'このままの前提では成り立たない領域を、描いていないと明記している');
           ok(d.querySelector('#stage2b-body svg [fill="url(#hatch)"]') !== null,
             'グラフに網かけが出ている');
+          /* 借りられる上限が、グラフの床になっている */
+          ok(d.querySelector('#stage2b-body svg').textContent.indexOf('法律上、これ以上は借りられません') > 0,
+            '借りられる上限の線に、説明が付いている');
+          ok(本文.indexOf('借りられる上限に先にぶつかる場合、そこから先は本当に打つ手がなくなります') > 0,
+            '上限にぶつかる場合の注記が出ている');
+          ok(d.querySelector('#stage2b-body .floor-note a[href*="fsa.go.jp"]') !== null,
+            '金融庁の出典リンクがある');
+          ok(d.querySelector('#stage2b-body .floor-note a[href="#gap-block"]') !== null,
+            '埋める手のリストへのリンクがある');
+          ok(d.getElementById('gap-block') !== null, 'リンク先の埋める手のリストが実在する');
           var 手 = d.querySelectorAll('#stage2b-body ol.gap-list li');
           ok(手.length >= 4, '足りないぶんを埋める手が4つ以上ならんでいる', 手.length + '個');
           ok(本文.indexOf('借金では埋められません') > 0, '借金では埋められないと書いてある');
@@ -220,6 +257,19 @@ server.listen(0, '127.0.0.1', function () {
             '埋める手から、制度のカードへリンクしている');
           ok(手[0].textContent.indexOf('養育費') >= 0,
             '養育費が未取り決めなら、いちばん上に出す', 手[0].textContent.slice(0, 40));
+          var 手の文 = d.querySelector('#stage2b-body ol.gap-list').textContent;
+          /* 穴が小さいときは、今週から動けるものが上、時間のかかるものが下 */
+          var 見出したち = [].map.call(手, function (li) { return li.textContent; });
+          var 資格の位置 = 見出したち.findIndex(function (t) { return t.indexOf('資格を取って') >= 0; });
+          var 食の位置 = 見出したち.findIndex(function (t) { return t.indexOf('食べるものを') >= 0; });
+          if (資格の位置 >= 0 && 食の位置 >= 0) {
+            ok(食の位置 < 資格の位置,
+              '穴が小さいときは、今週から動けるものが、時間のかかるものより上に来る',
+              '食 ' + 食の位置 + ' / 資格 ' + 資格の位置);
+          }
+          ok(手の文.indexOf('食べるものを助けてもらう') > 0, '食の支援が、埋める手に入っている');
+          ok(d.querySelector('#stage2b-body ol.gap-list a[href="#prog-shoku_shien"]') !== null,
+            '食の支援のカードへリンクしている');
           ok(d.getElementById('stage3-body').textContent.indexOf('カードローンやリボ払いで埋めない') > 0,
             '落とし穴チェックにも、借金で埋めない項目がある');
         }).then(function () {
@@ -264,7 +314,7 @@ server.listen(0, '127.0.0.1', function () {
         d.querySelectorAll('#sample-buttons button')[3].click();
         return 待つ(300);
       }).then(function () {
-        eq(d.querySelectorAll('#stage1-body .prog').length, 17, 'ファイル直開きでも制度カードが17枚出る');
+        eq(d.querySelectorAll('#stage1-body .prog').length, 18, 'ファイル直開きでも制度カードが18枚出る');
         eq(d.querySelectorAll('#stage2-body svg path').length, 2, 'ファイル直開きでもグラフが描ける');
         ok(d.querySelectorAll('#stage3-body .pit').length > 0, 'ファイル直開きでも注意書きが出る');
         eq(d.querySelectorAll('#stage4-body textarea').length, 5, 'ファイル直開きでもAIに相談する文章が5本できる');

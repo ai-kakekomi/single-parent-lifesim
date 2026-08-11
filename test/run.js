@@ -29,7 +29,7 @@ var 児手 = データ.programs_by_id.jido_teate.eligibility;
 
 var 官公庁 = ['cfa.go.jp', 'mhlw.go.jp', 'mext.go.jp', 'moj.go.jp', 'fsa.go.jp', 'npa.go.jp',
   'caa.go.jp', 'nta.go.jp', 'soumu.go.jp', 'mlit.go.jp', 'cao.go.jp', 'gender.go.jp',
-  'nenkin.go.jp', 'jasso.go.jp', 'kokusen.go.jp'];
+  'nenkin.go.jp', 'jasso.go.jp', 'kokusen.go.jp', 'stat.go.jp', 'maff.go.jp'];
 function 官公庁か(url) {
   return 官公庁.some(function (d) { return url.indexOf('//' + d + '/') > 0 || url.indexOf('.' + d + '/') > 0; });
 }
@@ -341,7 +341,10 @@ ok(SPS.資産カーブ(Object.assign({}, 入力F, { children: [] }), データ) 
 /* 赤字のときは、線を22歳まで引きのばさない（予測として不誠実なので） */
 ok(赤字.truncated, '赤字のときは、線を最後まで描かない');
 eq(赤字.negativeFromOffset, 0, 'はじめの年からマイナス');
-eq(赤字.drawUntilOffset, Math.min(赤字.points.length - 1, 0 + 3), 'マイナスに入ってから3年ぶんだけ描く');
+eq(赤字.drawUntilOffset,
+   Math.min(赤字.points.length - 1, 0 + 3,
+     赤字.hitsBorrowFloorAtOffset === null ? Infinity : 赤字.hitsBorrowFloorAtOffset),
+  'マイナスに入ってから3年ぶん、または借りられる上限に達するまでの、早いほうで描くのをやめる');
 ok(赤字.drawUntilOffset < 赤字.points.length - 1, '描く範囲が、全期間より短くなっている');
 eq(赤字.shortfallMonthly, -赤字.points[0].monthlyAll, 'ひと月あたりいくら足りないかを持っている（累積ではなく月額）');
 ok(赤字.shortfallMonthly > 0, '足りない額は正の数で持つ');
@@ -358,6 +361,36 @@ if (途中赤字.goesNegative) {
   eq(途中赤字.drawUntilOffset, Math.min(途中赤字.points.length - 1, 途中赤字.negativeFromOffset + 3),
     '赤字に入った年から3年ぶんまで描く');
 }
+
+/* 借りられる上限（貸金業法の総量規制）を、グラフの床にする */
+eq(資産F.borrowFloor, -Math.floor(3200000 / 3), '床は年収の3分の1のマイナス');
+eq(資産F.borrowFloorLabel, '年収の3分の1', '床のラベルが入っている');
+eq(データ.borrow_limit.source.url.indexOf('fsa.go.jp') > 0, true, '床の出典は金融庁');
+ok(データ.borrow_limit.source.law.indexOf('第13条の2') > 0, '根拠の条文が書いてある');
+ok(/^\d{4}-\d{2}-\d{2}$/.test(データ.borrow_limit.source.last_verified), '床の出典に最終確認日がある');
+
+ok(赤字.hitsBorrowFloor, '赤字がひどければ、借りられる上限にぶつかる');
+ok(赤字.hitsBorrowFloorAtOffset !== null, '上限にぶつかる年が分かる');
+ok(赤字.drawUntilOffset <= 赤字.hitsBorrowFloorAtOffset, '上限にぶつかったら、そこで描くのをやめる');
+
+var 収入なし = SPS.資産カーブ(Object.assign({}, 入力F, { myIncome: 0 }), データ);
+ok(収入なし.borrowFloor === 0 || 収入なし.borrowFloor === null || 収入なし.borrowFloor === -0,
+  '年収がなければ、借りられる金額もない', String(収入なし.borrowFloor));
+ok(!黒字.hitsBorrowFloor, '黒字なら、上限にはぶつからない');
+eq(黒字.borrowFloor, -Math.floor(3200000 / 3), '黒字でも床の値そのものは持っている');
+
+/* グラフの縦軸が、床より深くならないこと */
+var 床svg = Chart.資産を描く(赤字);
+ok(床svg.indexOf('法律上、これ以上は借りられません（年収の3分の1）') > 0, '床のラベルがグラフに出る');
+ok(/stroke="#a32020" stroke-width="2" stroke-dasharray="7 4"/.test(床svg), '床の赤い破線が引かれている');
+var 目盛りの値 = [];
+床svg.replace(/text-anchor="end" font-size="12" fill="[^"]*">(-?[\d.]+)(万|千万|0)</g, function (_, v, u) {
+  目盛りの値.push(parseFloat(v) * (u === '千万' ? 10000000 : u === '万' ? 10000 : 1));
+  return _;
+});
+ok(目盛りの値.length > 0, '床のあるグラフにも目盛りが出ている');
+var 深い = 目盛りの値.filter(function (v) { return v < 赤字.borrowFloor - 1; });
+eq(深い.length, 0, '縦の目盛りが、借りられる上限より深いところまで伸びていない', 深い.join(','));
 
 /* ------------------------------------------------------------ */
 見出し('8-4. 学校にかかるお金');
@@ -517,7 +550,7 @@ ok(見本.samples.some(function (s) { return (s.input.usedPrograms || []).length
 見出し('10. 制度データそのものの点検');
 
 
-eq(データ.programs.length, 17, '収めている制度は17件');
+eq(データ.programs.length, 18, '収めている制度は18件');
 var 種別 = { auto: 0, check: 0 };
 データ.programs.forEach(function (p) {
   ok(!!p.id && !!p.name && !!p.category, '「' + p.name + '」に id・名前・分類がある');
@@ -535,7 +568,7 @@ var 種別 = { auto: 0, check: 0 };
   }
 });
 eq(種別.auto, 3, '入力から自動で判定する制度は3件');
-eq(種別.check, 14, '窓口での確認にまわす制度は14件');
+eq(種別.check, 15, '窓口での確認にまわす制度は15件');
 
 /* 児童扶養手当の数値そのものの見張り（改正が入ったら必ずここが落ちる） */
 eq(児扶.amounts.first.full, 48050, '第1子の全部支給額');
@@ -549,6 +582,19 @@ eq(児扶.salary_income_flat_deduction, 100000, '給与所得者の一律控除�
 eq(児手.monthly.under3, 15000, '児童手当・3歳未満');
 eq(児手.monthly.age3_to_18_third_plus, 30000, '児童手当・第3子以降');
 eq(児手.count_child_upto_age, 22, '第3子を数えるのは22歳まで');
+
+/* 食の支援のカード */
+var 食 = データ.programs_by_id.shoku_shien;
+ok(!!食, '食の支援のカードがある');
+eq(食.judgment_type, 'check', '食の支援は、窓口で確認するあつかい');
+ok(食.eligibility.kodomo_shokudo.indexOf('こども食堂') >= 0, 'こども食堂の説明がある');
+ok(食.eligibility.food_bank.indexOf('フードバンク') >= 0, 'フードバンクの説明がある');
+ok(食.eligibility.takushoku_pantry.indexOf('フードパントリー') > 0, 'フードパントリーの説明がある');
+ok(食.eligibility.kyushoku.indexOf('就学援助') > 0, '給食費は就学援助でまかなえることが書いてある');
+ok(食.source.url.indexOf('cfa.go.jp') > 0, '出典にこども家庭庁がある');
+ok(食.source.url_detail.indexOf('maff.go.jp') > 0, '出典に農林水産省がある');
+ok(データ.programs_by_id.shugaku_enjo.cautions.some(function (c) { return c.indexOf('食の支援') > 0; }),
+  '就学援助のカードからも、食の支援に触れている（相互に行き来できる）');
 
 /* ------------------------------------------------------------ */
 見出し('11. 気をつけたいことのデータの点検');

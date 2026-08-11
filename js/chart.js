@@ -25,7 +25,8 @@
     withProg: '#2f6f9f',    // 使える制度を全部使った場合
     withoutProg: '#c2591a', // いまのまま
     band: '#dff0e6',        // 生活防衛資金のゾーン
-    bandLine: '#1c7a4a'
+    bandLine: '#1c7a4a',
+    floor: '#a32020'
   };
 
   function esc(s) {
@@ -220,11 +221,19 @@
     var 左 = 66, 右 = 74, 上 = 22, 下 = 54;
     var 幅 = W - 左 - 右, 高 = H - 上 - 下;
 
+    /* 借りられる上限より下は、実在しない金額。線もそこで止める（床にはりつく） */
+    function 床(v) {
+      return (curve.borrowFloor != null && v < curve.borrowFloor) ? curve.borrowFloor : v;
+    }
     var 全値 = [0, curve.safetyMax, curve.startSavings];
-    pts.slice(0, 描く数).forEach(function (p) { 全値.push(p.all, p.now); });
+    pts.slice(0, 描く数).forEach(function (p) { 全値.push(床(p.all), 床(p.now)); });
     var 上限 = Math.max.apply(null, 全値), 下限 = Math.min.apply(null, 全値);
     var 余白 = Math.max((上限 - 下限) * 0.1, 100000);
     上限 += 余白; 下限 -= 余白;
+    /* 借りられる上限（年収の3分の1）より下は、実在しない金額なので目盛りも出さない */
+    if (curve.borrowFloor != null && 下限 < curve.borrowFloor) {
+      下限 = curve.borrowFloor - Math.max((上限 - curve.borrowFloor) * 0.06, 30000);
+    }
 
     var 幅1 = pts.length > 1 ? 幅 / (pts.length - 1) : 0;
     function X(i) { return 左 + 幅1 * i; }
@@ -256,6 +265,16 @@
         目盛り文字(v) + '</text>');
     });
 
+    /* --- 借りられる上限（貸金業法の総量規制）の線 --- */
+    if (curve.borrowFloor != null && curve.borrowFloor >= 下限 && curve.borrowFloor <= 上限) {
+      var fy = Y(curve.borrowFloor);
+      s.push('<line x1="' + 左 + '" y1="' + fy.toFixed(1) + '" x2="' + (左 + 幅) + '" y2="' + fy.toFixed(1) +
+        '" stroke="' + 色.floor + '" stroke-width="2" stroke-dasharray="7 4"/>');
+      /* 線のはしの名前とかぶらないよう、破線の上に置く */
+      s.push('<text x="' + (左 + 4) + '" y="' + (fy - 6).toFixed(1) + '" font-size="11" font-weight="700" fill="' + 色.floor +
+        '">法律上、これ以上は借りられません（' + esc(curve.borrowFloorLabel || '年収の3分の1') + '）</text>');
+    }
+
     /* --- このままの前提では成り立たない領域（網かけ） --- */
     if (curve.truncated) {
       var 網x = X(描く数 - 1);
@@ -279,15 +298,15 @@
     /* --- 折れ線 --- */
     var 末 = 描く数 - 1;
     function 線(key, col, dash) {
-      var d = pts.slice(0, 描く数).map(function (p, i) { return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p[key]).toFixed(1); }).join(' ');
+      var d = pts.slice(0, 描く数).map(function (p, i) { return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(床(p[key])).toFixed(1); }).join(' ');
       s.push('<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"' +
         (dash ? ' stroke-dasharray="6 4"' : '') + '/>');
     }
     線('now', 色.withoutProg, true);
     線('all', 色.withProg, false);
     ラベルの位置([
-      { y: Y(pts[末].now) + 4, col: 色.withoutProg, 名: 'いまのまま' },
-      { y: Y(pts[末].all) + 4, col: 色.withProg, 名: '全部使う' }
+      { y: Y(床(pts[末].now)) + 4, col: 色.withoutProg, 名: 'いまのまま' },
+      { y: Y(床(pts[末].all)) + 4, col: 色.withProg, 名: '全部使う' }
     ]).forEach(function (L) {
       var x = Math.min(X(末) + 7, W - 4);
       s.push('<text x="' + x.toFixed(1) + '" y="' + L.y.toFixed(1) + '" font-size="12" font-weight="700" fill="' + L.col +

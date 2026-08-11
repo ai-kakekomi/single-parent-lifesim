@@ -69,6 +69,88 @@
     return out;
   }
 
+  /* ---------- 生活費のうちわけ（任意） ----------
+     入れた合計を「毎月の生活費」に自動で入れます。
+     よその家庭の平均と比べることはしません（世帯の人数や地域で大きく変わるため）。
+     かわりに、その方自身の生活費の中で何が重いかを、割合で見せます。 */
+  var 費目 = [
+    { id: 'cost-food', name: '食費' },
+    { id: 'cost-utility', name: '水道・光熱費' },
+    { id: 'cost-comm', name: '通信費' },
+    { id: 'cost-insurance', name: '保険料' },
+    { id: 'cost-other', name: 'そのほか' }
+  ];
+
+  function うちわけを読む() {
+    var 出 = { items: [], total: 0, 入力あり: false };
+    費目.forEach(function (f) {
+      var v = 数(f.id);
+      if (v > 0) { 出.入力あり = true; }
+      出.items.push({ id: f.id, name: f.name, value: v });
+      出.total += v;
+    });
+    return 出;
+  }
+
+  function うちわけを反映() {
+    var u = うちわけを読む();
+    if (!u.入力あり) {
+      $('cost-total').textContent = '';
+      $('cost-advice').innerHTML = '';
+      return;
+    }
+    $('living-cost').value = u.total;
+    $('cost-total').innerHTML = '合計 <strong>' + SPS.円(u.total) + '</strong>（この金額を、上の「毎月の生活費」に入れました）';
+    $('cost-advice').innerHTML = うちわけの見立て(u);
+    if (最新入力) {
+      最新入力.livingCost = u.total;
+      資産を描く();
+    }
+  }
+
+  /** 入れてもらったうちわけから、見直しの候補を出す（断言はしない） */
+  function うちわけの見立て(u) {
+    var h = ['<p class="cost-share-head">生活費の中での割合</p><ul class="cost-share">'];
+    u.items.forEach(function (it) {
+      if (it.value <= 0) { return; }
+      var 割 = Math.round(it.value / u.total * 100);
+      h.push('<li><span class="cost-name">' + esc(it.name) + '</span>' +
+        '<span class="cost-bar"><span style="width:' + Math.min(100, 割) + '%"></span></span>' +
+        '<span class="cost-pct">' + 割 + '%</span></li>');
+    });
+    h.push('</ul>');
+
+    var 候補 = [];
+    function 割合(id) {
+      var it = u.items.filter(function (x) { return x.id === id; })[0];
+      return (it && u.total > 0) ? it.value / u.total : 0;
+    }
+    if (割合('cost-comm') >= 0.12) {
+      候補.push('<strong>通信費</strong>が生活費の' + Math.round(割合('cost-comm') * 100) +
+        '%を占めています。プランや会社を変えて下がったという家庭は多いです。いまの契約内容を見るところから始めてみてください。');
+    }
+    if (割合('cost-insurance') >= 0.10) {
+      候補.push('<strong>保険料</strong>が生活費の' + Math.round(割合('cost-insurance') * 100) +
+        '%を占めています。公的な保障でまかなえる部分を確かめてから、足りない分だけ掛け捨てで持つ、という順で見直せます。' +
+        '<a href="#pit-chochiku_hoken">保険についての説明を見る</a>');
+    }
+    if (割合('cost-food') >= 0.45) {
+      候補.push('<strong>食費</strong>が生活費の' + Math.round(割合('cost-food') * 100) +
+        '%を占めています。こども食堂やフードパントリーなど、食の支援が使えるかもしれません。学校の給食費は就学援助の対象です。' +
+        '<a href="#prog-shoku_shien">食の支援を見る</a>');
+    }
+    if (候補.length) {
+      h.push('<p class="cost-advice-head">見直しの候補</p><ul class="cost-advice-list">' +
+        候補.map(function (c) { return '<li>' + c + '</li>'; }).join('') + '</ul>');
+      h.push('<p class="hint">よその家庭の平均とは比べていません。世帯の人数や地域で大きく変わるからです。' +
+        'ここに出しているのは、あなたが入れた金額の中での割合だけです。</p>');
+    } else {
+      h.push('<p class="hint">とくに目立って重い費目はありませんでした。よその家庭の平均とは比べていません。' +
+        'ここに出しているのは、あなたが入れた金額の中での割合だけです。</p>');
+    }
+    return h.join('');
+  }
+
   /* ---------- すでに使っている制度 ---------- */
   var 申告できる制度 = ['jido_fuyo_teate', 'jido_teate', 'hitorioya_kojo',
     'shugaku_enjo', 'koukou_shugaku_shienkin', 'koutou_kyoiku_shugaku_shien',
@@ -160,6 +242,9 @@
     $('area').value = i.area;
     var ht = document.querySelector('input[name="housing-type"][value="' + i.housingType + '"]');
     if (ht) { ht.checked = true; }
+    document.querySelectorAll('.cost-item').forEach(function (el) { el.value = ''; });
+    $('cost-total').textContent = '';
+    $('cost-advice').innerHTML = '';
     $('living-cost').value = i.livingCost;
     $('current-savings').value = i.currentSavings || 0;
     document.querySelectorAll('.used-prog').forEach(function (el) {
@@ -392,11 +477,22 @@
 
   function 打ち切りの注記(c) {
     if (!c.truncated) { return ''; }
-    return '<p class="hint cutoff">灰色の網かけから先は、線を描いていません。' +
+    var h = '<p class="hint cutoff">灰色の網かけから先は、線を描いていません。' +
       '<strong>このままの前提では成り立たない領域だからです。</strong>' +
       '借金をずっと積み増していくことは実際にはできませんし、' +
       'その前に、支出・収入・受けられる支援のどれかを変えることになります。' +
       'ここから先を数字で見せると、かえって嘘になります。</p>';
+    if (c.hitsBorrowFloor && c.borrowFloor != null) {
+      h += '<p class="hint floor-note">赤い破線は、<strong>貸金業者から借りられる上限（' +
+        esc(c.borrowFloorLabel || '年収の3分の1') + ' ＝ ' + SPS.円(-c.borrowFloor) + '）</strong>です。' +
+        'グラフがこれより下に行かないのは、そこから先は実際には借りられないからです。' +
+        '<strong>借りられる上限に先にぶつかる場合、そこから先は本当に打つ手がなくなります。その前に相談窓口へ。</strong>' +
+        '<a href="#gap-block">下の「足りないぶんをどこから持ってくるか」を見る</a><br>' +
+        '<span class="src">根拠: 貸金業法第13条の2（総量規制）／' +
+        '<a href="https://www.fsa.go.jp/policy/kashikin/kihon.html" target="_blank" rel="noopener">金融庁「貸金業法のキホン」</a>' +
+        '（最終確認 8/11(火)）。銀行からの借入れや住宅ローンなど、対象外のものもあります。</span></p>';
+    }
+    return h;
   }
 
   /* ---------- 学校にかかるお金 ---------- */
@@ -440,9 +536,13 @@
     var 使用中 = {};
     (入力.usedPrograms || []).forEach(function (id) { 使用中[id] = true; });
 
+    /* 手は「今週から動けるもの（すぐ）」と「時間のかかるもの（あと）」に分ける。
+       穴が小さいのに「資格を取って収入を上げる」から始めさせるのは、釣り合いが悪い。
+       穴が小さいときは、すぐ動けるものを上に。大きいときは、金額の大きい制度を上に。 */
+    var 小さい穴 = (不足 > 0 && 不足 < 10000);
     var 手 = [];
-    function 足す(見出し, 説明, 制度id, 強調) {
-      手.push({ head: 見出し, body: 説明, prog: 制度id, strong: !!強調 });
+    function 足す(見出し, 説明, 制度id, 強調, すぐ) {
+      手.push({ head: 見出し, body: 説明, prog: 制度id, strong: !!強調, quick: !!すぐ });
     }
 
     if (入力.childSupportState.indexOf('取り決めている') === -1) {
@@ -450,47 +550,61 @@
         '口約束や、取り決めなしのままになっています。ここがいちばん大きく動く可能性があります。' +
         '公正証書にしておけば、あとから給料や預金を差し押さえられます。' +
         '令和8年4月からは、取り決めがない場合でも一定額を請求できる仕組みが始まっています。',
-        'youikuhi', true);
+        'youikuhi', true, true);
     }
     c.gaps.forEach(function (g) {
       var p = データ.programs_by_id[g.id];
       足す('「' + p.name.replace(/（.*$/, '') + '」を申請する',
         'まだ受け取っていないと答えていただきました。ひと月あたり約' + SPS.円(g.monthly) + 'です。',
-        g.id, g.monthly >= 不足);
+        g.id, g.monthly >= 不足, true);
     });
+    if (入力.children.some(function (a) { return a >= 6 && a <= 15; })) {
+      足す('学校のお金を助けてもらう',
+        '就学援助は、学用品費や給食費が対象です。児童扶養手当を受けていることを基準のひとつにしている市町村が約4分の3あり、' +
+        '年度の途中でも受け付けているところがほとんどです。学校か教育委員会に聞くだけで始められます。',
+        'shugaku_enjo', false, true);
+    }
+    足す('食べるものを助けてもらう',
+      'こども食堂・フードパントリー・こども宅食など、食事や食材を無料か安く受け取れる場所があります。' +
+      '申請も審査もいらないところがほとんどで、行けばその日から使えます。' +
+      '市区町村の子育て担当課か社会福祉協議会に「近くのこども食堂を教えてください」と聞くのがいちばん早いです。',
+      'shoku_shien', false, true);
     if (入力.housingType === '賃貸' && 入力.housingAfter > 0) {
       足す('住まいの費用を見直す',
         'いまの住居費は月' + SPS.円(入力.housingAfter) + 'です。公営住宅は収入に応じて家賃が決まるので、' +
         '民間の賃貸との差が月に数万円になることがあります。募集の時期を調べてみてください。',
-        'koei_jutaku', false);
+        'koei_jutaku', false, true);
     }
     if (判定表.koutou_shokugyo_kunren) {
       足す('資格を取って、収入を上げる',
         '学校に通う間、住民税が非課税の世帯なら月10万円（課税世帯は月70,500円）を受け取れます。' +
-        '最後の1年はさらに月4万円。通いはじめる前に相談することが必要です。',
-        'koutou_shokugyo_kunren', false);
-    }
-    if (入力.children.some(function (a) { return a >= 6 && a <= 15; })) {
-      足す('学校のお金を助けてもらう',
-        '就学援助は、児童扶養手当を受けていることを基準のひとつにしている市町村が約4分の3あります。' +
-        '年度の途中でも受け付けているところがほとんどです。',
-        'shugaku_enjo', false);
+        '最後の1年はさらに月4万円。通いはじめる前に相談することが必要です。時間はかかりますが、いちばん大きく変わる手です。',
+        'koutou_shokugyo_kunren', false, false);
     }
     if (不足 >= 50000) {
       足す('生活保護の相談に行く',
         '足りない額が大きいときの選択肢です。生活保護は権利です。一時的に受けて、立て直してから抜けることもできます。' +
         '「車があるから」「持ち家だから」と自分で決めず、まず福祉事務所で聞いてください。',
-        'seikatsu_hogo', false);
+        'seikatsu_hogo', true, false);
     }
     足す('お住まいの地域の相談窓口に行く',
       '自立相談支援機関では、家計の立て直しを一緒に考えてくれます。' +
       '<a href="https://minna-tunagaru.jp/ichiran/" target="_blank" rel="noopener">全国の窓口一覧</a>から探せます。',
-      null, false);
+      null, false, true);
 
-    var h = ['<div class="pit red gap-block">'];
+    /* 穴が小さいときだけ、今週から動けるものを上に持ってくる */
+    if (小さい穴) {
+      手.sort(function (a, b) { return (b.quick ? 1 : 0) - (a.quick ? 1 : 0); });
+    }
+
+    var h = ['<div class="pit red gap-block" id="gap-block">'];
     h.push('<h4>🔴 足りないぶんを、どこから持ってくるか</h4>');
     if (不足 > 0) {
       h.push('<p class="gap-amount">埋めたいのは <strong>ひと月あたり ' + SPS.円(不足) + '</strong> です。</p>');
+      if (小さい穴) {
+        h.push('<p>この大きさなら、<strong>今週から動けることで埋まる見込みです。</strong>' +
+          '大きな決断をする前に、上から順に試してみてください。</p>');
+      }
     }
     h.push('<p><strong>借金では埋められません。</strong>カードローンやリボ払いで足りないぶんを埋めると、' +
       '来月からは返済も足されて、もっと足りなくなります。下の手を1つずつ試してください。</p>');
@@ -831,6 +945,9 @@
         進路欄を作る(子どもの年齢たち());
       });
       $('children-box').addEventListener('change', function () { 進路欄を作る(子どもの年齢たち()); });
+      document.querySelectorAll('.cost-item').forEach(function (el) {
+        el.addEventListener('input', うちわけを反映);
+      });
       使っている制度欄を作る();
       進路欄を作る([]);
       document.querySelectorAll('input[name="status"]').forEach(function (r) {
