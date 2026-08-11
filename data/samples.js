@@ -37,6 +37,7 @@
         "parentAge": 0,
         "livingCost": 88000,
         "currentSavings": 80000,
+        "juku": { "useAverage": false, "monthly": 3000 },
         "training": { "enabled": false, "years": 2, "afterIncome": 3200000 },
         "usedPrograms": ["jido_teate"]
       },
@@ -66,6 +67,7 @@
         "parentAge": 0,
         "livingCost": 105000,
         "currentSavings": 200000,
+        "juku": { "useAverage": false, "monthly": 10000 },
         "training": { "enabled": false, "years": 2, "afterIncome": 4000000 },
         "usedPrograms": ["jido_fuyo_teate", "jido_teate"],
         "plans": [{ "high": "private", "university": "private_home" }]
@@ -96,6 +98,7 @@
         "parentAge": 0,
         "livingCost": 120000,
         "currentSavings": 1500000,
+        "juku": { "useAverage": true, "monthly": 0 },
         "training": { "enabled": false, "years": 2, "afterIncome": 5000000 },
         "usedPrograms": ["jido_teate", "hitorioya_kojo"]
       },
@@ -125,6 +128,7 @@
         "parentAge": 0,
         "livingCost": 95000,
         "currentSavings": 300000,
+        "juku": { "useAverage": false, "monthly": 3000 },
         "training": { "enabled": false, "years": 2, "afterIncome": 3000000 },
         "usedPrograms": ["jido_teate"]
       },
@@ -155,6 +159,7 @@
         "parentAge": 0,
         "livingCost": 90000,
         "currentSavings": 150000,
+        "juku": { "useAverage": false, "monthly": 3000 },
         "training": { "enabled": false, "years": 2, "afterIncome": 3200000 },
         "usedPrograms": ["jido_fuyo_teate", "jido_teate"]
       },
@@ -184,6 +189,7 @@
         "parentAge": 68,
         "livingCost": 100000,
         "currentSavings": 400000,
+        "juku": { "useAverage": false, "monthly": 5000 },
         "training": { "enabled": false, "years": 3, "afterIncome": 3600000 },
         "usedPrograms": ["jido_teate"]
       },

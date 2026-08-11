@@ -911,6 +911,67 @@ ok(保c.points[0].monthlyAll < SPS.資産カーブ(
   '保育料のぶんだけ、ひと月の残りが少なくなる');
 
 /* ------------------------------------------------------------ */
+見出し('8-3-7. 学校そのものと、塾・習いごとの分離');
+
+var 学表 = データ.tuition;
+/* 学習費調査の内訳（学校教育費＋給食費／学校外活動費）が、総額とぴったり合うこと */
+学表.bands.forEach(function (b) {
+  if (!b.school_costs) { return; }
+  ['public', 'private'].forEach(function (種) {
+    eq(b.school_costs[種] + b.extra_costs[種], b.costs[種],
+      '「' + b.label + '」の' + (種 === 'public' ? '公立' : '私立') +
+      'は、学校そのもの＋塾・習いごと＝学習費総額');
+  });
+});
+eq(学表.bands[0].school_costs.public, 110110, '公立小の学校そのものは110,110円（学校教育費74,336＋給食費35,774）');
+eq(学表.bands[0].extra_costs.public, 256489, '公立小の塾・習いごとは256,489円');
+ok(学表.bands[0].extra_costs.public > 学表.bands[0].school_costs.public,
+  '公立小では、塾・習いごとのほうが学校そのものより高い（だから分ける必要がある）');
+ok(学表.note_split.indexOf('256,489円') > 0, '分けている理由が、実際の数字つきでデータに書いてある');
+ok(学表.note_extra_varies.indexOf('世帯の年間収入が増加するに連れて') > 0,
+  '塾代が収入で変わることが、調査の言葉で書いてある');
+
+/* 塾の設定が効くこと */
+var 平均で = SPS.学費の内訳(8, {}, 学表, { useAverage: true });
+var ゼロで = SPS.学費の内訳(8, {}, 学表, { useAverage: false, monthly: 0 });
+var 五千で = SPS.学費の内訳(8, {}, 学表, { useAverage: false, monthly: 5000 });
+eq(平均で.total, 366599, '全国平均を使えば、学習費総額どおり');
+eq(ゼロで.extra, 0, '塾を0円にすれば、塾のぶんは0円');
+eq(ゼロで.total, 110110, '0円なら、学校そのものだけが残る');
+eq(ゼロで.school, 平均で.school, '塾の額を変えても、学校そのものの額は変わらない');
+eq(五千で.extra, 60000, 'ひと月5,000円なら、年60,000円');
+eq(五千で.total, 110110 + 60000, '合計もそのぶんだけ');
+/* 大学は分けない（学費と生活費の調査なので、塾の設定に左右されない） */
+eq(SPS.学費の内訳(19, {}, 学表, { useAverage: false, monthly: 0 }).total,
+   SPS.学費の内訳(19, {}, 学表, { useAverage: true }).total, '大学は塾の設定に左右されない');
+eq(SPS.学費の内訳(4, {}, 学表, { useAverage: true }).total, 0, '幼稚園の年齢は0円のまま');
+
+/* 制度の助けは「学校そのもの」までしか当たらない（塾代は対象外） */
+var 塾状況 = { income: 1500000, children: 1, taxFree: true, grants: { kyufukin: true, university: true } };
+var 高校平均 = SPS.その年の学費([15], [{}], 学表, 塾状況, { useAverage: true });
+var 高校ゼロ = SPS.その年の学費([15], [{}], 学表, 塾状況, { useAverage: false, monthly: 0 });
+eq(高校平均.support, 高校ゼロ.support, '塾代を変えても、制度の助けの額は変わらない');
+ok(高校平均.support <= 高校平均.school, '制度の助けは、学校そのものの額をこえない');
+ok(高校ゼロ.net >= 0, '塾を0円にしても、実負担がマイナスにならない');
+
+/* カーブに反映されること（塾代を減らすと、底をつく時期が延びる） */
+var 塾入力 = Object.assign({}, 入力F, { children: [8], livingCost: 95000, myIncome: 1500000 });
+var 平均c = SPS.資産カーブ(Object.assign({}, 塾入力, { juku: { useAverage: true } }), データ);
+var ゼロc = SPS.資産カーブ(Object.assign({}, 塾入力, { juku: { useAverage: false, monthly: 0 } }), データ);
+ok(ゼロc.tuitionTotal < 平均c.tuitionTotal, '塾を0円にすると、学費の合計が減る',
+  平均c.tuitionTotal + ' → ' + ゼロc.tuitionTotal);
+ok(ゼロc.finalAll > 平均c.finalAll, '塾を0円にすると、22歳時点の貯金がふえる');
+if (平均c.negativeFromMonth !== null && ゼロc.negativeFromMonth !== null) {
+  ok(ゼロc.negativeFromMonth > 平均c.negativeFromMonth, '塾を0円にすると、底をつく時期が後ろにずれる');
+}
+/* うちわけに、学校そのものと塾が分かれて入っていること */
+var 塾行 = 平均c.points[0].breakdown.all.expense.filter(function (r) { return r.key === 'tuition'; })[0];
+ok(塾行.school != null && 塾行.extra != null, 'うちわけの学費行に、学校そのものと塾が分かれて入っている');
+eq(塾行.school + 塾行.extra, 塾行.amount, '学校そのもの＋塾＝学費行の金額');
+var ゼロ行 = ゼロc.points[0].breakdown.all.expense.filter(function (r) { return r.key === 'tuition'; })[0];
+eq(ゼロ行.extra, 0, '塾を0円にすれば、うちわけの塾も0円');
+
+/* ------------------------------------------------------------ */
 見出し('8-4. 学校にかかるお金');
 
 eq(SPS.学費(3, {}, 学費表), 0, '3歳（幼稚園）は0円。無償化されているため');

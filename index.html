@@ -116,6 +116,16 @@
           <div id="cost-advice"></div>
         </details>
 
+        <label for="juku-cost">塾・習いごとにかけるお金（お子さん1人・ひと月・円）</label>
+        <div class="inline-choice">
+          <label><input type="radio" name="juku-mode" value="average" checked>全国平均を使う</label>
+          <label><input type="radio" name="juku-mode" value="custom">自分で決める</label>
+        </div>
+        <div id="juku-row" style="display:none">
+          <input type="number" id="juku-cost" min="0" max="200000" inputmode="numeric" placeholder="0でもかまいません">
+        </div>
+        <p class="hint">学校にかかるお金には、塾や習いごとの費用が入っています。全国平均だと、公立の小学校で年256,489円（ひと月あたり約21,000円）。<strong>この平均は、収入の高い家庭に引っぱられて高めに出ます。</strong>お子さんの実際にあわせて変えてください。0円にもできます。</p>
+
         <label for="current-savings">いまの貯金額（円）</label>
         <input type="number" id="current-savings" min="0" max="100000000" inputmode="numeric" placeholder="例 300000">
         <p class="hint">これから貯金がどうふえていくかの、出発点になります。だいたいで大丈夫です。ここに入れた数字も、どこにも送られません。</p>

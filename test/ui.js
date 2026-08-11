@@ -48,7 +48,8 @@ function 道筋のチェック() {
       var 見本 = require(path.join(ROOT, 'data', 'samples.js')).samples;
       var 期待 = {
         part_two_kids: ['黒字になります', '資格を取って抜ける道'],
-        seishain_one_kid: ['申請すれば'],
+        /* 塾代を現実的な額にしたことで、この世帯は防衛資金に届くようになった */
+        seishain_one_kid: ['まだ受け取れるお金があります'],
         over_limit: ['学費の山'],
         considering_divorce: ['養育費を取り決めると'],
         on_the_edge: ['手当が減りはじめます'],
@@ -460,6 +461,21 @@ server.listen(0, '127.0.0.1', function () {
           '修学支援新制度に、誤解を解く一文が出ている');
         ok(d.querySelector('#prog-koutou_kyoiku_shugaku_shien .misunderstanding').textContent.indexOf('返す必要がありません') > 0,
           'その一文に「返す必要がありません」と書いてある');
+
+        /* 塾・習いごとの額を変えられること */
+        ok(d.getElementById('juku-cost') !== null, '塾・習いごとの額を入れる欄がある');
+        eq(d.querySelectorAll('input[name="juku-mode"]').length, 2, '全国平均か自分で決めるかを選べる');
+        var 塾前 = d.querySelector('#stage2b-body table.balance').textContent;
+        d.querySelector('input[name="juku-mode"][value="custom"]').checked = true;
+        d.querySelector('input[name="juku-mode"][value="custom"]')
+          .dispatchEvent(new w.Event('change', { bubbles: true }));
+        eq(d.getElementById('juku-row').style.display, '', '自分で決めるを選ぶと、金額の欄が出る');
+        d.getElementById('juku-cost').value = '0';
+        d.getElementById('juku-cost').dispatchEvent(new w.Event('input', { bubbles: true }));
+        var 塾後 = d.querySelector('#stage2b-body table.balance').textContent;
+        ok(塾後 !== 塾前, '塾の額を変えると、家計の表がその場で変わる');
+        ok(d.querySelector('#stage2b-body table.balance').textContent.indexOf('塾・習いごと') > 0,
+          '家計の表に、塾・習いごとが分けて出ている');
 
         /* 進路プラン: 私立にすると、その場でグラフが変わる */
         var 進路 = d.querySelectorAll('.plan-select');

@@ -236,6 +236,17 @@
     if (最新入力) { 最新入力.training = 訓練の入力(); 資産を描く(); }
   }
 
+  /* ---------- 塾・習いごとにかけるお金 ---------- */
+  function 塾の入力() {
+    var 決め方 = 選択('juku-mode') || 'average';
+    return { useAverage: (決め方 === 'average'), monthly: 数('juku-cost') };
+  }
+  function 塾欄を反映() {
+    var 自分で = (選択('juku-mode') === 'custom');
+    $('juku-row').style.display = 自分で ? '' : 'none';
+    if (最新入力) { 最新入力.juku = 塾の入力(); 資産を描く(); }
+  }
+
   /* ---------- 進路プラン ---------- */
   function 進路欄を作る(年齢たち) {
     var 帯 = (データ.tuition && データ.tuition.bands) || [];
@@ -287,6 +298,7 @@
       usedPrograms: 使っている制度(),
       training: 訓練の入力(),
       plans: 進路プラン(),
+      juku: 塾の入力(),
       housingNow: 数('housing-now'),
       housingAfter: (選択('status') === 'single') ? 数('housing-now') : 数('housing-after'),
       childSupportState: 選択('cs-state'),
@@ -323,6 +335,12 @@
     /* 資格ルートは、いつも切った状態から始める。
        まず「いまのまま」の現実だけを見てもらい、
        ボタンを押したときに線が現れる体験にするため。 */
+    var j = i.juku || { useAverage: true };
+    var jEl = document.querySelector('input[name="juku-mode"][value="' + (j.useAverage ? 'average' : 'custom') + '"]');
+    if (jEl) { jEl.checked = true; }
+    $('juku-cost').value = j.monthly ? j.monthly : '';
+    $('juku-row').style.display = j.useAverage ? 'none' : '';
+
     var tr = i.training || { enabled: false };
     $('training-on').checked = false;
     $('training-years').value = String(tr.years || 2);
@@ -972,8 +990,11 @@
       '実際には、お子さんが中学生・高校生になると食費などが増えます。' +
       '<span class="warn-inline">その分、後半の線は甘め（実際より良く）に出ます。</span>' +
       'お子さんが大きくなったときの姿を見たいときは、生活費の欄を多めに入れて試してください。</li>');
-    h.push('<li><strong>学校にかかるお金は、全国の平均値です。</strong>まん中の人の金額ではありません。' +
-      '塾に通わせるかどうかだけでも、年に数十万円変わります。' +
+    h.push('<li><strong>学校にかかるお金には、塾・習いごとの費用が入っています。</strong>' +
+      '全国平均だと、公立の小学校で年366,599円のうち256,489円（7割）が塾・習いごとです。' +
+      'この平均は収入の高い家庭に引っぱられて高めに出るので、' +
+      '<strong>入力欄で自分の家に合った額に変えられます（0円にもできます）</strong>。' +
+      '学校そのものにかかるお金（授業料・教材費・給食費など）とは分けて計算しています。' +
       'また、1年ぶんの金額を<strong>12か月に等分して</strong>引いています。' +
       '入学金のように実際は一度に出ていくお金も、ならして引いているので、' +
       '入学の月の落ち込みは実際よりゆるやかに出ます。</li>');
@@ -1115,9 +1136,17 @@
           追記 = '<span class="why">' + esc(データ.childcare.note_municipality) + '</span>';
         }
       }
-      if (r.key === 'tuition' && r.support > 0) {
-        追記 = '<span class="why">もとの額は ' + SPS.円(r.gross) +
-          '。制度が ' + SPS.円(r.support) + ' 助けてくれた後の額です</span>';
+      if (r.key === 'tuition') {
+        var 内 = [];
+        if (r.school != null) { 内.push('学校そのもの ' + SPS.円(r.school)); }
+        if (r.extra != null) {
+          内.push('塾・習いごと ' + SPS.円(r.extra) +
+            ((最新入力.juku && 最新入力.juku.useAverage === false) ? '（自分で決めた額）' : '（全国平均）'));
+        }
+        if (r.support > 0) {
+          内.push('もとの額 ' + SPS.円(r.gross) + ' から制度が ' + SPS.円(r.support) + ' 助けたあと');
+        }
+        if (内.length) { 追記 = '<span class="why">' + 内.join(' ／ ') + '</span>'; }
       }
       var 小計か = (r.children && r.children.length > 1);
       h.push('<tr' + (r.amount === 0 ? ' class="zero"' : '') + (小計か ? ' class="has-children"' : '') +
@@ -1128,7 +1157,12 @@
         r.children.forEach(function (ch) {
           var 呼び名 = 子の呼び名(ch.index, pt.childAges || []);
           var 補 = '';
-          if (ch.support > 0) {
+          if (ch.school != null && ch.extra != null && (ch.school > 0 || ch.extra > 0)) {
+            補 = '<span class="why">学校そのもの ' + SPS.円(ch.school) +
+              ' ／ 塾・習いごと ' + SPS.円(ch.extra) +
+              (ch.support > 0 ? '（もとの額 ' + SPS.円(ch.gross) + ' から制度が ' + SPS.円(ch.support) + ' 助けたあと）' : '') +
+              '</span>';
+          } else if (ch.support > 0) {
             補 = '<span class="why">もとの額 ' + SPS.円(ch.gross) + ' − 制度の助け ' + SPS.円(ch.support) + '</span>';
           } else if (ch.discount > 0) {
             補 = '<span class="why">きょうだいの軽減で ' + SPS.円(ch.discount) + ' 安く（軽減前 ' + SPS.円(ch.gross) + '）</span>';
@@ -1693,6 +1727,10 @@
       document.querySelectorAll('.cost-item').forEach(function (el) {
         el.addEventListener('input', うちわけを反映);
       });
+      document.querySelectorAll('input[name="juku-mode"]').forEach(function (el) {
+        el.addEventListener('change', 塾欄を反映);
+      });
+      $('juku-cost').addEventListener('input', 塾欄を反映);
       $('training-on').addEventListener('change', 訓練欄を反映);
       ['training-years', 'training-during', 'training-after'].forEach(function (id) {
         $(id).addEventListener('input', 訓練欄を反映);

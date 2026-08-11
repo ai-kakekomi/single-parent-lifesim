@@ -18,6 +18,8 @@
   "note": "全国共通の制度だけを収めています。お住まいの市区町村だけの制度は入っていません。",
   "tuition": {
     "note": "学校にかかるお金の、1年ぶんの目安です。すべて全国の平均値です。実際にかかる額は、地域や学校、習いごとの有無で大きく変わります。",
+    "note_split": "小学校・中学校・高校の金額は、「学校そのものにかかるお金」（授業料・教材費・給食費など）と「塾・習いごとなど」（学校外活動費）に分けています。たとえば公立の小学校の年366,599円のうち、256,489円（7割）は塾や習いごとの全国平均です。",
+    "note_extra_varies": "塾・習いごとの金額は、家庭によってまったく違います。文部科学省の調査でも「世帯の年間収入が増加するに連れて、おおむね支出が多い傾向がみられる」とされています。全国平均は収入の高い家庭に引っ張られるので、入力欄で自分の家に合った額に変えてください。0円にもできます。",
     "note_average": "ここに出している金額は、すべて平均値です。まん中の人の金額（中央値）ではありません。塾や習いごとにたくさんかける家庭が平均を押し上げるため、多くの家庭の実感より高めに出ます。",
     "note_kindergarten": "幼稚園・保育所・認定こども園は、3歳から5歳のクラスの利用料が無償になっているため、このツールでは0円として計算しています（0歳から2歳は住民税非課税世帯が対象）。ただし、給食の食材料費・通園送迎費・行事費は別にかかります。",
     "note_high_school": "高校の金額は、授業料をふくむ平均です。高等学校等就学支援金（公立で年118,800円、私立で年457,200円まで）が授業料にあてられるので、実際の負担はこの金額より軽くなります。申請しないと受け取れません。",
@@ -27,6 +29,8 @@
         "stage": "elementary", "label": "小学校", "from": 6, "to": 11,
         "default": "public", "baseline": "public",
         "costs": { "public": 366599, "private": 1741516 },
+        "school_costs": { "public": 110110, "private": 1031849 },
+        "extra_costs": { "public": 256489, "private": 709667 },
         "choices": [
           { "value": "public", "label": "公立の小学校", "yearly": 366599 },
           { "value": "private", "label": "私立の小学校", "yearly": 1741516 }
@@ -36,6 +40,8 @@
         "stage": "junior", "label": "中学校", "from": 12, "to": 14,
         "default": "public", "baseline": "public",
         "costs": { "public": 542450, "private": 1560359 },
+        "school_costs": { "public": 186432, "private": 1137378 },
+        "extra_costs": { "public": 356018, "private": 422981 },
         "choices": [
           { "value": "public", "label": "公立の中学校", "yearly": 542450 },
           { "value": "private", "label": "私立の中学校", "yearly": 1560359 }
@@ -45,6 +51,8 @@
         "stage": "high", "label": "高校", "from": 15, "to": 17,
         "default": "public", "baseline": "public",
         "costs": { "public": 596954, "private": 1179261 },
+        "school_costs": { "public": 351523, "private": 832650 },
+        "extra_costs": { "public": 245431, "private": 346611 },
         "choices": [
           { "value": "public", "label": "公立の高校", "yearly": 596954 },
           { "value": "private", "label": "私立の高校", "yearly": 1179261 }

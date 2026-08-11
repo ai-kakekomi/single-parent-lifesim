@@ -462,21 +462,50 @@
    *   生活防衛資金（生活費の3か月分から6か月分）の帯もいっしょに返します。
    * ---------------------------------------------------------- */
   /** その年齢のお子さん1人に、1年でかかる学校のお金 */
-  function 学費(年齢, プラン, 学費表) {
-    if (!学費表) { return 0; }
+  function 学費(年齢, プラン, 学費表, 塾設定) {
+    var 内 = 学費の内訳(年齢, プラン, 学費表, 塾設定);
+    return 内.total;
+  }
+
+  /**
+   * その年齢のお子さん1人にかかる、1年ぶんの学校のお金を
+   * 「学校そのもの」と「塾・習いごと」に分けて返す。
+   *
+   * 学習費調査の学習費総額には、塾や習いごと（学校外活動費）が入っている。
+   * 公立の小学校では、年366,599円のうち256,489円（7割）が塾・習いごと。
+   * この平均は収入の高い家庭に引っぱられるので、そのまま全員に当てると
+   * 収入の低い家庭の負担を実際より重く見せてしまう。だから分けて持ち、
+   * 塾・習いごとの額は利用者が変えられるようにする。
+   *
+   * @param {Object} 塾設定 { useAverage: 全国平均を使うか, monthly: ひと月の額 }
+   */
+  function 学費の内訳(年齢, プラン, 学費表, 塾設定) {
+    var 空 = { school: 0, extra: 0, total: 0 };
+    if (!学費表) { return 空; }
     var p = プラン || {};
     var b = 学費表.bands;
     for (var i = 0; i < b.length; i++) {
       if (年齢 >= b[i].from && 年齢 <= b[i].to) {
         var 選択 = p[b[i].stage] || b[i].default;
-        var v = b[i].costs[選択];
-        if (v == null) { return 0; }
+        var 学校 = 0, 塾 = 0;
+        if (b[i].school_costs) {
+          学校 = b[i].school_costs[選択] || 0;
+          var 設定 = 塾設定 || {};
+          塾 = (設定.useAverage === false)
+            ? Math.max(0, Math.round((設定.monthly || 0) * 12))
+            : (b[i].extra_costs[選択] || 0);
+        } else {
+          /* 大学は塾・習いごとを分けない（学費と生活費の調査なので） */
+          var v = b[i].costs[選択];
+          if (v == null) { return 空; }
+          学校 = v;
+        }
         /* 入学のときだけかかるお金（大学の入学料）は、その学校に入る年に足す */
-        if (b[i].entrance && 年齢 === b[i].from && b[i].entrance[選択]) { v += b[i].entrance[選択]; }
-        return v;
+        if (b[i].entrance && 年齢 === b[i].from && b[i].entrance[選択]) { 学校 += b[i].entrance[選択]; }
+        return { school: 学校, extra: 塾, total: 学校 + 塾 };
       }
     }
-    return 0;   // その年齢は、学校にかかるお金を数えない（幼稚園・保育園は無償化のためゼロ）
+    return 空;   // その年齢は、学校にかかるお金を数えない（幼稚園・保育園は無償化のためゼロ）
   }
 
   /* ------------------------------------------------------------
@@ -562,20 +591,25 @@
   }
 
   /** ある年に、お子さん全員でかかる学校のお金の合計 */
-  function その年の学費(子の年齢たち, プラン一覧, 学費表, 状況) {
-    var 合計 = 0, 支援合計 = 0, 明細 = [];
+  function その年の学費(子の年齢たち, プラン一覧, 学費表, 状況, 塾設定) {
+    var 合計 = 0, 支援合計 = 0, 明細 = [], 学校計 = 0, 塾計 = 0;
     (子の年齢たち || []).forEach(function (age, i) {
       var プラン = (プラン一覧 || [])[i];
-      var v = 学費(age, プラン, 学費表);
-      var 支 = 状況 ? Math.min(v, 学費の支援(age, プラン, 学費表, 状況)) : 0;
-      if (v > 0) {
-        明細.push({ index: i, age: age, amount: v, support: 支, net: v - 支,
+      var 内 = 学費の内訳(age, プラン, 学費表, 塾設定);
+      /* 制度が助けてくれるのは「学校そのもの」の部分まで。塾代は対象外 */
+      var 支 = 状況 ? Math.min(内.school, 学費の支援(age, プラン, 学費表, 状況)) : 0;
+      if (内.total > 0) {
+        明細.push({ index: i, age: age, amount: 内.total, support: 支, net: 内.total - 支,
+          school: 内.school, extra: 内.extra, schoolNet: 内.school - 支,
           stage: 段階の名前(age, プラン, 学費表) });
       }
-      合計 += v;
+      合計 += 内.total;
+      学校計 += 内.school;
+      塾計 += 内.extra;
       支援合計 += 支;
     });
-    return { total: 合計, support: 支援合計, net: Math.max(0, 合計 - 支援合計), detail: 明細 };
+    return { total: 合計, school: 学校計, extra: 塾計, support: 支援合計,
+      net: Math.max(0, 合計 - 支援合計), detail: 明細 };
   }
 
   /** お子さんごとの金額を、行の合計にぴったり合わせる。
@@ -712,6 +746,7 @@
     var 児手表 = データ.programs_by_id.jido_teate.eligibility;
     var 非課税か = (給与所得(入力.myIncome) <= ((データ.training || {}).resident_tax_free_limit || 1350000));
     var プラン一覧 = 入力.plans || [];
+    var 塾設定 = 入力.juku || { useAverage: true };
     var 使用中 = {};
     (入力.usedPrograms || []).forEach(function (id) { 使用中[id] = true; });
 
@@ -771,9 +806,10 @@
         } };
       var 状況全部 = { income: 入力.myIncome, children: 子の人数, taxFree: 非課税か,
         grants: { kyufukin: true, university: true } };
-      var 学 = その年の学費(y.childAges, プラン一覧, 学費表, 状況いま);
-      var 学全部 = その年の学費(y.childAges, プラン一覧, 学費表, 状況全部);
-      var 安 = その年の学費(y.childAges, y.childAges.map(function () { return 安いプラン; }), 学費表, 状況全部);
+      var 学 = その年の学費(y.childAges, プラン一覧, 学費表, 状況いま, 塾設定);
+      var 学全部 = その年の学費(y.childAges, プラン一覧, 学費表, 状況全部, 塾設定);
+      var 安 = その年の学費(y.childAges, y.childAges.map(function () { return 安いプラン; }),
+        学費表, 状況全部, 塾設定);
       var 学費月いま = Math.round(学.net / 12);
       var 学費月全部 = Math.round(学全部.net / 12);
       /* お子さんが大きくなったぶん、生活費（の食費部分）がふえる */
@@ -827,9 +863,12 @@
           { key: 'housing', name: '住居費', amount: d.housing },
           { key: 'tuition', name: '学校にかかるお金（支援を引いたあと）', amount: 学費,
             gross: Math.round(学の元.total / 12), support: Math.round(学の元.total / 12) - 学費,
+            school: Math.round(学の元.school / 12) - (Math.round(学の元.total / 12) - 学費),
+            extra: Math.round(学の元.extra / 12),
             children: 子ども別をそろえる(学の元.detail.map(function (x) {
               return { index: x.index, age: x.age, stage: x.stage,
-                amount: Math.round(x.net / 12), gross: Math.round(x.amount / 12), support: 0 };
+                amount: Math.round(x.net / 12), gross: Math.round(x.amount / 12), support: 0,
+                school: Math.round(x.schoolNet / 12), extra: Math.round(x.extra / 12) };
             }), 学費, Math.round(学の元.total / 12)) },
           { key: 'childcare', name: '保育料（0歳から2歳）', amount: 今年の保育料,
             gross: 保育の内訳.gross, discount: 保育の内訳.discount,
@@ -1094,7 +1133,7 @@
         income: 年収, children: (入力.children || []).length,
         taxFree: (給与所得(年収) <= (訓練表.resident_tax_free_limit || 1350000)),
         grants: { kyufukin: true, university: true }
-      });
+      }, 入力.juku || { useAverage: true });
       var 学 = 学の全体.net, 学の総額 = 学の全体.total;
 
       /* お子さんが大きくなったぶん、生活費（の食費部分）がふえる。
@@ -1320,6 +1359,7 @@
     資格ルート: 資格ルート,
     学費: 学費,
     その年の学費: その年の学費,
+    学費の内訳: 学費の内訳,
     段階の名前: 段階の名前,
     保育料: 保育料,
     保育料の内訳: 保育料の内訳,
