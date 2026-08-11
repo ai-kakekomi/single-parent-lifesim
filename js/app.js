@@ -310,7 +310,7 @@
       'そして黒字分を貯蓄することです」としています（' +
       '<a href="https://www.fsa.go.jp/policy/nisa2/invest/" target="_blank" rel="noopener">金融庁「資産形成の基本」</a>）。' +
       'また金融広報中央委員会は、緊急時の予備資金について「金額は生活費の半年分が目安です」としています（' +
-      '<a href="https://www.shiruporuto.jp/public/family/marriage/shinkon/" target="_blank" rel="noopener">知るぽると</a>' +
+      '<a href="https://www.shiruporuto.jp/public/document/container/shinkon/" target="_blank" rel="noopener">知るぽると</a>' +
       '／アーカイブ。最終確認 8/11(火)）。</p>' +
       '<div class="stance" style="background:#fff"><span class="stance-tag">ここからは、私たちの立場の表明です（事実ではありません）</span>' +
       '私たちAIかけこみ寺は、ひとり親家庭にとっては生活費の3か月分から6か月分を手元に置くことが、' +
