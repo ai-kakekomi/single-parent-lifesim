@@ -1638,18 +1638,74 @@ ok(重なり(左svg).length === 0, '印のラベルを右へ引き出しても�
 /* いま見ている年のカーソル線 */
 var カーソルなし = Chart.資産を描く(赤字);
 ok(カーソルなし.indexOf('stroke="#33414f"') === -1, '年を指定しなければ、カーソル線は出ない');
-[0, 3, 10].forEach(function (年) {
-  if (年 >= 赤字.points.length) { return; }
-  var svgK = Chart.資産を描く(赤字, false, 年);
-  var m = /<line x1="([\d.]+)"[^>]*stroke="#33414f"/.exec(svgK);
-  ok(m !== null, '年' + 年 + 'を指定すると、カーソル線が出る（線を打ち切っている先でも出る）');
-  if (m && 年 > 0) {
-    var m0 = /<line x1="([\d.]+)"[^>]*stroke="#33414f"/.exec(Chart.資産を描く(赤字, false, 0));
-    ok(Number(m[1]) > Number(m0[1]), '年が進むほど、カーソル線は右に動く',
-      m0[1] + ' → ' + m[1]);
-  }
+/* 横軸の中の年ならカーソルが出る。軸の外（線を描いていない先）なら出さない */
+var 軸内 = [0, 1, 2];
+軸内.forEach(function (年) {
+  var svgK = Chart.資産を描く(黒字, false, 年);
+  ok(/<line x1="[\d.]+"[^>]*stroke="#33414f"/.test(svgK), '年' + 年 + 'を指定すると、カーソル線が出る');
 });
+var 位置 = 軸内.map(function (年) {
+  return Number(/<line x1="([\d.]+)"[^>]*stroke="#33414f"/.exec(Chart.資産を描く(黒字, false, 年))[1]);
+});
+ok(位置[1] > 位置[0] && 位置[2] > 位置[1], '年が進むほど、カーソル線は右に動く', 位置.join(' → '));
+var 遠い年 = 赤字.points.length - 1;
+ok(Chart.資産を描く(赤字, false, 遠い年).indexOf('stroke="#33414f"') === -1,
+  '横軸の外（線を描いていない先）の年を選んだときは、カーソル線を出さない');
+
 ok(重なり(Chart.資産を描く(赤字, false, 2)).length === 0, 'カーソル線を出しても、文字がかぶらない');
+
+/* 資格ルートの線には、説明のない印を置かない
+   （危機の印は「いまのまま」の線だけ、が正しい状態） */
+var 資格svg2 = Chart.資産を描く(SPS.資産カーブ(訓入力, データ));
+var むらさきの丸 = (資格svg2.match(/<circle[^>]*stroke="#6a4c93"[^>]*>/g) || []);
+eq(むらさきの丸.length, 0, '資格ルートの線の上に、説明のない丸を置いていない');
+var 丸ぜんぶ = (資格svg2.match(/<circle[^>]*>/g) || []);
+丸ぜんぶ.forEach(function (c) {
+  ok(c.indexOf('#2f6f9f') > 0 || c.indexOf(色なし(c)) === 0,
+    'グラフに残っている丸は、説明のあるもの（いまの貯金の印）だけ', c);
+});
+function 色なし(x) { return x; }
+ok(資格svg2.indexOf('▲資格取得') === -1, '古い「▲資格取得」の印も残っていない');
+
+/* 横軸は、実際に線を描く範囲までで切る */
+function 軸の年齢たち(svg) {
+  var 出 = [];
+  svg.replace(/<text x="[\d.]+" y="\d+" text-anchor="middle" font-size="12"[^>]*>(\d+)<\/text>/g,
+    function (_, v) { 出.push(Number(v)); return _; });
+  return 出;
+}
+var 打切c = SPS.資産カーブ(Object.assign({}, 入力F,
+  { myIncome: 1500000, livingCost: 95000, currentSavings: 80000, children: [5], usedPrograms: [] }), データ);
+ok(打切c.truncated, 'この例は、途中で線を打ち切る');
+var 打切svg = Chart.資産を描く(打切c);
+var 軸年齢 = 軸の年齢たち(打切svg);
+ok(軸年齢.length > 0, '横軸に年齢のラベルが出ている');
+ok(軸年齢[軸年齢.length - 1] < 22,
+  '線を打ち切るときは、横軸も22歳まで伸ばさない', 'いちばん右のラベル: ' + 軸年齢[軸年齢.length - 1] + '歳');
+ok(軸年齢[軸年齢.length - 1] >= 打切c.points[打切c.drawUntilOffset].youngestAge,
+  '横軸は、線を描いた先までは含んでいる');
+ok(打切svg.indexOf('hatch') === -1, '網かけはもう描かない');
+
+/* 資格ルートを出して線が先まで伸びると、横軸も広がる */
+var 広がるc = SPS.資産カーブ(Object.assign({}, 入力F,
+  { myIncome: 1500000, livingCost: 95000, currentSavings: 80000, children: [5], usedPrograms: [],
+    training: { enabled: true, years: 2, afterIncome: 3200000 } }), データ);
+var 広がった = 軸の年齢たち(Chart.資産を描く(広がるc));
+ok(広がった[広がった.length - 1] > 軸年齢[軸年齢.length - 1],
+  '資格ルートを出すと、横軸が先まで広がる',
+  軸年齢[軸年齢.length - 1] + '歳 → ' + 広がった[広がった.length - 1] + '歳');
+
+/* 全部の線が22歳まで描けるときは、これまでどおり22歳まで */
+var 黒字軸 = 軸の年齢たち(Chart.資産を描く(黒字));
+eq(黒字軸[黒字軸.length - 1], 22, '打ち切りがなければ、横軸は22歳まで');
+
+/* 軸を縮めても、文字がかぶらない・はみ出さない */
+[打切svg, Chart.資産を描く(広がるc), Chart.資産を描く(打切c, true)].forEach(function (g, i) {
+  ok(重なり(g).length === 0, '軸を縮めたグラフ' + (i + 1) + 'でも、文字がかぶらない', 重なり(g).join(' / '));
+  var w = parseFloat(/width="(\d+)"/.exec(g)[1]);
+  ok(文字を拾う(g).every(function (t) { return t.x2 <= w + 1 && t.x1 >= -1; }),
+    '軸を縮めたグラフ' + (i + 1) + 'でも、文字がはみ出さない');
+});
 
 /* ------------------------------------------------------------ */
 見出し('13-3. スマートフォンでの縦長のグラフ');
@@ -1721,14 +1777,14 @@ ok(css.indexOf('cta-pulse 1.8s') > 0, '脈打つ周期は1.8秒（1.5〜2秒の�
 var appソース = fs.readFileSync(path.join(ROOT, 'js', 'app.js'), 'utf8');
 ok(/打ち切りの注記[\s\S]{0,2600}details class="explain"/.test(appソース),
   '網かけと赤い線の説明が、折りたたみに入っている');
-ok(appソース.indexOf('グラフの網かけと赤い線の意味（くわしく）') > 0,
+ok(appソース.indexOf('グラフの線の終わりと、赤い領域の意味（くわしく）') > 0,
   '閉じたときの見出しが1行で用意されている');
 ok(!/打ち切りの注記[\s\S]{0,2600}details class="explain" open/.test(appソース),
   'その折りたたみは、はじめから開いてはいない');
 /* グラフの中の短いラベルは、たたまずに残す */
 var 短いラベル = Chart.資産を描く(赤字);
 ok(短いラベル.indexOf('借りられません') > 0, 'グラフの中の借入上限のラベルは残っている');
-ok(短いラベル.indexOf('この先は') > 0, 'グラフの中の網かけのラベルも残っている');
+ok(短いラベル.indexOf('hatch') === -1, '網かけはもう描かない（横軸を短くする方式にした）');
 
 /* ------------------------------------------------------------ */
 見出し('14. 画面と処理のつながり');

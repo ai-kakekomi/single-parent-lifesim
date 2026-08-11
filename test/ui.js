@@ -297,6 +297,26 @@ server.listen(0, '127.0.0.1', function () {
         /* グラフに、いま見ている年のカーソル線が出る */
         ok(d.querySelector('#curve-chart svg line[stroke="#33414f"]') !== null,
           'グラフに、いま見ている年のたて線が出る');
+        /* 横軸は、線を描く範囲までで切ってある */
+        (function () {
+          var もとの年 = 年欄.value;
+          var 年齢ラベル = [].map.call(d.querySelectorAll('#curve-chart svg text'), function (t) {
+            return Number(t.textContent);
+          }).filter(function (v) { return v >= 5 && v <= 22; });
+          ok(年齢ラベル.length > 0, '横軸に年齢のラベルが出ている');
+          /* いちばん先まで選ぶと、軸の外なのでカーソルは出さない（表は出る） */
+          年欄.value = 年欄.max;
+          年欄.dispatchEvent(new w.Event('input', { bubbles: true }));
+          ok(d.querySelector('#stage2b-body table.balance') !== null,
+            '軸の外の年を選んでも、家計の表は出る');
+          年欄.value = String(Math.min(2, Number(年欄.max)));
+          年欄.dispatchEvent(new w.Event('input', { bubbles: true }));
+          ok(d.querySelector('#curve-chart svg line[stroke="#33414f"]') !== null,
+            '軸の中に戻すと、カーソル線もまた出る');
+          /* あとのテストが同じ年を見ているので、もとに戻しておく */
+          年欄.value = もとの年;
+          年欄.dispatchEvent(new w.Event('input', { bubbles: true }));
+        }());
         ok(d.querySelector('#stage2b-body .balance-events') !== null,
           'その年に変わることが出ている');
         /* シナリオを切りかえると変わる */
@@ -316,13 +336,21 @@ server.listen(0, '127.0.0.1', function () {
               var 表示 = 円を数に((tr.cells[1] || {}).textContent || '');
               var 補足 = tr.querySelector('.why');
               if (!補足) { return; }
-              var 数字 = (補足.textContent.match(/([\d,]+)円/g) || []).map(function (x) {
-                return Number(x.replace(/[円,]/g, ''));
-              });
-              if (数字.length >= 2) {
-                eq(数字[0] - 数字[1], 表示,
+              /* 「もとの額 ◯円 から制度が ◯円 助けたあと」の部分だけを見る */
+              var m2 = /もとの額 ([\d,]+)円 から制度が ([\d,]+)円/.exec(補足.textContent);
+              if (m2) {
+                var もと = Number(m2[1].replace(/,/g, '')), 助け = Number(m2[2].replace(/,/g, ''));
+                eq(もと - 助け, 表示,
                   '[' + 線 + '] 学費の行「もとの額 − 支援 ＝ 表示額」が画面上で合っている',
-                  数字[0] + ' − ' + 数字[1] + ' ≠ ' + 表示);
+                  もと + ' − ' + 助け + ' ≠ ' + 表示);
+              }
+              /* 「学校そのもの ＋ 塾・習いごと ＝ 表示額」も画面上で合っていること */
+              var m3 = /学校そのもの ([\d,]+)円 ／ 塾・習いごと ([\d,]+)円/.exec(補足.textContent);
+              if (m3) {
+                var 学校 = Number(m3[1].replace(/,/g, '')), 塾 = Number(m3[2].replace(/,/g, ''));
+                eq(学校 + 塾, 表示,
+                  '[' + 線 + '] 学費の行「学校そのもの ＋ 塾・習いごと ＝ 表示額」が画面上で合っている',
+                  学校 + ' ＋ ' + 塾 + ' ≠ ' + 表示);
               }
             });
           });
@@ -397,11 +425,11 @@ server.listen(0, '127.0.0.1', function () {
 
         /* グラフの網かけと赤い線の説明も、折りたたみに入っている */
         var 網たたみ = [].filter.call(d.querySelectorAll('#stage2b-body details.explain'), function (x) {
-          return x.querySelector('summary').textContent.indexOf('網かけ') >= 0;
+          return x.querySelector('summary').textContent.indexOf('線の終わり') >= 0;
         })[0];
-        ok(網たたみ !== undefined, 'グラフの網かけと赤い線の説明が、折りたたみになっている');
+        ok(網たたみ !== undefined, 'グラフの線の終わりと赤い領域の説明が、折りたたみになっている');
         ok(!網たたみ.open, 'はじめは閉じている');
-        eq(網たたみ.querySelector('summary').textContent, 'グラフの網かけと赤い線の意味（くわしく）',
+        eq(網たたみ.querySelector('summary').textContent, 'グラフの線の終わりと、赤い領域の意味（くわしく）',
           '閉じた見出しが1行で分かりやすい');
         ok(網たたみ.querySelector('.explain-body') !== null, '中身が入れものに入っている');
         ok(網たたみ.textContent.indexOf('うすい赤') > 0 && 網たたみ.textContent.indexOf('濃い赤') > 0,
@@ -409,10 +437,8 @@ server.listen(0, '127.0.0.1', function () {
         /* 長い説明はたたんでも、グラフの中の短いラベルは残っている */
         var 絵の字 = d.querySelector('#curve-chart svg').textContent;
         ok(絵の字.indexOf('借りられません') > 0, 'グラフの中の「借りられません」のラベルは残っている');
-        if (d.querySelector('#curve-chart svg [fill="url(#hatch)"]')) {
-          ok(絵の字.indexOf('描いていません') > 0 || 絵の字.indexOf('この先は') > 0 || 絵の字.indexOf('なし') > 0,
-            'グラフの中の網かけのラベルも残っている', 絵の字.slice(0, 60));
-        }
+        ok(d.querySelector('#curve-chart svg [fill="url(#hatch)"]') === null,
+          '網かけはもう使っていない（横軸そのものを短くしている）');
         /* 2つの折りたたみが、同じ見た目のしくみを使っている */
         var たたみ全部 = d.querySelectorAll('#stage2b-body details.explain');
         ok(たたみ全部.length >= 2, '折りたたみが2つある（網かけの説明・生活防衛資金の説明）');
@@ -582,6 +608,26 @@ server.listen(0, '127.0.0.1', function () {
           /* 押した瞬間だけ、線が伸びる動きがつく */
           ok(d.querySelector('#stage2b-body path.draw-in') !== null,
             '押した瞬間、線が伸びる動きで描かれる');
+          /* 制度の長い説明は、たたんである（設定と結果は出したまま） */
+          var 資格たたみ = [].filter.call(d.querySelectorAll('#stage2b-body details.explain'), function (x) {
+            return x.querySelector('summary').textContent.indexOf('この制度のくわしい説明') >= 0;
+          })[0];
+          ok(資格たたみ !== undefined, '資格ルートの制度説明が、折りたたみになっている');
+          ok(!資格たたみ.open, 'はじめは閉じている');
+          ok(資格たたみ.textContent.indexOf('2,988人') > 0, '実績は折りたたみの中にある');
+          ok(資格たたみ.textContent.indexOf('高等職業訓練促進給付金') > 0, '給付金の説明も中にある');
+          /* 設定と結果は、たたまずに出したまま */
+          ok(d.getElementById('training-years') !== null, '通う年数の設定は、常に見えている');
+          ok(d.getElementById('training-after') !== null, '修了後の年収の欄も、常に見えている');
+          ok(d.querySelectorAll('input[name="training-work"]').length === 4, '働き方の選択も常に見えている');
+          ok(d.querySelector('#stage2b-body .alert-card') !== null ||
+             d.querySelector('#stage2b-body .path-block') !== null,
+            '結果（追い越す年など）は、たたまずに出ている');
+          /* 資格ルートの線に、説明のない印がない */
+          var 絵2 = d.querySelector('#curve-chart svg').innerHTML;
+          eq((絵2.match(/<circle[^>]*stroke="#6a4c93"[^>]*>/g) || []).length, 0,
+            '資格ルートの線の上に、説明のない丸が出ていない');
+
           /* 資格ルートで底つきが消えるなら、印も消える */
           var カード3 = d.querySelector('#stage2b-body .alert-card');
           if (カード3 && カード3.querySelector('.alert-good')) {
@@ -605,10 +651,10 @@ server.listen(0, '127.0.0.1', function () {
             'ONのあとは、ボタンが「設定を見直す」に変わる');
           d.getElementById('training-on').checked = false;
           d.getElementById('training-on').dispatchEvent(new w.Event('change', { bubbles: true }));
-          ok(本文.indexOf('灰色の網かけから先は、線を描いていません') > 0,
+          ok(本文.indexOf('その先を描いていないからです') > 0,
             'このままの前提では成り立たない領域を、描いていないと明記している');
-          ok(d.querySelector('#stage2b-body svg [fill="url(#hatch)"]') !== null,
-            'グラフに網かけが出ている');
+          ok(d.querySelector('#stage2b-body svg [fill="url(#hatch)"]') === null,
+            '網かけは使わず、横軸を短くして見やすくしている');
           /* 2段の言い分け（いまのまま／制度活用） */
           var 頭2 = カード.querySelector('.alert-head').textContent;
           var 体2 = カード.querySelector('.alert-body').textContent;

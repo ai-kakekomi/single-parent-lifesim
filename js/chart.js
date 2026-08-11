@@ -324,13 +324,25 @@
       下限 = curve.borrowFloor - Math.max((上限 - curve.borrowFloor) * 0.10, 40000);
     }
 
-    var 幅1 = pts.length > 1 ? 幅 / (pts.length - 1) : 0;
-    function X(i) { return 左 + 幅1 * i; }
-    /* 月ごとの位置。12か月で1年ぶん進む */
-    function Xm(m) { return 左 + 幅1 * (m / 12); }
-    function Y(v) { return 上 + 高 - (v - 下限) / (上限 - 下限) * 高; }
     /* 描くのは、打ち切りの年までの月ぶん */
     var 描く月数 = Math.min((curve.monthly || []).length, (描く数 - 1) * 12 + 1);
+    var 資格月数0 = (tr && tr.monthly)
+      ? Math.min(tr.monthly.length, (資格描く数 - 1) * 12 + 1) : 0;
+
+    /* 横軸の右はしは「いちばん先まで描く線の終わり＋少しの余白」まで。
+       描かない先まで軸を伸ばすと、肝心の部分が左に押しつぶされて読めなくなるため。
+       資格ルートを出して線が先まで伸びれば、軸もそのぶん広がる。 */
+    var 最終月 = Math.max(描く月数, 資格月数0) - 1;
+    var 全月 = ((curve.monthly || []).length || 1) - 1;
+    var 軸の右月 = Math.min(全月, 最終月 + 3);
+    if (軸の右月 < 12) { 軸の右月 = Math.min(全月, 12); }   // せますぎると読めないので最低1年
+    var 軸年数 = Math.max(軸の右月 / 12, 0.5);
+
+    function X(i) { return 左 + 幅 * (i / 軸年数); }
+    /* 月ごとの位置。12か月で1年ぶん進む */
+    function Xm(m) { return 左 + 幅 * (m / 12 / 軸年数); }
+    function Y(v) { return 上 + 高 - (v - 下限) / (上限 - 下限) * 高; }
+    var 幅1 = 幅 / 軸年数;   // 1年あたりの横はば
 
     var s = [];
     /* グラフの中に置く文字は、いったんためておいて、最後に重ならないよう並べてから描く。
@@ -351,7 +363,7 @@
     if (curve.safetyTarget > 0) {
       var ys;
       if (月列.length) {
-        var 目標線 = 月列.slice(0, 描く月数).map(function (q, k) {
+        var 目標線 = 月列.slice(0, Math.min(月列.length, 軸の右月 + 1)).map(function (q, k) {
           return (k ? 'L' : 'M') + Xm(k).toFixed(1) + ' ' + Y(q.target).toFixed(1);
         }).join(' ');
         s.push('<path d="' + 目標線 + '" fill="none" stroke="' + 色.bandLine + '" stroke-width="1.5"/>');
@@ -408,28 +420,16 @@
         左 + 幅 - 4, 上 + 高 - 5, 'end', 色.floor, 11, 45);
     }
 
-    /* --- このままの前提では成り立たない領域（網かけ） --- */
-    if (curve.truncated) {
-      var 網x = X(描く数 - 1);
-      s.push('<defs><pattern id="hatch" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">' +
-        '<line x1="0" y1="0" x2="0" y2="7" stroke="#b7c2cc" stroke-width="2"/></pattern></defs>');
-      s.push('<rect x="' + 網x.toFixed(1) + '" y="' + 上 + '" width="' + (左 + 幅 - 網x).toFixed(1) + '" height="' + 高 +
-        '" fill="url(#hatch)" opacity="0.35"/>');
-      /* 網かけの幅がせまいときは、文字が右にはみ出すので出さない（説明はグラフの下に置く） */
-      var 網幅 = 左 + 幅 - 網x;
-      if (網幅 >= 90) {
-        注記追加('この先は', 網x + 8, 上 + 高 / 2 - 6, 'start', '#52616f', 11, 70);
-        注記追加('描いていません', 網x + 8, 上 + 高 / 2 + 9, 'start', '#52616f', 11, 71);
-      } else if (網幅 >= 40) {
-        注記追加('この先は', 網x + 6, 上 + 高 / 2, 'start', '#52616f', 10, 70);
-        注記追加('なし', 網x + 6, 上 + 高 / 2 + 13, 'start', '#52616f', 10, 71);
-      }
-    }
+    /* 網かけはやめた。かわりに横軸そのものを、線を描く範囲で切っている
+       （描かない先まで軸を伸ばすと、読みたいところが左に圧縮されるため）。
+       打ち切りの理由は、グラフの下の折りたたみで説明している。 */
 
     /* --- 横軸 --- */
-    var 間引き = 縦長 ? Math.max(1, Math.ceil(pts.length / 6)) : (pts.length > 14 ? 2 : 1);
+    var 軸の年数 = Math.floor(軸年数);
+    var 間引き = 縦長 ? Math.max(1, Math.ceil((軸の年数 + 1) / 6)) : ((軸の年数 + 1) > 14 ? 2 : 1);
     pts.forEach(function (p, i) {
-      if (i % 間引き !== 0 && i !== pts.length - 1) { return; }
+      if (i > 軸年数 + 0.001) { return; }
+      if (i % 間引き !== 0 && i !== 軸の年数) { return; }
       s.push('<text x="' + X(i).toFixed(1) + '" y="' + (上 + 高 + 17) + '" text-anchor="middle" font-size="12" fill="' + 色.sub + '">' + p.youngestAge + '</text>');
     });
     s.push('<text x="' + (左 + 幅 / 2) + '" y="' + (H - 18) + '" text-anchor="middle" font-size="12" fill="' + 色.sub + '">いちばん下のお子さんの年齢（歳）</text>');
@@ -497,11 +497,10 @@
         /* 資格を取る時点は、帯の右はし（破線）が示しているので、
            そこに印や文字はもう置かない。 */
       }
-      /* 追い越す地点に印をつける */
-      if (tr.crossoverOffset !== null && tr.crossoverOffset < 資格描く数) {
-        var cx2 = X(tr.crossoverOffset), cy2 = Y(床(tr.points[tr.crossoverOffset].all));
-        s.push('<circle cx="' + cx2.toFixed(1) + '" cy="' + cy2.toFixed(1) + '" r="6" fill="none" stroke="' + 色.training + '" stroke-width="2.5"/>');
-      }
+      /* 追い越す地点には、印を置かない。
+         説明のない丸が浮いていると「これは何？」になるだけで、
+         追い越す年は文章のほうで伝えているため。
+         グラフの印は「いまのまま」の線の危ないところだけにそろえる。 */
       ラベル.push({ y: 収める(点列[点列.length - 1].y + 4), col: 色.training, 名: '資格を取る',
         x: 点列[点列.length - 1].x });
     }
@@ -515,7 +514,7 @@
     /* --- いま見ている年のカーソル線 --- */
     /* 線を途中で打ち切っていても、横軸は最後の年まであるので、
        カーソルはどの年にも置ける */
-    if (カーソル年 != null && カーソル年 >= 0 && カーソル年 < pts.length) {
+    if (カーソル年 != null && カーソル年 >= 0 && カーソル年 <= 軸年数 + 0.001) {
       var kx = X(カーソル年);
       s.push('<line x1="' + kx.toFixed(1) + '" y1="' + 上 + '" x2="' + kx.toFixed(1) + '" y2="' + (上 + 高) +
         '" stroke="#33414f" stroke-width="1.5" opacity="0.45"/>');
@@ -578,6 +577,7 @@
     }
 
     pts.slice(0, 描く数).forEach(function (p, i) {
+      if (i > 軸年数 + 0.001) { return; }
       var x0 = X(i) - 幅1 / 2, w = 幅1 || 40;
       s.push('<rect class="hit" x="' + Math.max(左, x0).toFixed(1) + '" y="' + 上 + '" width="' + w.toFixed(1) + '" height="' + 高 +
         '" fill="transparent" style="cursor:crosshair"><title>' +

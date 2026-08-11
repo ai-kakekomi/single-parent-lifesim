@@ -848,7 +848,8 @@
     var t = c.training;
     if (!t || !(t.afterIncome > 0)) { return ''; }
     var 訓 = データ.training;
-    var h = ['<div class="notice"><h4>むらさきの線「資格を取るルート」について</h4>'];
+    var h = ['<details class="explain"><summary>この制度のくわしい説明（給付金の金額・実績）</summary>' +
+      '<div class="explain-body notice"><h4>むらさきの線「資格を取るルート」について</h4>'];
     var 働き方の文 = (t.duringIncome === 0)
       ? '学校に通う' + t.years + '年間は<strong>働かない</strong>ものとして計算しています。'
       : '学校に通う' + t.years + '年間の収入を、年 ' + SPS.円(t.duringIncome) + ' として計算しています。';
@@ -870,7 +871,7 @@
       日付表示(訓.source.last_verified) + '）<br>実績の出典: <a href="' + esc(訓.track_record_source.url) +
       '" target="_blank" rel="noopener">' + esc(訓.track_record_source.law) + '</a>（最終確認 ' +
       日付表示(訓.track_record_source.last_verified) + '）</p>');
-    h.push('</div>');
+    h.push('</div></details>');
     return h.join('');
   }
 
@@ -1232,11 +1233,13 @@
   function 打ち切りの注記(c) {
     var h = '';
     if (c.truncated) {
-      h += '<p class="hint cutoff">灰色の網かけから先は、線を描いていません。' +
-        '<strong>このままの前提では成り立たない領域だからです。</strong>' +
+      h += '<p class="hint cutoff">グラフの右はしで線が終わっているのは、' +
+        'その先を描いていないからです。<strong>このままの前提では成り立たない領域だからです。</strong>' +
         '借金をずっと積み増していくことは実際にはできませんし、' +
         'その前に、支出・収入・受けられる支援のどれかを変えることになります。' +
-        'ここから先を数字で見せると、かえって嘘になります。</p>';
+        'ここから先を数字で見せると、かえって嘘になります。' +
+        'そのぶん横軸も短くして、読みたいところを大きく出しています。' +
+        '資格を取るルートを出すと線が先まで伸びるので、横軸もそのぶん広がります。</p>';
     }
     h += '<p class="hint red-zone-note">0円より下は、赤の濃さで2つに分けています。' +
       '<strong>うすい赤</strong>は0円から借りられる上限までで、ここから下は<strong>借金</strong>になります。' +
@@ -1251,7 +1254,7 @@
         '<a href="https://www.fsa.go.jp/policy/kashikin/kihon.html" target="_blank" rel="noopener">金融庁「貸金業法のキホン」</a>' +
         '（最終確認 8/11(火)）。銀行からの借入れや住宅ローンなど、対象外のものもあります。</span></p>';
     }
-    return '<details class="explain"><summary>グラフの網かけと赤い線の意味（くわしく）</summary>' +
+    return '<details class="explain"><summary>グラフの線の終わりと、赤い領域の意味（くわしく）</summary>' +
       '<div class="explain-body">' + h + '</div></details>';
   }
 
