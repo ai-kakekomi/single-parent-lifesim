@@ -98,6 +98,30 @@ server.listen(0, '127.0.0.1', function () {
       });
     });
   }).then(function () {
+    /* ファイルを直接ダブルクリックして開いた場合（file://）でも動くこと。
+       非技術者の方はサーバーの立て方を知らないので、ここが動かないと使えません。 */
+    return JSDOM.fromFile(path.join(ROOT, 'index.html'), {
+      runScripts: 'dangerously', resources: 'usable', pretendToBeVisual: true
+    }).then(function (dom) {
+      var w = dom.window, d = w.document, エラー = [];
+      w.addEventListener('error', function (e) { エラー.push(String(e.error || e.message)); });
+      return 待つ(2500).then(function () {
+        ok(d.location.href.indexOf('file://') === 0, 'ファイルを直接開いた状態で試している');
+        eq(d.getElementById('loading').style.display, 'none',
+          'ファイルを直接開いても、データが読み込める');
+        eq(d.querySelectorAll('#sample-buttons button').length, 6, 'ファイル直開きでも例のボタンが出る');
+        d.querySelectorAll('#sample-buttons button')[3].click();
+        return 待つ(300);
+      }).then(function () {
+        eq(d.querySelectorAll('#stage1-body .prog').length, 17, 'ファイル直開きでも制度カードが17枚出る');
+        eq(d.querySelectorAll('#stage2-body svg path').length, 2, 'ファイル直開きでもグラフが描ける');
+        ok(d.querySelectorAll('#stage3-body .pit').length > 0, 'ファイル直開きでも注意書きが出る');
+        eq(d.querySelectorAll('#stage4-body textarea').length, 5, 'ファイル直開きでもAIに相談する文章が5本できる');
+        ok(エラー.length === 0, 'ファイル直開きでもエラーが出ない', エラー.join(' / '));
+        w.close();
+      });
+    });
+  }).then(function () {
     server.close();
     console.log('\n============================================');
     console.log('  画面のチェック: 成功 ' + 成功 + ' 件 ／ 失敗 ' + 失敗 + ' 件');

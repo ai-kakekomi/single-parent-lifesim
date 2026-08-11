@@ -16,10 +16,11 @@ var SPS = require(path.join(ROOT, 'js', 'engine.js'));
 var Chart = require(path.join(ROOT, 'js', 'chart.js'));
 var Prompts = require(path.join(ROOT, 'js', 'prompts.js'));
 
-function 読む(p) { return JSON.parse(fs.readFileSync(path.join(ROOT, p), 'utf8')); }
-var データ = 読む('data/programs.json');
-var 見本 = 読む('data/samples.json');
-var 落とし穴 = 読む('data/pitfalls.json');
+/* 画面と同じデータファイルを、そのまま読み込む（データは1か所にしかない） */
+function 読む(p) { return require(path.join(ROOT, p)); }
+var データ = 読む('data/programs.js');
+var 見本 = 読む('data/samples.js');
+var 落とし穴 = 読む('data/pitfalls.js');
 データ.programs_by_id = {};
 データ.programs.forEach(function (p) { データ.programs_by_id[p.id] = p; });
 
@@ -401,10 +402,21 @@ app.replace(/\$\('([a-z0-9-]+)'\)/g, function (_, id) { 使っているid.push(i
 ok(html.indexOf('escape-btn') > 0, '「すぐ閉じる」のボタンが画面にある');
 ok(app.indexOf('location.replace') > 0, '「すぐ閉じる」は履歴を置きかえる形で移動する');
 ok(html.indexOf('localStorage') === -1 && app.indexOf('localStorage') === -1, '端末に保存する処理を一切持っていない');
+/* ファイルを直接ダブルクリックして開いても動くこと（読み込みに通信を使っていないこと） */
+ok(app.indexOf('XMLHttpRequest') === -1 && app.indexOf('fetch(') === -1,
+  '制度データの読み込みに通信を使っていない（file:// で直接開いても動く）');
+['SPS_DATA_PROGRAMS', 'SPS_DATA_PITFALLS', 'SPS_DATA_SAMPLES'].forEach(function (g) {
+  ok(app.indexOf('window.' + g) > 0, '画面が「' + g + '」のデータを直接受け取っている');
+});
+ok(/data\/programs\.js/.test(html) && /data\/pitfalls\.js/.test(html) && /data\/samples\.js/.test(html),
+  '画面が3つのデータファイルを読み込んでいる');
+ok(!fs.existsSync(path.join(ROOT, 'data', 'programs.json')),
+  'データが2か所に分かれていない（古い形式のファイルが残っていない）');
 ok(html.indexOf('sessionStorage') === -1 && app.indexOf('sessionStorage') === -1, '一時的な保存もしていない');
 ok(!/src="https?:/.test(html) && !/href="https?:\/\/[^"]*\.(css|js)/.test(html),
   '外から読み込むプログラムや見た目のファイルがない（インターネットにつながらなくても動く）');
-['js/engine.js', 'js/chart.js', 'js/prompts.js', 'js/app.js', 'css/style.css'].forEach(function (f) {
+['data/programs.js', 'data/pitfalls.js', 'data/samples.js',
+ 'js/engine.js', 'js/chart.js', 'js/prompts.js', 'js/app.js', 'css/style.css'].forEach(function (f) {
   ok(html.indexOf(f) > 0, '画面が「' + f + '」を読み込んでいる');
   ok(fs.existsSync(path.join(ROOT, f)), '「' + f + '」が実在する');
 });

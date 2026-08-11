@@ -29,33 +29,18 @@
   }
 
   /* ---------- データの読み込み ----------
-     読みにいくのは、このツール自身のフォルダの中だけです。
-     外のサーバーへは、行きも帰りも一切つながりません。 */
-  function 取得(相対パス) {
-    return new Promise(function (resolve, reject) {
-      var x = new XMLHttpRequest();
-      x.open('GET', 相対パス, true);
-      x.onload = function () {
-        if (x.status === 0 || (x.status >= 200 && x.status < 300)) {
-          try { resolve(JSON.parse(x.responseText)); }
-          catch (e) { reject(new Error(相対パス + ' の中身を読めませんでした')); }
-        } else { reject(new Error(相対パス + ' を読めませんでした（' + x.status + '）')); }
-      };
-      x.onerror = function () { reject(new Error(相対パス + ' を読めませんでした')); };
-      x.send();
-    });
-  }
-
+     制度データは、この画面と一緒に読み込まれています（index.html の下のほうを見てください）。
+     通信は一切していません。だから、インターネットにつながっていなくても、
+     ファイルをダブルクリックして開くだけでも動きます。 */
   function 読み込む() {
-    return Promise.all([
-      取得('data/programs.json'),
-      取得('data/samples.json'),
-      取得('data/pitfalls.json')
-    ]).then(function (a) {
-      データ = a[0]; 見本 = a[1]; 落とし穴 = a[2];
-      データ.programs_by_id = {};
-      データ.programs.forEach(function (p) { データ.programs_by_id[p.id] = p; });
-    });
+    データ = window.SPS_DATA_PROGRAMS;
+    見本 = window.SPS_DATA_SAMPLES;
+    落とし穴 = window.SPS_DATA_PITFALLS;
+    if (!データ || !見本 || !落とし穴) {
+      throw new Error('制度データが読み込まれていません');
+    }
+    データ.programs_by_id = {};
+    データ.programs.forEach(function (p) { データ.programs_by_id[p.id] = p; });
   }
 
   /* ---------- 子どもの年齢の入力欄 ---------- */
@@ -340,7 +325,9 @@
     document.querySelectorAll('.escape-btn').forEach(function (b) { b.addEventListener('click', 退避); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { 退避(); } });
 
-    読み込む().then(function () {
+    try {
+      読み込む();
+
       見本ボタンを描く();
       子ども欄を作る(1, [null]);
       $('child-count').addEventListener('change', function () {
@@ -365,13 +352,11 @@
       コピー設定();
       $('loading').style.display = 'none';
       $('form-area').style.display = '';
-    }).catch(function (err) {
+    } catch (err) {
       $('loading').innerHTML = '<p class="pit red">画面のもとになるデータを読み込めませんでした。' +
-        'このページは、インターネット上（ai-kakekomi.com）で開くか、パソコンの中で小さなサーバーを立てて開いてください。' +
-        'ファイルを直接ダブルクリックして開くと、ブラウザの決まりごとで読み込めないことがあります。' +
-        '（くわしくは使い方マニュアルの「動かし方」をごらんください）</p>';
+        'フォルダの中身がそろっているか確かめてください（data というフォルダの中の3つのファイルが必要です）。</p>';
       if (window.console) { console.error(err); }
-    });
+    }
   }
 
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', 起動); }
