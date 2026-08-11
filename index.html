@@ -145,6 +145,33 @@
       </fieldset>
 
       <fieldset>
+        <legend>資格を取って収入を上げる道も見てみる</legend>
+        <div class="inline-choice">
+          <label><input type="checkbox" id="training-on">この道もグラフに出す</label>
+        </div>
+        <div id="training-box" style="display:none">
+          <div class="row">
+            <div>
+              <label for="training-years">学校に通う年数</label>
+              <select id="training-years">
+                <option value="1">1年</option>
+                <option value="2" selected>2年</option>
+                <option value="3">3年</option>
+                <option value="4">4年</option>
+              </select>
+            </div>
+            <div>
+              <label for="training-during">通っているあいだの年収（万円）</label>
+              <input type="number" id="training-during" min="0" max="3000" inputmode="numeric" placeholder="いまの半分">
+            </div>
+          </div>
+          <label for="training-after">資格を取ったあとの年収の見込み（万円）</label>
+          <input type="number" id="training-after" min="0" max="3000" inputmode="numeric" placeholder="例 320">
+          <p class="hint">このツールは、職種ごとの平均年収を出しません。相場は「1. 仕事・収入の相談」の文章をAIに渡して調べてください。ここには、その見込みを入れてください。</p>
+        </div>
+      </fieldset>
+
+      <fieldset>
         <legend>養育費</legend>
         <div class="inline-choice">
           <label><input type="radio" name="cs-state" value="公正証書で取り決めている">公正証書で取り決め</label>

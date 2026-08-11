@@ -334,3 +334,22 @@ ul.cost-share .cost-bar > span { display: block; height: 100%; background: var(-
 ul.cost-share .cost-pct { flex: 0 0 2.4rem; text-align: right; font-weight: 700; }
 ul.cost-advice-list { margin: .3rem 0; padding-left: 1.2rem; font-size: .87rem; }
 ul.cost-advice-list li { margin-bottom: .4rem; line-height: 1.7; }
+ul.cost-ref { list-style: none; margin: 0; padding: 0; font-size: .84rem; }
+ul.cost-ref li { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: .22rem; }
+ul.cost-ref .cost-ref-v { font-weight: 700; }
+ul.cost-ref .cost-ref-b { color: var(--ink-sub); }
+
+/* ---- あなたの場合の道筋 ---- */
+.path-block { background: #fff; border: 2px solid var(--accent); border-radius: var(--radius); padding: 1rem; margin: 1.2rem 0; }
+.path-block h3 { margin: 0 0 .2rem; border: 0; color: var(--accent-dark); }
+.path-item { border-top: 1px solid var(--line); padding-top: .7rem; margin-top: .7rem; }
+.path-item:first-of-type { border-top: 0; padding-top: 0; }
+.path-head { display: flex; gap: .5rem; align-items: baseline; font-weight: 700; font-size: .98rem; margin: 0 0 .3rem; line-height: 1.6; }
+.path-no { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+  width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--accent); color: #fff; font-size: .8rem; }
+.path-body { margin: 0 0 .3rem; font-size: .89rem; line-height: 1.75; }
+.path-link { margin: 0; font-size: .85rem; }
+.path-link a { color: var(--accent-dark); font-weight: 700; }
+#training-box { margin-top: .6rem; }
+.track-record { background: var(--ok-soft); border-left: 4px solid var(--ok); border-radius: 0 6px 6px 0;
+  padding: .55rem .75rem; font-size: .86rem; line-height: 1.75; margin: .5rem 0; }

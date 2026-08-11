@@ -393,6 +393,84 @@ var 深い = 目盛りの値.filter(function (v) { return v < 赤字.borrowFloor
 eq(深い.length, 0, '縦の目盛りが、借りられる上限より深いところまで伸びていない', 深い.join(','));
 
 /* ------------------------------------------------------------ */
+見出し('8-3-2. 資格を取って抜けるルート');
+
+var 訓表 = データ.training;
+ok(!!訓表, '資格ルートのデータがある');
+eq(訓表.monthly_non_taxable, 100000, '住民税が非課税の世帯の給付金は月10万円');
+eq(訓表.monthly_taxable, 70500, '課税世帯は月70,500円');
+eq(訓表.final_year_bonus, 40000, '最後の1年はさらに月4万円');
+ok(訓表.source.url.indexOf('cfa.go.jp') > 0, '給付金の出典はこども家庭庁');
+ok(訓表.assumption_note.indexOf('予測ではありません') > 0, 'めやすであることがデータに書いてある');
+/* 実際に渡れる橋であることの実績 */
+ok(訓表.track_record.indexOf('2,988人') > 0, '資格を取った人数が書いてある');
+ok(訓表.track_record.indexOf('2,105人') > 0, '就職した人数が書いてある');
+ok(訓表.track_record.indexOf('看護師945人') > 0, '職種の内訳が書いてある');
+ok(訓表.track_record_source.url.indexOf('cfa.go.jp') > 0, '実績の出典はこども家庭庁');
+ok(/^\d{4}-\d{2}-\d{2}$/.test(訓表.track_record_source.last_verified), '実績の出典に最終確認日がある');
+ok(訓表.non_taxable_note.indexOf('非課税') > 0, '給付金が非課税であることが書いてある');
+
+var 訓入力 = Object.assign({}, 入力F, {
+  myIncome: 1500000, livingCost: 95000, currentSavings: 80000,
+  training: { enabled: true, years: 2, afterIncome: 3200000 }
+});
+var 訓 = SPS.資産カーブ(訓入力, データ).training;
+ok(訓 !== null, '資格ルートが計算される');
+eq(訓.years, 2, '通う年数が反映される');
+eq(訓.duringIncome, 750000, '通っているあいだの年収は、既定でいまの半分');
+ok(訓.taxFree, '年収75万なら住民税は非課税の見込み');
+eq(訓.grantMonthly, 100000, '非課税なので給付金は月10万円');
+eq(訓.completionGrant, 50000, '修了支援給付金も非課税の額');
+
+/* 訓練中は給付金が乗り、修了後は収入がジャンプする */
+eq(訓.points[0].grant, 100000, '1年目は給付金が月10万円');
+eq(訓.points[1].grant, 100000 + 40000, '最後の年（2年目）は4万円が足される');
+eq(訓.points[2].grant, 0, '修了したら給付金は止まる');
+eq(訓.points[0].income, 750000, '訓練中の年収');
+eq(訓.points[2].income, 3200000, '修了後は見込みの年収にうつる');
+ok(訓.points[2].monthly > 訓.points[0].monthly,
+  '修了したあとは、通いはじめた年より、ひと月に残る額がふえる');
+ok(訓.points[1].monthly > 訓.points[0].monthly,
+  '最後の年は4万円の上乗せがあるぶん、いちばん残る');
+
+/* 課税世帯になる場合 */
+var 課税 = SPS.資産カーブ(Object.assign({}, 訓入力,
+  { myIncome: 6000000, training: { enabled: true, years: 2, afterIncome: 7000000 } }), データ).training;
+ok(!課税.taxFree, '訓練中の収入が高ければ、住民税は課税の見込み');
+eq(課税.grantMonthly, 70500, '課税世帯の給付金は月70,500円');
+eq(課税.completionGrant, 25000, '修了支援給付金も課税世帯の額');
+
+/* 追い越す年 */
+ok(訓.crossesOver, '低い収入からなら、資格ルートは「いまのまま」を追い越す');
+ok(訓.crossoverOffset !== null && 訓.crossoverOffset >= 0, '追い越す年が分かる');
+var 通常 = SPS.資産カーブ(Object.assign({}, 訓入力, { training: { enabled: false } }), データ);
+ok(訓.finalAll > 通常.finalAll, '最後には、資格ルートのほうが貯金が多い');
+
+/* 追い越さないケースは、正直にそう返す */
+var 下がる = SPS.資産カーブ(Object.assign({}, 訓入力,
+  { myIncome: 5000000, livingCost: 200000, training: { enabled: true, years: 4, afterIncome: 2000000 } }), データ).training;
+ok(!下がる.crossesOver, '修了後の収入がいまより低ければ、追い越さない（正直に返す）');
+eq(下がる.crossoverOffset, null, '追い越さない場合は、追い越す年を出さない');
+ok(下がる.finalAll < SPS.資産カーブ(Object.assign({}, 訓入力,
+  { myIncome: 5000000, livingCost: 200000, training: { enabled: false } }), データ).finalAll,
+  '追い越さない場合は、最後の貯金も「いまのまま」より少ない');
+
+/* 使わないときは何も返さない */
+ok(SPS.資産カーブ(Object.assign({}, 訓入力, { training: { enabled: false } }), データ).training === null,
+  'チェックを入れていなければ、資格ルートは計算しない');
+ok(SPS.資産カーブ(Object.assign({}, 訓入力, { training: null }), データ).training === null,
+  '設定がなくても落ちない');
+
+/* グラフに3本目の線が出る */
+var 訓svg = Chart.資産を描く(SPS.資産カーブ(訓入力, データ));
+ok((訓svg.match(/<path /g) || []).length === 3, '線が3本になる（いまのまま・全部使う・資格を取る）');
+ok(訓svg.indexOf('資格を取る') > 0, '3本目に名前が付いている');
+ok(訓svg.indexOf('学校に通う2年間') > 0, '通っている期間が示されている');
+ok(Chart.資産の凡例(true).indexOf('資格を取るルート') > 0, '凡例にも出る');
+ok(Chart.資産の凡例(false).indexOf('資格を取るルート') === -1, '使わないときは凡例に出さない');
+ok(重なり(訓svg).length === 0, '資格ルートを出しても、文字がかぶらない', 重なり(訓svg).join(' / '));
+
+/* ------------------------------------------------------------ */
 見出し('8-4. 学校にかかるお金');
 
 eq(SPS.学費(3, {}, 学費表), 0, '3歳（幼稚園）は0円。無償化されているため');

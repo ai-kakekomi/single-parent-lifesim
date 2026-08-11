@@ -26,7 +26,8 @@
     withoutProg: '#c2591a', // いまのまま
     band: '#dff0e6',        // 生活防衛資金のゾーン
     bandLine: '#1c7a4a',
-    floor: '#a32020'
+    floor: '#a32020',
+    training: '#6a4c93'   // 資格を取るルート
   };
 
   function esc(s) {
@@ -216,7 +217,14 @@
     if (!curve || !curve.points.length) { return '<p class="hint">毎月の生活費を入れると、ここにグラフが出ます。</p>'; }
     var pts = curve.points;
 
+    var tr = curve.training;
     var 描く数 = (curve.drawUntilOffset != null ? curve.drawUntilOffset : pts.length - 1) + 1;
+    /* 資格を取るルートは、いまのままの線より先まで見せたい（そこに希望があるので）。
+       ただし借りられる上限にぶつかったら、そこで止める。 */
+    var 資格描く数 = tr
+      ? ((tr.hitsBorrowFloorAtOffset !== null) ? tr.hitsBorrowFloorAtOffset + 1 : tr.points.length)
+      : 0;
+    if (tr) { 描く数 = Math.max(描く数, Math.min(資格描く数, pts.length)); }
     var W = Math.max(500, 70 + pts.length * 42), H = 320;
     var 左 = 66, 右 = 74, 上 = 22, 下 = 54;
     var 幅 = W - 左 - 右, 高 = H - 上 - 下;
@@ -227,6 +235,7 @@
     }
     var 全値 = [0, curve.safetyMax, curve.startSavings];
     pts.slice(0, 描く数).forEach(function (p) { 全値.push(床(p.all), 床(p.now)); });
+    if (tr) { tr.points.slice(0, 資格描く数).forEach(function (p) { 全値.push(床(p.all)); }); }
     var 上限 = Math.max.apply(null, 全値), 下限 = Math.min.apply(null, 全値);
     var 余白 = Math.max((上限 - 下限) * 0.1, 100000);
     上限 += 余白; 下限 -= 余白;
@@ -304,20 +313,49 @@
     }
     線('now', 色.withoutProg, true);
     線('all', 色.withProg, false);
-    ラベルの位置([
+
+    /* --- 資格を取るルート --- */
+    var ラベル = [
       { y: Y(床(pts[末].now)) + 4, col: 色.withoutProg, 名: 'いまのまま' },
       { y: Y(床(pts[末].all)) + 4, col: 色.withProg, 名: '全部使う' }
-    ]).forEach(function (L) {
-      var x = Math.min(X(末) + 7, W - 4);
+    ];
+    if (tr && 資格描く数 > 0) {
+      var td = tr.points.slice(0, 資格描く数).map(function (p, i) {
+        return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(床(p.all)).toFixed(1);
+      }).join(' ');
+      s.push('<path d="' + td + '" fill="none" stroke="' + 色.training +
+        '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>');
+      /* 訓練しているあいだ（谷）を、うすく塗って見せる */
+      if (tr.years > 0) {
+        var tx = X(Math.min(tr.years, 資格描く数 - 1));
+        s.push('<rect x="' + 左 + '" y="' + 上 + '" width="' + Math.max(0, tx - 左).toFixed(1) + '" height="' + 高 +
+          '" fill="' + 色.training + '" opacity="0.07"/>');
+        s.push('<text x="' + (左 + 4) + '" y="' + (上 + 高 - 6) + '" font-size="11" font-weight="700" fill="' + 色.training +
+          '">学校に通う' + tr.years + '年間</text>');
+      }
+      /* 追い越す地点に印をつける */
+      if (tr.crossoverOffset !== null && tr.crossoverOffset < 資格描く数) {
+        var cx2 = X(tr.crossoverOffset), cy2 = Y(床(tr.points[tr.crossoverOffset].all));
+        s.push('<circle cx="' + cx2.toFixed(1) + '" cy="' + cy2.toFixed(1) + '" r="6" fill="none" stroke="' + 色.training + '" stroke-width="2.5"/>');
+      }
+      ラベル.push({ y: Y(床(tr.points[資格描く数 - 1].all)) + 4, col: 色.training, 名: '資格を取る', x: X(資格描く数 - 1) });
+    }
+    ラベルの位置(ラベル).forEach(function (L) {
+      var 基点 = (L.x != null) ? L.x : X(末);
+      var 右寄せ = (基点 > 左 + 幅 * 0.72);
+      var x = 右寄せ ? Math.min(基点 - 4, 左 + 幅) : 基点 + 7;
       s.push('<text x="' + x.toFixed(1) + '" y="' + L.y.toFixed(1) + '" font-size="12" font-weight="700" fill="' + L.col +
-        '" text-anchor="' + (X(末) > 左 + 幅 * 0.7 ? 'end' : 'start') + '">' + L.名 + '</text>');
+        '" text-anchor="' + (右寄せ ? 'end' : 'start') + '">' + L.名 + '</text>');
     });
 
     if (curve.startSavings > 0) {
       var sy = Y(curve.startSavings);
       s.push('<circle cx="' + 左 + '" cy="' + sy.toFixed(1) + '" r="4" fill="#fff" stroke="' + 色.withProg + '" stroke-width="2"/>');
-      /* 帯の説明の文とかぶらないよう、下に置く */
-      s.push('<text x="' + (左 + 8) + '" y="' + (sy + 15).toFixed(1) + '" font-size="11" fill="' + 色.sub + '">いまの貯金</text>');
+      /* 文字は、グラフの中ではなく上のヘッダーの行に置く。
+         中に置くと、帯や床や訓練期間の文とかぶるため。 */
+      s.push('<circle cx="' + (左 + 116) + '" cy="' + (上 - 12) + '" r="4" fill="#fff" stroke="' + 色.withProg + '" stroke-width="2"/>');
+      s.push('<text x="' + (左 + 124) + '" y="' + (上 - 8) + '" font-size="11" fill="' + 色.sub + '">いまの貯金 ' +
+        Math.round(curve.startSavings).toLocaleString('ja-JP') + '円</text>');
     }
 
     pts.slice(0, 描く数).forEach(function (p, i) {
@@ -334,11 +372,12 @@
     return s.join('');
   }
 
-  function 資産の凡例() {
+  function 資産の凡例(資格あり) {
     return '<div class="legend">' +
       '<span><span class="swatch" style="background:' + 色.withProg + '"></span>使える制度を全部使った場合（実線）</span>' +
       '<span><span class="swatch" style="background:' + 色.withoutProg + '"></span>いまのまま（破線）</span>' +
       '<span><span class="swatch" style="background:' + 色.band + ';height:.7rem;border:1px solid ' + 色.bandLine + '"></span>生活防衛資金のゾーン</span>' +
+      (資格あり ? '<span><span class="swatch" style="background:' + 色.training + '"></span>資格を取るルート（太い実線）</span>' : '') +
       '</div>';
   }
 

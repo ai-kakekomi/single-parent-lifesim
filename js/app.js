@@ -120,14 +120,46 @@
     });
     h.push('</ul>');
 
+    /* 母子世帯の平均とのくらべ（比べられる費目だけ） */
+    var 参 = データ.living_cost_reference;
+    if (参) {
+      h.push('<p class="cost-share-head">母子世帯の平均とくらべると</p><ul class="cost-ref">');
+      u.items.forEach(function (it) {
+        if (it.value <= 0) { return; }
+        var 目安 = 参.monthly[it.id];
+        if (目安 == null) {
+          h.push('<li><span class="cost-name">' + esc(it.name) + '</span><span class="cost-ref-v">' +
+            '比べられる統計がありません</span></li>');
+          return;
+        }
+        var 差 = it.value - 目安;
+        var 語 = (Math.abs(差) < 目安 * 0.15) ? '平均くらい'
+          : (差 > 0 ? '平均より ' + SPS.円(差) + ' 多い' : '平均より ' + SPS.円(-差) + ' 少ない');
+        h.push('<li><span class="cost-name">' + esc(it.name) + '</span>' +
+          '<span class="cost-ref-v">' + esc(語) + '</span>' +
+          '<span class="cost-ref-b">（平均 ' + SPS.円(目安) + '）</span></li>');
+      });
+      h.push('</ul>');
+      h.push('<p class="hint">くらべているのは、' + esc(参.household) + 'の平均です。' +
+        esc(参.caution) + esc(参.not_available_note) + '<br>' +
+        '<span class="src">出典: <a href="' + esc(参.source.url_detail) + '" target="_blank" rel="noopener">' +
+        esc(参.source.law) + '</a>（' + 日付表示(参.source.last_verified) + '確認）</span></p>');
+    }
+
     var 候補 = [];
     function 割合(id) {
       var it = u.items.filter(function (x) { return x.id === id; })[0];
       return (it && u.total > 0) ? it.value / u.total : 0;
     }
-    if (割合('cost-comm') >= 0.12) {
-      候補.push('<strong>通信費</strong>が生活費の' + Math.round(割合('cost-comm') * 100) +
-        '%を占めています。プランや会社を変えて下がったという家庭は多いです。いまの契約内容を見るところから始めてみてください。');
+    function 目安差(id) {
+      var it = u.items.filter(function (x) { return x.id === id; })[0];
+      var 目安 = 参 && 参.monthly[id];
+      return (it && 目安) ? it.value - 目安 : 0;
+    }
+    if (割合('cost-comm') >= 0.12 || 目安差('cost-comm') >= 5000) {
+      候補.push('<strong>通信費</strong>が生活費の' + Math.round(割合('cost-comm') * 100) + '%' +
+        (目安差('cost-comm') >= 5000 ? '、母子世帯の平均より ' + SPS.円(目安差('cost-comm')) + ' 多い状態' : '') +
+        'です。プランや会社を変えて下がったという家庭は多いです。いまの契約内容を見るところから始めてみてください。');
     }
     if (割合('cost-insurance') >= 0.10) {
       候補.push('<strong>保険料</strong>が生活費の' + Math.round(割合('cost-insurance') * 100) +
@@ -142,11 +174,10 @@
     if (候補.length) {
       h.push('<p class="cost-advice-head">見直しの候補</p><ul class="cost-advice-list">' +
         候補.map(function (c) { return '<li>' + c + '</li>'; }).join('') + '</ul>');
-      h.push('<p class="hint">よその家庭の平均とは比べていません。世帯の人数や地域で大きく変わるからです。' +
-        'ここに出しているのは、あなたが入れた金額の中での割合だけです。</p>');
+      h.push('<p class="hint">平均より多いからといって、使いすぎということではありません。' +
+        '世帯の人数も、住んでいる場所も、事情も違います。見直す候補として見てください。</p>');
     } else {
-      h.push('<p class="hint">とくに目立って重い費目はありませんでした。よその家庭の平均とは比べていません。' +
-        'ここに出しているのは、あなたが入れた金額の中での割合だけです。</p>');
+      h.push('<p class="hint">とくに目立って重い費目はありませんでした。</p>');
     }
     return h.join('');
   }
@@ -165,6 +196,30 @@
   }
   function 使っている制度() {
     return [].map.call(document.querySelectorAll('.used-prog:checked'), function (el) { return el.value; });
+  }
+
+  /* ---------- 資格を取って抜けるルート ---------- */
+  function 訓練の入力() {
+    var on = $('training-on') && $('training-on').checked;
+    var t = データ.training || {};
+    var いま = 数('my-income') * 10000;
+    var 中 = 数('training-during') * 10000;
+    return {
+      enabled: !!on,
+      years: parseInt(($('training-years') || {}).value, 10) || t.years_default,
+      duringIncome: 中 > 0 ? 中 : Math.floor(いま * (t.during_income_ratio_default || 0.5)),
+      afterIncome: 数('training-after') * 10000
+    };
+  }
+
+  function 訓練欄を反映() {
+    var on = $('training-on').checked;
+    $('training-box').style.display = on ? '' : 'none';
+    if (on && !数('training-after')) {
+      /* 何も入っていないと線が引けないので、いまの年収を初期値として置く */
+      $('training-after').value = Math.max(Math.round(数('my-income')), 200);
+    }
+    if (最新入力) { 最新入力.training = 訓練の入力(); 資産を描く(); }
   }
 
   /* ---------- 進路プラン ---------- */
@@ -216,6 +271,7 @@
       livingCost: 数('living-cost'),
       currentSavings: 数('current-savings'),
       usedPrograms: 使っている制度(),
+      training: 訓練の入力(),
       plans: 進路プラン(),
       housingNow: 数('housing-now'),
       housingAfter: (選択('status') === 'single') ? 数('housing-now') : 数('housing-after'),
@@ -250,6 +306,12 @@
     document.querySelectorAll('.used-prog').forEach(function (el) {
       el.checked = (i.usedPrograms || []).indexOf(el.value) >= 0;
     });
+    var tr = i.training || { enabled: false };
+    $('training-on').checked = !!tr.enabled;
+    $('training-years').value = String(tr.years || 2);
+    $('training-during').value = tr.duringIncome ? Math.round(tr.duringIncome / 10000) : '';
+    $('training-after').value = tr.afterIncome ? Math.round(tr.afterIncome / 10000) : '';
+    $('training-box').style.display = tr.enabled ? '' : 'none';
     進路欄を作る(i.children);
     (i.plans || []).forEach(function (pl, idx) {
       Object.keys(pl).forEach(function (st) {
@@ -462,9 +524,10 @@
     }
 
     $('stage2b-body').innerHTML =
-      伸びしろ + 頭 + SPSChart.資産の凡例() +
+      伸びしろ + 頭 + SPSChart.資産の凡例(!!(c.training && c.training.afterIncome > 0)) +
       '<div class="chart-box">' + SPSChart.資産を描く(c) + '</div>' +
-      打ち切りの注記(c) +
+      打ち切りの注記(c) + 資格ルートの説明(c) +
+      道筋を描く(道筋(入力, データ, c, 最新判定)) +
       '<p class="band-line">' + 到達 + '</p>' +
       '<details class="explain"><summary>生活防衛資金って？（くわしく）</summary>' + 防衛資金の説明() + '</details>' +
       赤字の警告(c) +
@@ -473,6 +536,223 @@
         ? '「いまの貯金」' + SPS.円(c.startSavings) + ' を出発点にしています。'
         : 'いまの貯金を入れていないので、0円から始まるものとして描いています。') +
       '年収は変わらないものとして計算しています。</p>';
+  }
+
+  /* ============================================================
+   * あなたの場合の道筋
+   *
+   *   このツールの約束: どんな入力でも、
+   *   「次の一手 → それでこうなる」が、数字つきで必ず1つ以上出ること。
+   *   だからこの関数は、けっして空の配列を返しません。
+   * ============================================================ */
+  function 道筋(入力, データ, c, 判定) {
+    var 道 = [];
+    function 足す(見出し, 本文, リンク, リンク名) {
+      道.push({ head: 見出し, body: 本文, href: リンク || null, linkName: リンク名 || 'くわしく見る' });
+    }
+    function 別の場合(変える) {
+      return SPS.資産カーブ(Object.assign({}, 入力, 変える), データ);
+    }
+
+    /* --- 1. 使っていない制度で、赤字が黒字になるか --- */
+    if (c.gaps.length) {
+      var 名 = c.gaps.map(function (g) { return データ.programs_by_id[g.id].name.replace(/（.*$/, ''); }).join('・');
+      if (c.monthlyBalanceNow < 0 && c.monthlyBalance >= 0) {
+        足す('いま申請すれば、毎月の赤字がなくなります',
+          esc(名) + ' を申請すると、毎月 ' + SPS.円(c.gapMonthly) + ' 入ります。' +
+          'いまは毎月 ' + SPS.円(-c.monthlyBalanceNow) + ' 足りませんが、' +
+          '<strong>申請すれば毎月 ' + SPS.円(c.monthlyBalance) + ' 残る計算になります。つまり黒字になります。</strong>',
+          '#stage1', '申請先を見る');
+      } else if (c.monthlyBalance < 0) {
+        足す('申請すると、足りない額がここまで小さくなります',
+          esc(名) + ' を申請すると、毎月 ' + SPS.円(c.gapMonthly) + ' 入ります。' +
+          'いま足りないのは毎月 ' + SPS.円(-c.monthlyBalanceNow) + ' ですが、' +
+          '<strong>申請すれば ' + SPS.円(-c.monthlyBalance) + ' まで小さくなります。</strong>' +
+          '残りは、就学援助（給食費）やこども食堂などで埋められる大きさです。',
+          '#stage1', '申請先を見る');
+      } else {
+        var 早まる = (c.reachMonthsNow !== null && c.reachMonths !== null)
+          ? c.reachMonthsNow - c.reachMonths : null;
+        var 文 = esc(名) + ' を申請すると、毎月 ' + SPS.円(c.gapMonthly) + ' 入ります。' +
+          '10年で約' + Math.round(c.diffAtTenYears / 10000).toLocaleString('ja-JP') + '万円の差です。';
+        if (早まる && 早まる > 0) {
+          文 += '<strong>生活防衛資金にとどくのが、' + SPS.年月表示(早まる) + ' 早まります。</strong>';
+        } else if (c.reachMonthsNow === null && c.reachMonths !== null) {
+          文 += '<strong>いまのままでは生活防衛資金にとどきませんが、申請すれば ' +
+            SPS.年月表示(c.reachMonths) + ' でとどきます。</strong>';
+        }
+        足す('まだ受け取れるお金があります', 文, '#stage1', '申請先を見る');
+      }
+    }
+
+    /* --- 2. 資格を取るルート --- */
+    var t = c.training;
+    if (t && t.afterIncome > 0) {
+      if (t.crossesOver) {
+        var いつ = (t.crossoverOffset === 0)
+          ? '<strong>通いはじめた最初の年から</strong>'
+          : '<strong>' + t.crossoverOffset + '年後に</strong>';
+        足す('資格を取る道なら、' + (t.crossoverOffset === 0 ? '最初の年から追い越します' : t.crossoverOffset + '年後に追い越します'),
+          '学校に通う' + t.years + '年のあいだ、高等職業訓練促進給付金が毎月 ' + SPS.円(t.grantMonthly) +
+          '（最後の1年はさらに ' + SPS.円(t.grantFinalYearBonus) + '）入ります。' +
+          'そのおかげで、' + いつ + '「いまのまま」の線を追い越します。' +
+          (t.reachSafetyOffset !== null
+            ? '生活防衛資金にとどくのは、' + (t.reachSafetyOffset === 0 ? 'すぐ' : t.reachSafetyOffset + '年後') + 'です。' : '') +
+          '22歳のときの貯金は、約' + Math.round(t.finalAll / 10000).toLocaleString('ja-JP') + '万円になります。' +
+          '<strong>令和5年度は、この給付金で2,988人が資格を取り、2,105人が就職しています。</strong>',
+          '#prog-koutou_shokugyo_kunren', 'この給付金のくわしい説明を見る');
+      } else {
+        足す('資格を取る道は、この見込みでは追い越しません',
+          '入れていただいた「資格を取ったあとの年収 ' + SPS.円(t.afterIncome) + '」だと、' +
+          '通う' + t.years + '年間の落ち込みを取り戻せない計算です。正直にお伝えします。' +
+          '年数を短くするか、資格を取ったあとの年収の見込みを変えて、もう一度見てください。' +
+          'どの資格ならどのくらいの収入になるかは、下の「仕事・収入の相談」の文章をAIに渡すと調べられます。',
+          '#stage4', 'AIに聞く文章を見る');
+      }
+      if (t.hitsBorrowFloor) {
+        足す('ただし、通っているあいだの生活が持ちません',
+          '学校に通う期間中に、借りられる上限にぶつかる計算です。' +
+          'この期間は、母子父子寡婦福祉資金の技能習得資金・生活資金の貸付や、' +
+          '生活保護との併用が使えることがあります。通いはじめる前に、必ず窓口で相談してください。',
+          '#prog-fukushi_shikin_kashitsuke', '貸付のくわしい説明を見る');
+      }
+    } else if (!t || !t.enabled) {
+      var 現年収 = 入力.myIncome;
+      if (現年収 > 0 && 現年収 < 2500000) {
+        足す('資格を取って抜ける道も、数字で見られます',
+          '学校に通うあいだ、高等職業訓練促進給付金が毎月 ' +
+          SPS.円((データ.training || {}).monthly_non_taxable || 100000) +
+          '（住民税が非課税の世帯の場合）入ります。' +
+          '上の入力欄の「資格を取って収入を上げる道も見てみる」にチェックを入れると、' +
+          'この道を選んだ場合の線がグラフに増えます。',
+          '#prog-koutou_shokugyo_kunren', 'この給付金のくわしい説明を見る');
+      }
+    }
+
+    /* --- 3. 養育費を取り決めた場合の差（受け取っていない方むけ） --- */
+    if (入力.childSupportState.indexOf('取り決めている') === -1) {
+      var いま受取 = 入力.divorced_childSupportMonthly || 0;
+      var 見込み = いま受取 > 0 ? いま受取 : 40000;
+      var 差, 養;
+      if (いま受取 > 0) {
+        /* すでに見込みの額を入れている場合は、取り決めなかったときとの差を出す */
+        養 = 別の場合({ divorced_childSupportMonthly: 0, childSupportMonthly: 0 });
+        差 = c.finalAll - 養.finalAll;
+      } else {
+        養 = 別の場合({ divorced_childSupportMonthly: 見込み, childSupportMonthly: 見込み });
+        差 = 養.finalAll - c.finalAll;
+      }
+      if (差 > 0) {
+        足す('養育費を取り決めると、22歳までで約' + Math.round(差 / 10000).toLocaleString('ja-JP') + '万円ちがいます',
+          '月 ' + SPS.円(見込み) + ' を受け取れた場合の計算です。' +
+          '児童扶養手当は養育費の8割が所得に入るので、手当が少し減ります。それを差し引いても、この額が残ります。' +
+          '公正証書にしておけば、あとから差し押さえもできます。費用は数万円です。',
+          '#prog-youikuhi', '手続きのくわしい説明を見る');
+      }
+    }
+
+    /* --- 4. 収入の崖（働き控えが要るかどうかを、数字で） --- */
+    var j = 判定.jidoFuyoTeate;
+    if (j && (j.status === 'full' || j.status === 'partial')) {
+      var 余裕 = j.limits.full - j.income;
+      if (j.status === 'full' && 余裕 >= 0 && 余裕 < 300000) {
+        var 増 = 別の場合({ myIncome: 入力.myIncome + 200000 });
+        var 手取り差 = 増.points[0].monthlyAll - c.points[0].monthlyAll;
+        足す('あと ' + SPS.円(余裕) + ' 稼ぐと、手当が減りはじめます',
+          'いまは全部支給のぎりぎりの内側です。年収を20万円ふやすと、' +
+          (手取り差 >= 0
+            ? '手当は減りますが、<strong>手元に残るお金は月 ' + SPS.円(手取り差) + ' ふえます。働き控えをする必要はありません。</strong>'
+            : '<strong>手元に残るお金は月 ' + SPS.円(-手取り差) + ' 減ります。この範囲で増やすなら、いまのままのほうが得です。</strong>') +
+          '「働きすぎると損」ではなく、どこを越えると損かを知っておくのが大事です。',
+          '#pit-shunyu_no_gake', 'くわしい説明を見る');
+      }
+    }
+
+    /* --- 5. 学費の山への備え（もう帯を越えている方むけ） --- */
+    if (c.alreadyReachedSafety && c.tuitionTotal > 0) {
+      var 児手累計 = 0;
+      c.points.forEach(function (pt) { 児手累計 += 0; });
+      var 児手月 = SPS.児童手当(入力.children, データ.programs_by_id.jido_teate.eligibility).monthly;
+      var 埋まる = Math.min(100, Math.round(児手月 * 12 * c.points.length / c.tuitionTotal * 100));
+      足す('次に備えるのは、学費の山です',
+        'これからかかる学校のお金は、合計およそ ' +
+        Math.round(c.tuitionTotal / 10000).toLocaleString('ja-JP') + '万円です。' +
+        '<strong>児童手当（いま月 ' + SPS.円(児手月) + '）を使わずに全部ためておくだけで、その約' + 埋まる + '%がまかなえます。</strong>' +
+        '進路の見込みを変えると、この金額がどう動くかも見られます。',
+        '#stage4', 'お金の守り方をAIに聞く文章を見る');
+    }
+
+    /* --- 6. 親の援助が終わるまでの猶予 --- */
+    if (入力.parentSupportMonthly > 0 && 入力.parentAge) {
+      var 終わり = (入力.parentSupportEndAge || データ.tables.parent_support_end_age_default) - 入力.parentAge;
+      if (終わり > 0) {
+        足す('援助があるうちに、やっておけることがあります',
+          '親御さんからの月 ' + SPS.円(入力.parentSupportMonthly) + ' の援助は、あと ' + 終わり + '年ほどの想定です。' +
+          'この間は、ふつうより毎月それだけ多く残せます。' +
+          '<strong>この' + 終わり + '年で、生活防衛資金をためきることと、資格を取ることの両方ができます。</strong>' +
+          '援助が止まってからでは、どちらも難しくなります。',
+          '#prog-koutou_shokugyo_kunren', '資格の給付金を見る');
+      }
+    }
+
+    /* --- 7. どうしても数字が動かないとき --- */
+    if (!道.length || c.monthlyBalance < 0) {
+      足す('生活保護は、負けではありません。やり直すための土台です',
+        '数字の上では、いまの収入と支出のままでは足りません。でも、そこで終わりではありません。' +
+        '生活保護は<strong>権利</strong>です。一時的に受けて、生活を立て直し、資格を取って、抜けていく方はたくさんいます。' +
+        '医療費の自己負担もなくなるので、体を治すこともできます。' +
+        '「車があるから」「持ち家だから」と自分で判断せず、まず福祉事務所で聞いてください。' +
+        'ひとりで行くのが不安なら、支援団体に付き添いを頼めます。',
+        '#prog-seikatsu_hogo', '相談先を見る');
+    }
+
+    /* --- 8. 最後の受け皿（かならず1つは出る） --- */
+    足す('お住まいの地域だけの制度が、まだ残っています',
+      'このツールが見ているのは、全国どこでも同じ制度だけです。' +
+      '市区町村ごとの医療費の助成、水道料金の減免、交通機関の割引、保育料の軽減などは入っていません。' +
+      '下の「4. 住んでいる地域の制度を調べる」の文章をAIに渡すと、あなたの地域のものを洗い出せます。',
+      '#stage4', 'AIに聞く文章を見る');
+
+    return 道;
+  }
+
+  function 道筋を描く(道) {
+    var h = ['<div class="path-block"><h3>あなたの場合の道筋</h3>',
+      '<p class="hint">入力の内容から、いまのあなたに効く順に出しています。全部やらなくて大丈夫です。</p>'];
+    道.forEach(function (o, i) {
+      h.push('<div class="path-item"><p class="path-head"><span class="path-no">' + (i + 1) + '</span>' +
+        esc(o.head) + '</p><p class="path-body">' + o.body + '</p>' +
+        (o.href ? '<p class="path-link"><a href="' + esc(o.href) + '">' + esc(o.linkName) + '</a></p>' : '') +
+        '</div>');
+    });
+    h.push('</div>');
+    return h.join('');
+  }
+
+  function 資格ルートの説明(c) {
+    var t = c.training;
+    if (!t || !(t.afterIncome > 0)) { return ''; }
+    var 訓 = データ.training;
+    var h = ['<div class="notice"><h4>むらさきの線「資格を取るルート」について</h4>'];
+    h.push('<p style="margin:.3rem 0">学校に通う' + t.years + '年間は、働ける時間が減るぶん収入が ' +
+      SPS.円(t.duringIncome) + ' に下がるものとして計算しています。' +
+      'そのあいだ、高等職業訓練促進給付金が毎月 ' + SPS.円(t.grantMonthly) +
+      '（最後の1年はさらに ' + SPS.円(t.grantFinalYearBonus) + '）入り、修了したときに ' +
+      SPS.円(t.completionGrant) + ' 入ります。修了後は、入れていただいた見込みの年収 ' +
+      SPS.円(t.afterIncome) + ' にうつるものとしています。</p>');
+    h.push('<p class="hint" style="margin:.3rem 0">' + esc(訓.resident_tax_free_note) + '</p>');
+    h.push('<p class="hint" style="margin:.3rem 0"><strong>' + esc(訓.assumption_note) + '</strong>' +
+      esc(訓.after_income_note) + '</p>');
+    h.push('<p class="hint" style="margin:.3rem 0">' + esc(訓.target_qualifications) + '</p>');
+    h.push('<p class="track-record"><strong>この橋は、実際に渡れます。</strong>' + esc(訓.track_record) + '</p>');
+    h.push('<p class="hint" style="margin:.3rem 0">' + esc(訓.non_taxable_note) + '</p>');
+    h.push('<p class="src">根拠: ' + esc(訓.source.law) + '／<a href="' + esc(訓.source.url) +
+      '" target="_blank" rel="noopener">' + esc(訓.source.publisher) + 'のページを開く</a>（最終確認 ' +
+      日付表示(訓.source.last_verified) + '）<br>実績の出典: <a href="' + esc(訓.track_record_source.url) +
+      '" target="_blank" rel="noopener">' + esc(訓.track_record_source.law) + '</a>（最終確認 ' +
+      日付表示(訓.track_record_source.last_verified) + '）</p>');
+    h.push('</div>');
+    return h.join('');
   }
 
   function 打ち切りの注記(c) {
@@ -807,7 +1087,8 @@
       }
       if (it.roi) {
         h.push('<div class="roi"><strong>いますぐのお金と、積み上げるお金</strong><br>' +
-          '・いますぐ: ' + esc(it.roi.quick) + '<br>・積み上げ: ' + esc(it.roi.slow) + '</div>');
+          '・いますぐ: ' + esc(it.roi.quick) + '<br>・積み上げ: ' + esc(it.roi.slow) +
+          '<br><a href="#stage2b" class="roi-link">積み上げルートを数字で見る（貯金のグラフへ）</a></div>');
       }
       if (it.exit_support) {
         h.push('<p><strong>いま使える相談先</strong></p><ul>' + it.exit_support.map(function (e) {
@@ -947,6 +1228,11 @@
       $('children-box').addEventListener('change', function () { 進路欄を作る(子どもの年齢たち()); });
       document.querySelectorAll('.cost-item').forEach(function (el) {
         el.addEventListener('input', うちわけを反映);
+      });
+      $('training-on').addEventListener('change', 訓練欄を反映);
+      ['training-years', 'training-during', 'training-after'].forEach(function (id) {
+        $(id).addEventListener('input', 訓練欄を反映);
+        $(id).addEventListener('change', 訓練欄を反映);
       });
       使っている制度欄を作る();
       進路欄を作る([]);

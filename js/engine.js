@@ -469,10 +469,10 @@
 
     var 月ごと = [];
     var 貯金いま = 起点, 貯金全部 = 起点;
-    var 到達月 = null, 赤字になる月 = null;
+    var 到達月 = null, 到達月いま = null, 赤字になる月 = null;
     var 最初から帯の中 = (防衛下限 > 0 && 起点 >= 防衛下限);
     var 最初から帯の上 = (防衛上限 > 0 && 起点 >= 防衛上限);
-    if (防衛下限 > 0 && 起点 >= 防衛下限) { 到達月 = 0; }
+    if (防衛下限 > 0 && 起点 >= 防衛下限) { 到達月 = 0; 到達月いま = 0; }
 
     var points = [], 学費の合計 = 0, いちばん安い学費の合計 = 0;
     var 大学で赤字 = null;
@@ -504,6 +504,7 @@
         貯金全部 += 月収支全部;
         月ごと.push({ month: 月ごと.length + 1, now: 貯金いま, all: 貯金全部 });
         if (到達月 === null && 防衛下限 > 0 && 貯金全部 >= 防衛下限) { 到達月 = 月ごと.length; }
+        if (到達月いま === null && 防衛下限 > 0 && 貯金いま >= 防衛下限) { 到達月いま = 月ごと.length; }
         if (赤字になる月 === null && 貯金全部 < 0) { 赤字になる月 = 月ごと.length; }
       }
 
@@ -569,8 +570,13 @@
     if (d0.jidoTeate > 0 && !使用中.jido_teate) { 伸びしろ.push({ id: 'jido_teate', monthly: d0.jidoTeate }); }
     if (控除が使える && !使用中.hitorioya_kojo) { 伸びしろ.push({ id: 'hitorioya_kojo', monthly: 控除の効果 }); }
 
+    /* 資格を取って抜けるルート（オプション） */
+    sim.assetNow = points.map(function (pt) { return pt.now; });
+    var 資格 = 資格ルート(入力, データ, sim);
+
     return {
       points: points,
+      training: 資格,
       startSavings: 起点,
       livingCost: 生活費,
       safetyMin: 防衛下限,
@@ -578,6 +584,7 @@
       alreadyReachedSafety: 最初から帯の中,
       alreadyAboveSafety: 最初から帯の上,
       reachMonths: 到達月,
+      reachMonthsNow: 到達月いま,
       negativeFromMonth: 赤字になる月,
       negativeFromOffset: 赤字の年,
       borrowFloor: 借入上限,
@@ -612,6 +619,133 @@
     if (y === 0) { return m + 'か月'; }
     if (m === 0) { return y + '年'; }
     return y + '年' + m + 'か月';
+  }
+
+  /* ------------------------------------------------------------
+   * 6-3. 資格を取って抜けるルート
+   *
+   *   いまの収入のまま22歳まで進む線だけを見せると、
+   *   収入が低い方には「詰み」しか見えません。
+   *   でも実際には、資格を取って収入を上げる道があり、
+   *   その間の生活費を支える給付金も用意されています。
+   *   その道を、同じグラフの上に線として描きます。
+   *
+   *   モデル
+   *     ・訓練中（既定2年）は、働ける時間が減るので就労収入が下がる（既定で半分）
+   *     ・そのあいだ、高等職業訓練促進給付金が毎月入る
+   *       （住民税が非課税の世帯は月10万円、課税世帯は月70,500円。
+   *         修業期間の最後の12か月はさらに月4万円）
+   *     ・修了したときに、修了支援給付金が1回入る
+   *     ・修了後は、その資格の仕事の収入水準にうつる
+   *
+   *   給付金は非課税で、児童扶養手当の所得にも入らないものとして扱います。
+   *   修了後の収入は全国の平均値であって、約束された金額ではありません。
+   * ---------------------------------------------------------- */
+  function 資格ルート(入力, データ, sim) {
+    var t = 入力.training;
+    if (!t || !t.enabled) { return null; }
+    var 学費表 = データ.tuition;
+    var 児扶表 = データ.programs_by_id.jido_fuyo_teate.eligibility;
+    var 児手表 = データ.programs_by_id.jido_teate.eligibility;
+    var 訓練表 = データ.training;
+    if (!訓練表) { return null; }
+
+    var 年数 = Math.max(1, Math.min(訓練表.years_max, Math.floor(t.years || 訓練表.years_default)));
+    var 訓練中年収 = Math.max(0, Math.floor(
+      (t.duringIncome != null) ? t.duringIncome : 入力.myIncome * (訓練表.during_income_ratio_default)));
+    var 修了後年収 = Math.max(0, Math.floor(t.afterIncome || 0));
+
+    /* 訓練中に住民税が非課税かどうか（ひとり親の非課税限度と、その年の所得で見る） */
+    var 非課税 = (給与所得(訓練中年収) <= 訓練表.resident_tax_free_limit);
+    var 給付月額 = 非課税 ? 訓練表.monthly_non_taxable : 訓練表.monthly_taxable;
+    var 修了時 = 非課税 ? 訓練表.completion_non_taxable : 訓練表.completion_taxable;
+
+    var 生活費 = Math.max(0, Math.floor(入力.livingCost || 0));
+    var 養育費月 = 入力.divorced_childSupportMonthly || 0;
+    var 親支援月 = 入力.parentSupportMonthly || 0;
+    var 親の年齢 = 入力.parentAge || 0;
+    var 親支援終了年齢 = (入力.parentSupportEndAge != null)
+      ? 入力.parentSupportEndAge : データ.tables.parent_support_end_age_default;
+    var 住居 = 入力.housingAfter || 0;
+    var プラン一覧 = 入力.plans || [];
+
+    var 貯金 = Math.floor(入力.currentSavings || 0);
+    var points = [], 月ごと = [];
+    var 床 = (データ.borrow_limit && 入力.myIncome > 0)
+      ? -Math.floor(入力.myIncome * データ.borrow_limit.ratio) : null;
+    var 床に当たる年 = null, 谷の底 = null;
+
+    sim.years.forEach(function (y, i) {
+      var 訓練中 = (i < 年数);
+      var 年収 = 訓練中 ? 訓練中年収 : 修了後年収;
+
+      var 給付 = 0;
+      if (訓練中) {
+        給付 = 給付月額 + ((i === 年数 - 1) ? 訓練表.final_year_bonus : 0);
+      }
+
+      var 児扶対象数 = y.childAges.filter(function (a) { return a <= 児扶表.pay_upto_age; }).length;
+      var 児扶 = 児童扶養手当({
+        salaryGross: 年収, childSupportYearly: 養育費月 * 12,
+        dependents: 児扶対象数, childCount: 児扶対象数
+      }, 児扶表);
+      var 児手 = 児童手当(y.childAges, 児手表).monthly;
+      var 手取り月 = Math.floor(手取りめやす(年収, true) / 12);
+      var 親支援 = (親の年齢 && (親の年齢 + i) >= 親支援終了年齢) ? 0 : 親支援月;
+      var 学 = その年の学費(y.childAges, プラン一覧, 学費表).total;
+
+      var 月収支 = 手取り月 + 児扶.monthly + 児手 + 給付 + 養育費月 + 親支援
+        - 住居 - 生活費 - Math.round(学 / 12);
+
+      for (var m = 0; m < 12; m++) {
+        貯金 += 月収支;
+        月ごと.push(貯金);
+        if (床 != null && 床に当たる年 === null && 貯金 <= 床) { 床に当たる年 = i; }
+      }
+      /* 修了したその年に、修了支援給付金が1回入る */
+      if (i === 年数 - 1) { 貯金 += 修了時; }
+
+      if (谷の底 === null || 貯金 < 谷の底) { 谷の底 = 貯金; }
+
+      points.push({
+        offset: i, youngestAge: y.youngestAge,
+        training: 訓練中, income: 年収, grant: 給付,
+        monthly: 月収支, all: 貯金
+      });
+    });
+
+    /* 「いまのまま」を追い越す年 */
+    var 逆転 = null;
+    for (var k = 0; k < points.length; k++) {
+      if (points[k].all >= sim.assetNow[k]) { 逆転 = k; break; }
+    }
+    /* 生活防衛資金にとどく年 */
+    var 帯到達 = null;
+    var 帯 = 生活費 * 3;
+    if (帯 > 0) {
+      for (var q = 0; q < points.length; q++) {
+        if (points[q].all >= 帯) { 帯到達 = q; break; }
+      }
+    }
+
+    return {
+      points: points,
+      years: 年数,
+      duringIncome: 訓練中年収,
+      afterIncome: 修了後年収,
+      taxFree: 非課税,
+      grantMonthly: 給付月額,
+      grantFinalYearBonus: 訓練表.final_year_bonus,
+      completionGrant: 修了時,
+      crossoverOffset: 逆転,
+      crossesOver: 逆転 !== null,
+      reachSafetyOffset: 帯到達,
+      valleyBottom: 谷の底,
+      hitsBorrowFloorAtOffset: 床に当たる年,
+      hitsBorrowFloor: 床に当たる年 !== null,
+      borrowFloor: 床,
+      finalAll: points.length ? points[points.length - 1].all : 0
+    };
   }
 
   /* ------------------------------------------------------------
@@ -726,6 +860,7 @@
     等価所得: 等価所得,
     シミュレーション: シミュレーション,
     資産カーブ: 資産カーブ,
+    資格ルート: 資格ルート,
     学費: 学費,
     その年の学費: その年の学費,
     いちばん安いプラン: いちばん安いプラン,

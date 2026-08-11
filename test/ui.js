@@ -33,6 +33,71 @@ function 待つ(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 var 型 = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8' };
 
+/* ============================================================
+ * 受け入れ条件:
+ *   どの入力でも、脱出ルート（良くなる道筋）が
+ *   かならず1つ以上、数字つきで見えること。
+ * ============================================================ */
+function 道筋のチェック() {
+  return JSDOM.fromFile(path.join(ROOT, 'index.html'), {
+    runScripts: 'dangerously', resources: 'usable', pretendToBeVisual: true
+  }).then(function (dom) {
+    var w = dom.window, d = w.document;
+    w.Element.prototype.scrollIntoView = function () {};
+    return 待つ(2200).then(function () {
+      var 見本 = require(path.join(ROOT, 'data', 'samples.js')).samples;
+      var 期待 = {
+        part_two_kids: ['黒字になります', '追い越します'],
+        seishain_one_kid: ['早まります'],
+        over_limit: ['学費の山'],
+        considering_divorce: ['養育費を取り決めると'],
+        on_the_edge: ['手当が減りはじめます'],
+        parent_support: ['援助があるうちに']
+      };
+      var 数え = [];
+      見本.forEach(function (sm, i) {
+        d.querySelectorAll('#sample-buttons button')[i].click();
+        var 塊 = d.querySelector('#stage2b-body .path-block');
+        ok(塊 !== null, '[' + sm.id + '] 「あなたの場合の道筋」が出る');
+        if (!塊) { return; }
+        var 項目 = d.querySelectorAll('#stage2b-body .path-item');
+        ok(項目.length >= 2,
+          '[' + sm.id + '] 最後の受け皿だけでなく、その人に固有の道筋が出ている', 項目.length + '個');
+        var 文 = 塊.textContent;
+        ok(/[0-9][0-9,]*\s*(円|万円|年|か月|%)/.test(文), '[' + sm.id + '] 道筋に数字がついている');
+        ok(塊.querySelectorAll('.path-link a').length >= 1, '[' + sm.id + '] 行き先のリンクがある');
+        (期待[sm.id] || []).forEach(function (語) {
+          ok(文.indexOf(語) > 0, '[' + sm.id + '] 「' + 語 + '」が道筋に出ている',
+            文.replace(/\s+/g, ' ').slice(0, 140));
+        });
+        数え.push(sm.id + ':' + 項目.length);
+      });
+      console.log('    （道筋の数 ' + 数え.join(' / ') + '）');
+
+      /* きわめて苦しい入力でも、生活保護が「権利」として出ること */
+      d.getElementById('my-income').value = '0';
+      d.getElementById('child-count').value = '2';
+      d.getElementById('child-count').dispatchEvent(new w.Event('change'));
+      d.getElementById('child-age-0').value = '4';
+      d.getElementById('child-age-1').value = '9';
+      d.getElementById('living-cost').value = '120000';
+      d.getElementById('current-savings').value = '0';
+      d.getElementById('housing-now').value = '60000';
+      d.getElementById('training-on').checked = false;
+      d.getElementById('calc').click();
+      var 極 = d.querySelector('#stage2b-body .path-block');
+      ok(極 !== null, '収入0でも、道筋が空にならない');
+      if (極) {
+        ok(極.textContent.indexOf('生活保護は、負けではありません') > 0,
+          '収入0のときは、生活保護を権利として正面から出す',
+          極.textContent.replace(/\s+/g, ' ').slice(0, 140));
+        ok(極.textContent.indexOf('やり直すための土台') > 0, '再出発の土台というトーンになっている');
+      }
+      w.close();
+    });
+  });
+}
+
 var server = http.createServer(function (req, res) {
   var p = path.join(ROOT, decodeURIComponent(req.url.split('?')[0]));
   if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
@@ -136,8 +201,10 @@ server.listen(0, '127.0.0.1', function () {
         ok(d.querySelectorAll('#cost-advice ul.cost-share li').length === 5, '費目ごとの割合が出る');
         ok(見立て.indexOf('通信費') > 0 && 見立て.indexOf('プランや会社を変えて') > 0,
           '通信費が重いときは、見直しの候補として出る（断言はしない）');
-        ok(見立て.indexOf('よその家庭の平均とは比べていません') > 0,
-          'よその家庭と比べていないことを明記している');
+        ok(見立て.indexOf('母子世帯の平均') > 0,
+          '母子世帯の平均とくらべた結果が出る');
+        ok(見立て.indexOf('平均より多いからといって、使いすぎということではありません') > 0,
+          '平均より多くても責める書き方になっていない');
         ok(見立て.indexOf('必ず') === -1 && 見立て.indexOf('すべきです') === -1,
           '断言口調になっていない');
         /* 入れ直すと、貯金のグラフも追いかけて変わる */
@@ -159,9 +226,9 @@ server.listen(0, '127.0.0.1', function () {
         /* すでに使っている制度は「利用中」と出る */
         eq(d.querySelectorAll('#used-programs input.used-prog').length, 9, 'すでに使っている制度を申告する欄が9つある');
         var 利用中 = d.querySelectorAll('#stage1-body .prog.used');
-        eq(利用中.length, 3, '見本2は3件を利用中と申告しているので、3枚が利用中の表示になる', 利用中.length);
+        eq(利用中.length, 2, '見本2は2件を利用中と申告しているので、2枚が利用中の表示になる', 利用中.length);
         ok(利用中[0].querySelector('.badge.used').textContent.indexOf('利用中') > 0, '利用中のしるしが出ている');
-        ok(d.getElementById('stage1-summary').textContent.indexOf('すでに3件を使っている') >= 0,
+        ok(d.getElementById('stage1-summary').textContent.indexOf('すでに2件を使っている') >= 0,
           'まとめにも、すでに使っている件数が出る', d.getElementById('stage1-summary').textContent);
 
         /* 進路プラン: 私立にすると、その場でグラフが変わる */
@@ -220,6 +287,8 @@ server.listen(0, '127.0.0.1', function () {
         ok(d.querySelector('#stage3-body .pit h4').textContent.indexOf('闇バイト') > 0,
           '閉じたままでも、結論の1行が読める', d.querySelector('#stage3-body .pit h4').textContent);
         ok(d.querySelectorAll('#stage3-body .stance').length >= 4, '立場表明の枠が、事実と分けて表示される');
+        ok(d.querySelector('#stage3-body .roi a.roi-link[href="#stage2b"]') !== null,
+          '即金の話から、積み上げルートのグラフへ行けるリンクがある');
         ok(d.getElementById('stage3-body').textContent.indexOf('私たちAIかけこみ寺は') > 0,
           '立場表明が「私たちAIかけこみ寺は」で始まっている');
 
@@ -228,8 +297,10 @@ server.listen(0, '127.0.0.1', function () {
         ok(文.indexOf('東京都板橋区') > 0, '入力した地域が文章に入る');
         ok(文.indexOf('板橋区1-2-3') === -1, '番地のような情報は入らない');
 
-        /* 赤字の見せ方（1番目の例は毎月赤字） */
+        /* 赤字の見せ方（例1をもとに、生活費を上げて赤字にする） */
         d.querySelectorAll('#sample-buttons button')[0].click();
+        d.getElementById('living-cost').value = '150000';
+        d.getElementById('calc').click();
         return 待つ(300).then(function () {
           var 本文 = d.getElementById('stage2b-body').textContent;
           ok(本文.indexOf('毎月あと') > 0 && 本文.indexOf('足りない状態です') > 0,
@@ -322,7 +393,7 @@ server.listen(0, '127.0.0.1', function () {
         w.close();
       });
     });
-  }).then(function () {
+  }).then(道筋のチェック).then(function () {
     server.close();
     console.log('\n============================================');
     console.log('  画面のチェック: 成功 ' + 成功 + ' 件 ／ 失敗 ' + 失敗 + ' 件');

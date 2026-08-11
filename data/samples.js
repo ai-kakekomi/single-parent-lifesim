@@ -20,7 +20,7 @@
     {
       "id": "part_two_kids",
       "label": "パート勤務・保育園児と小学生のおかあさん",
-      "story": "パートで年150万円。5歳と8歳のお子さんと賃貸暮らし。養育費は取り決めをしていません。毎月の生活費95,000円は、かなり切り詰めた場合のめやすです（親子3人・住居費と学校のお金をのぞく）。",
+      "story": "パートで年150万円。5歳と8歳のお子さんと賃貸暮らし。養育費は取り決めをしていません。毎月の生活費88,000円は、かなり切り詰めた場合のめやすです（親子3人・住居費と学校のお金をのぞく）。",
       "input": {
         "isSingleParent": true,
         "myAge": 34,
@@ -35,8 +35,9 @@
         "childSupportMonthly": 0,
         "parentSupportMonthly": 0,
         "parentAge": 0,
-        "livingCost": 95000,
+        "livingCost": 88000,
         "currentSavings": 80000,
+        "training": { "enabled": true, "years": 2, "afterIncome": 3200000 },
         "usedPrograms": ["jido_teate"]
       },
       "expect": {
@@ -64,8 +65,9 @@
         "parentSupportMonthly": 0,
         "parentAge": 0,
         "livingCost": 105000,
-        "currentSavings": 600000,
-        "usedPrograms": ["jido_fuyo_teate", "jido_teate", "hitorioya_kojo"],
+        "currentSavings": 200000,
+        "training": { "enabled": false, "years": 2, "afterIncome": 4000000 },
+        "usedPrograms": ["jido_fuyo_teate", "jido_teate"],
         "plans": [{ "high": "private", "university": "private_home" }]
       },
       "expect": {
@@ -94,6 +96,7 @@
         "parentAge": 0,
         "livingCost": 120000,
         "currentSavings": 1500000,
+        "training": { "enabled": false, "years": 2, "afterIncome": 5000000 },
         "usedPrograms": ["jido_teate", "hitorioya_kojo"]
       },
       "expect": {
@@ -122,6 +125,7 @@
         "parentAge": 0,
         "livingCost": 95000,
         "currentSavings": 300000,
+        "training": { "enabled": true, "years": 2, "afterIncome": 3000000 },
         "usedPrograms": ["jido_teate"]
       },
       "expect": {
@@ -151,6 +155,7 @@
         "parentAge": 0,
         "livingCost": 90000,
         "currentSavings": 150000,
+        "training": { "enabled": true, "years": 2, "afterIncome": 3200000 },
         "usedPrograms": ["jido_fuyo_teate", "jido_teate"]
       },
       "expect": {
@@ -179,6 +184,7 @@
         "parentAge": 68,
         "livingCost": 100000,
         "currentSavings": 400000,
+        "training": { "enabled": true, "years": 3, "afterIncome": 3600000 },
         "usedPrograms": ["jido_teate"]
       },
       "expect": {
