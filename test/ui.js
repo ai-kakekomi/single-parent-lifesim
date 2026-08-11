@@ -153,6 +153,21 @@ server.listen(0, '127.0.0.1', function () {
         ok(d.querySelector('#stage2-body a[href="#stage3"]') !== null,
           '身の安全のことを見に行くリンクがある');
 
+        /* グラフの左はしが、入力した貯金額であること（1年ずれていないこと） */
+        (function () {
+          var 見本一覧 = require(path.join(ROOT, 'data', 'samples.js')).samples;
+          var SPSe = require(path.join(ROOT, 'js', 'engine.js'));
+          var データ本 = require(path.join(ROOT, 'data', 'programs.js'));
+          データ本.programs_by_id = {};
+          データ本.programs.forEach(function (p2) { データ本.programs_by_id[p2.id] = p2; });
+          見本一覧.forEach(function (sm) {
+            var c2 = SPSe.資産カーブ(Object.assign({}, sm.input,
+              { divorced_childSupportMonthly: sm.input.childSupportMonthly }), データ本);
+            eq(c2.points[0].all, sm.input.currentSavings,
+              '[' + sm.id + '] グラフの左はしが、入力した貯金額と同じ');
+          });
+        }());
+
         /* 貯金のたまり方（資産カーブ）が、いちばん最初の出力になっている */
         ok(d.getElementById('stage2b').classList.contains('shown'), '貯金のたまり方の欄が出る');
         ok(d.getElementById('stage2b').compareDocumentPosition(d.getElementById('stage1')) & 4,

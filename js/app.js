@@ -629,10 +629,10 @@
     var t = c.training;
     if (t && t.afterIncome > 0) {
       if (t.crossesOver) {
-        var いつ = (t.crossoverOffset === 0)
-          ? '<strong>通いはじめた最初の年から</strong>'
+        var いつ = (t.crossoverOffset <= 1)
+          ? '<strong>通いはじめて1年で</strong>'
           : '<strong>' + t.crossoverOffset + '年後に</strong>';
-        足す('資格を取る道なら、' + (t.crossoverOffset === 0 ? '最初の年から追い越します' : t.crossoverOffset + '年後に追い越します'),
+        足す('資格を取る道なら、' + (t.crossoverOffset <= 1 ? '1年で追い越します' : t.crossoverOffset + '年後に追い越します'),
           '学校に通う' + t.years + '年のあいだ、高等職業訓練促進給付金が毎月 ' + SPS.円(t.grantMonthly) +
           '（最後の1年はさらに ' + SPS.円(t.grantFinalYearBonus) + '）入ります。' +
           'そのおかげで、' + いつ + '「いまのまま」の線を追い越します。' +
@@ -834,7 +834,7 @@
         文 = '<strong>資格を取るルートなら、貯金が底をつきません。</strong>' +
           (t.crossesOver
             ? (t.crossoverOffset === 0
-              ? '通いはじめた最初の年から、いまのままの線を追い越します。'
+              ? '通いはじめて1年で、いまのままの線を追い越します。'
               : t.crossoverOffset + '年後に、いまのままの線を追い越します。')
             : '');
         h.push('<p class="alert-good">' + 文 + '</p>');

@@ -285,9 +285,14 @@ eq(資産F.points[0].tuition, 学0, 'その年の学校にかかるお金が出�
 eq(資産F.points[0].livingCost, 105000, '1年目の生活費は、入力した額そのまま');
 eq(資産F.points[0].monthlyAll, simF.years[0].divorced.total - 105000 - Math.round(学0 / 12),
   'ひと月の残りは、使えるお金から生活費と学校のお金を引いた額');
-eq(資産F.points[0].all, 資産F.points[0].monthlyAll * 12, '1年目の貯金は、ひと月の残りの12倍');
-eq(資産F.points[1].all, 資産F.points[0].all + 資産F.points[1].monthlyAll * 12,
-  '2年目は1年目に積み増される（累積になっている）');
+/* いちばん左の点は、入力した貯金そのもの。そこから1年ぶんずつ積み上げる */
+eq(資産F.points[0].all, 資産F.startSavings, 'いちばん左の点は、入力した貯金額そのもの');
+eq(資産F.points[0].now, 資産F.startSavings, '「いまのまま」の線も同じ点から始まる');
+eq(資産F.points[1].all, 資産F.points[0].all + 資産F.points[0].monthlyAll * 12,
+  '1年後の点は、いまの貯金にその年の12か月ぶんを足した額');
+eq(資産F.points[2].all, 資産F.points[1].all + 資産F.points[1].monthlyAll * 12,
+  '2年後の点は、1年後にさらに1年ぶん積み増した額');
+eq(資産F.points[0].youngestAge, simF.years[0].youngestAge, 'いちばん左の点は、いまのお子さんの年齢');
 
 /* いまの貯金が起点になる */
 var 起点あり = SPS.資産カーブ(Object.assign({}, 入力F, { currentSavings: 500000 }), データ);
@@ -342,7 +347,8 @@ ok(SPS.資産カーブ(Object.assign({}, 入力F, { children: [] }), データ) 
 
 /* 赤字のときは、線を22歳まで引きのばさない（予測として不誠実なので） */
 ok(赤字.truncated, '赤字のときは、線を最後まで描かない');
-eq(赤字.negativeFromOffset, 0, 'はじめの年からマイナス');
+eq(赤字.negativeFromOffset, 1, 'いまの貯金は0円なので、1年後の点からマイナスになる');
+eq(赤字.points[0].all, 赤字.startSavings, '赤字のケースでも、いちばん左の点は入力した貯金額');
 eq(赤字.drawUntilOffset,
    Math.min(赤字.points.length - 1, 0 + 3,
      赤字.hitsBorrowFloorAtOffset === null ? Infinity : 赤字.hitsBorrowFloorAtOffset),
@@ -466,6 +472,8 @@ var 下がる = SPS.資産カーブ(Object.assign({}, 訓入力,
   { myIncome: 5000000, livingCost: 200000, training: { enabled: true, years: 4, afterIncome: 2000000 } }), データ).training;
 ok(!下がる.crossesOver, '修了後の収入がいまより低ければ、追い越さない（正直に返す）');
 eq(下がる.crossoverOffset, null, '追い越さない場合は、追い越す年を出さない');
+ok(訓.crossoverOffset >= 1, '追い越す年は1年後より先（いちばん左の点は3本とも同じなので数えない）',
+  String(訓.crossoverOffset));
 ok(下がる.finalAll < SPS.資産カーブ(Object.assign({}, 訓入力,
   { myIncome: 5000000, livingCost: 200000, training: { enabled: false } }), データ).finalAll,
   '追い越さない場合は、最後の貯金も「いまのまま」より少ない');
@@ -567,6 +575,29 @@ eq(成長c.points[8].monthlyAll,
     - 成長c.points[8].livingCost - Math.round(成長c.points[8].tuition / 12),
   '生活費と学費は、それぞれ1回ずつだけ引かれている');
 
+/* 3本の線が、同じ点から分かれること（グラフの左はしの取りちがえを防ぐ） */
+var 起点そろえ = SPS.資産カーブ(Object.assign({}, 入力F, {
+  currentSavings: 200000,
+  training: { enabled: true, years: 2, afterIncome: 3200000 }
+}), データ);
+eq(起点そろえ.points[0].all, 200000, '「使える制度を全部使った」線の起点が、入力した貯金額');
+eq(起点そろえ.points[0].now, 200000, '「いまのまま」の線の起点も、同じ額');
+eq(起点そろえ.training.points[0].all, 200000, '「資格を取るルート」の起点も、同じ額');
+eq(起点そろえ.training.points[0].youngestAge, 起点そろえ.points[0].youngestAge,
+  '3本とも、同じ年齢の位置から始まる');
+eq(起点そろえ.points.length, 起点そろえ.training.points.length, '点の数も3本ともそろっている');
+/* 貯金額を変えると、起点だけがそのぶん動く（形は変わらない） */
+var 起点ゼロ = SPS.資産カーブ(Object.assign({}, 入力F, {
+  currentSavings: 0, training: { enabled: true, years: 2, afterIncome: 3200000 }
+}), データ);
+eq(起点ゼロ.points[0].all, 0, '貯金0円なら、起点も0円');
+eq(起点そろえ.points[5].all - 起点ゼロ.points[5].all, 200000,
+  '途中の点も、入れた貯金のぶんだけ上に平行移動する');
+eq(起点そろえ.training.points[5].all - 起点ゼロ.training.points[5].all, 200000,
+  '資格ルートの線も同じだけ平行移動する');
+/* いちばん右の点は、末子22歳の時点 */
+eq(起点そろえ.points[起点そろえ.points.length - 1].youngestAge, 22, 'いちばん右の点は末子22歳');
+
 /* ------------------------------------------------------------ */
 見出し('8-4. 学校にかかるお金');
 
@@ -622,6 +653,8 @@ eq(学費ゼロ.tuitionTotal, 学費の年合計, '学校のお金の合計が�
     'どの年でも、生活費と学校のお金が1回ずつだけ引かれている');
   ok(pt.livingCost >= 105000, 'その年の生活費は、入力した額以上になる（お子さんの成長ぶん）');
 });
+eq(学費ゼロ.tuitionTotal, 学費の年合計 - 学費ゼロ.points[学費ゼロ.points.length - 1].tuition,
+  '学校のお金の合計は、積み上げに使った年ぶんだけ（いちばん右の点の年は積まない）');
 
 /* 学費データそのものの点検 */
 eq(学費表.bands.length, 4, '学校の段階は4つ（小・中・高・大学）');
@@ -650,9 +683,14 @@ ok(学費表.note_average.indexOf('平均値') > 0, '平均値であることが
   ok(s.input.livingCost > 0, '[' + s.id + '] 見本に毎月の生活費が入っている');
   ok(s.input.currentSavings >= 0, '[' + s.id + '] 見本にいまの貯金額が入っている');
   ok(Array.isArray(s.input.usedPrograms), '[' + s.id + '] 見本にすでに使っている制度が入っている');
+  eq(c.points[0].all, s.input.currentSavings,
+    '[' + s.id + '] グラフのいちばん左の点が、入力した貯金額と同じ');
+  eq(c.points[0].now, s.input.currentSavings, '[' + s.id + '] 2本目の線も同じ点から始まる');
   var 手 = s.input.currentSavings;
-  c.points.forEach(function (pt) { 手 += pt.monthlyAll * 12; });
+  c.points.slice(0, -1).forEach(function (pt) { 手 += pt.monthlyAll * 12; });
   eq(c.points[c.points.length - 1].all, 手, '[' + s.id + '] 積み上げの合計が合っている');
+  eq(c.finalAll, c.points[c.points.length - 1].all,
+    '[' + s.id + '] 最後の点と、最終の貯金額が一致する');
 });
 ok(見本.samples.some(function (s) { return SPS.資産カーブ(
   Object.assign({}, s.input, { divorced_childSupportMonthly: s.input.childSupportMonthly }), データ).alreadyAboveSafety; }),

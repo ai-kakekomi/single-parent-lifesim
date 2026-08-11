@@ -533,14 +533,17 @@
     var 大学で赤字 = null;
     var 安いプラン = 学費表 ? いちばん安いプラン(学費表) : null;
 
-    sim.years.forEach(function (y) {
+    /* 【グラフの点の意味】
+       points[i] は「いちばん下のお子さんが（末子+i）歳になった時点」の貯金です。
+       だから points[0] は、入力していただいた貯金額そのもの（まだ1円も足していない状態）。
+       そこから1年ぶん足したものが points[1]、という並びにします。
+       （先に足してから点を置くと、グラフの左はしが1年後の残高になってしまうため） */
+    sim.years.forEach(function (y, i) {
       var d = y.divorced;
 
       /* この年の、お子さん全員ぶんの学校のお金 */
       var 学 = その年の学費(y.childAges, プラン一覧, 学費表);
       var 安 = その年の学費(y.childAges, y.childAges.map(function () { return 安いプラン; }), 学費表);
-      学費の合計 += 学.total;
-      いちばん安い学費の合計 += 安.total;
       var 学費月 = Math.round(学.total / 12);
       /* お子さんが大きくなったぶん、生活費（の食費部分）がふえる */
       var 今年の生活費 = Math.round(生活費 * 生活費の倍率(いまの子の年齢, y.childAges, 成長表));
@@ -556,6 +559,26 @@
       var 月収支全部 = 土台 + 全部の給付;
       var 月収支いま = 土台 + いまの給付;
 
+      /* まず、いまの時点の貯金を点として置く */
+      points.push({
+        offset: i,
+        youngestAge: y.youngestAge,
+        childAges: y.childAges,
+        tuition: 学.total,
+        tuitionCheapest: 安.total,
+        livingCost: 今年の生活費,
+        monthlyNow: 月収支いま,
+        monthlyAll: 月収支全部,
+        now: 貯金いま,
+        all: 貯金全部
+      });
+
+      /* いちばん最後の点は「末子22歳の時点」なので、そこから先は積まない */
+      if (i >= sim.years.length - 1) { return; }
+
+      学費の合計 += 学.total;
+      いちばん安い学費の合計 += 安.total;
+
       for (var m = 0; m < 12; m++) {
         貯金いま += 月収支いま;
         貯金全部 += 月収支全部;
@@ -567,21 +590,8 @@
 
       /* 大学に通う年で赤字になっていないか */
       if (大学で赤字 === null && 貯金全部 < 0 && 学.detail.some(function (x) { return x.age >= 18; })) {
-        大学で赤字 = { youngestAge: y.youngestAge, offset: y.offset };
+        大学で赤字 = { youngestAge: sim.years[i + 1].youngestAge, offset: i + 1 };
       }
-
-      points.push({
-        offset: y.offset,
-        youngestAge: y.youngestAge,
-        childAges: y.childAges,
-        tuition: 学.total,
-        tuitionCheapest: 安.total,
-        livingCost: 今年の生活費,
-        monthlyNow: 月収支いま,
-        monthlyAll: 月収支全部,
-        now: 貯金いま,
-        all: 貯金全部
-      });
     });
 
     /* 赤字のときは、線をどこまで描くか。
@@ -755,30 +765,38 @@
       var 親支援 = (親の年齢 && (親の年齢 + i) >= 親支援終了年齢) ? 0 : 親支援月;
       var 学 = その年の学費(y.childAges, プラン一覧, 学費表).total;
 
+      /* お子さんが大きくなったぶん、生活費（の食費部分）がふえる。
+         こちらの線も、本体のカーブと同じ扱いにそろえる。 */
+      var 今年の生活費 = Math.round(生活費 * 生活費の倍率(いまの子の年齢, y.childAges, 成長表));
       var 月収支 = 手取り月 + 児扶.monthly + 児手 + 給付 + 養育費月 + 親支援
-        - 住居 - 生活費 - Math.round(学 / 12);
+        - 住居 - 今年の生活費 - Math.round(学 / 12);
+
+      /* こちらも、貯めるより先に点を置く。
+         いちばん左の点は「いまの貯金」で、3本の線がそこから分かれる形にする。 */
+      points.push({
+        offset: i, youngestAge: y.youngestAge,
+        training: 訓練中, income: 年収, grant: 給付,
+        livingCost: 今年の生活費,
+        monthly: 月収支, all: 貯金
+      });
+      if (谷の底 === null || 貯金 < 谷の底) { 谷の底 = 貯金; }
+      if (赤字になる年 === null && 貯金 < 0) { 赤字になる年 = i; }
+      if (床 != null && 床に当たる年 === null && 貯金 <= 床) { 床に当たる年 = i; }
+
+      if (i >= sim.years.length - 1) { return; }
 
       for (var m = 0; m < 12; m++) {
         貯金 += 月収支;
         月ごと.push(貯金);
-        if (床 != null && 床に当たる年 === null && 貯金 <= 床) { 床に当たる年 = i; }
       }
-      /* 修了したその年に、修了支援給付金が1回入る */
+      /* 修了したその年の終わりに、修了支援給付金が1回入る */
       if (i === 年数 - 1) { 貯金 += 修了時; }
-
-      if (谷の底 === null || 貯金 < 谷の底) { 谷の底 = 貯金; }
-      if (赤字になる年 === null && 貯金 < 0) { 赤字になる年 = i; }
-
-      points.push({
-        offset: i, youngestAge: y.youngestAge,
-        training: 訓練中, income: 年収, grant: 給付,
-        monthly: 月収支, all: 貯金
-      });
     });
 
-    /* 「いまのまま」を追い越す年 */
+    /* 「いまのまま」を追い越す年。
+       いちばん左の点は3本とも同じ（いまの貯金）なので、そこは数えない。 */
     var 逆転 = null;
-    for (var k = 0; k < points.length; k++) {
+    for (var k = 1; k < points.length; k++) {
       if (points[k].all >= sim.assetNow[k]) { 逆転 = k; break; }
     }
     /* 生活防衛資金にとどく年 */
