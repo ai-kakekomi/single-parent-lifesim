@@ -614,7 +614,7 @@
     var 低所得ひとり親 = (ひとり親か && m.single_parent_low_income_max &&
       年収 <= m.single_parent_low_income_max);
 
-    var 合計 = 0;
+    var 合計 = 0, 軽減前 = 0;
     対象.forEach(function (age) {
       /* 未就学の子のなかで、上から何番目か */
       var 順位 = 未就学.indexOf(age) + 1;
@@ -626,9 +626,18 @@
       } else if (順位 === 2) {
         割合 = (m.second_child_ratio != null) ? m.second_child_ratio : 0.5;
       }
+      軽減前 += 基本;
       合計 += Math.round(基本 * 割合);
     });
+    保育料.内訳 = { total: 合計, gross: 軽減前, discount: 軽減前 - 合計 };
     return 合計;
+  }
+
+  /** 保育料の内訳（軽減前の額と、きょうだい軽減の額）を返す */
+  function 保育料の内訳(子の年齢たち, 年収, ひとり親か, 表) {
+    var 額 = 保育料(子の年齢たち, 年収, ひとり親か, 表);
+    var 内 = 保育料.内訳 || { total: 額, gross: 額, discount: 0 };
+    return { total: 額, gross: 内.gross, discount: 内.discount };
   }
 
   /** その年、児童扶養手当の対象になる年齢のお子さんがいるか */
@@ -732,7 +741,8 @@
         + ((使用中.hitorioya_kojo && 控除が使える) ? 控除の効果 : 0);
 
       /* 0歳から2歳の保育料（国が定めた上限額のめやす） */
-      var 今年の保育料 = 保育料(y.childAges, 入力.myIncome, !!入力.isSingleParent, データ.childcare);
+      var 保育の内訳 = 保育料の内訳(y.childAges, 入力.myIncome, !!入力.isSingleParent, データ.childcare);
+      var 今年の保育料 = 保育の内訳.total;
       var 土台 = d.total - d.jidoFuyoTeate - d.jidoTeate - (控除が使える ? 控除の効果 : 0)
         - 今年の生活費 - 今年の保育料;
       var 月収支全部 = 土台 + 全部の給付 - 学費月全部;
@@ -762,11 +772,17 @@
           { key: 'parentSupport', name: '親からの援助', amount: d.parentSupport,
             reason: (d.parentSupport === 0 ? 'なし、または終わったあと' : null) }
         ];
+        /* 学費は、その線で実際に使っている数字をそのまま持たせる。
+           表示のために別で計算し直すと、線と表がずれる（実際にずれていた）。 */
+        var 学の元 = 全部か ? 学全部 : 学;
         var 支出 = [
-          { key: 'living', name: '生活費（食費・光熱費など）', amount: 今年の生活費 },
+          { key: 'living', name: '生活費（食費・光熱費など）', amount: 今年の生活費,
+            baseline: 生活費, increase: 今年の生活費 - 生活費 },
           { key: 'housing', name: '住居費', amount: d.housing },
-          { key: 'tuition', name: '学校にかかるお金（支援を引いたあと）', amount: 学費 },
+          { key: 'tuition', name: '学校にかかるお金（支援を引いたあと）', amount: 学費,
+            gross: Math.round(学の元.total / 12), support: Math.round(学の元.total / 12) - 学費 },
           { key: 'childcare', name: '保育料（0歳から2歳）', amount: 今年の保育料,
+            gross: 保育の内訳.gross, discount: 保育の内訳.discount,
             reason: (今年の保育料 === 0 ? (対象の未就学児(y.childAges, データ.childcare)
               ? '住民税が非課税の世帯なので0円、または2人目以降で0円'
               : '3歳から5歳は無償化されているため0円') : null) }
@@ -1020,16 +1036,18 @@
       var 児手 = 児童手当(y.childAges, 児手表).monthly;
       var 手取り月 = Math.floor(手取りめやす(年収, true) / 12);
       var 親支援 = (親の年齢 && (親の年齢 + i) >= 親支援終了年齢) ? 0 : 親支援月;
-      var 学 = その年の学費(y.childAges, プラン一覧, 学費表, {
+      var 学の全体 = その年の学費(y.childAges, プラン一覧, 学費表, {
         income: 年収, children: (入力.children || []).length,
         taxFree: (給与所得(年収) <= (訓練表.resident_tax_free_limit || 1350000)),
         grants: { kyufukin: true, university: true }
-      }).net;
+      });
+      var 学 = 学の全体.net, 学の総額 = 学の全体.total;
 
       /* お子さんが大きくなったぶん、生活費（の食費部分）がふえる。
          こちらの線も、本体のカーブと同じ扱いにそろえる。 */
       var 今年の生活費 = Math.round(生活費 * 生活費の倍率(いまの子の年齢, y.childAges, 成長表));
-      var 今年の保育料 = 保育料(y.childAges, 年収, true, データ.childcare);
+      var 保育の内訳2 = 保育料の内訳(y.childAges, 年収, true, データ.childcare);
+      var 今年の保育料 = 保育の内訳2.total;
       var 月収支 = 手取り月 + 児扶.monthly + 児手 + 給付 + 養育費月 + 親支援
         - 住居 - 今年の生活費 - Math.round(学 / 12) - 今年の保育料;
 
@@ -1055,10 +1073,13 @@
               reason: (親支援 === 0 ? 'なし、または終わったあと' : null) }
           ],
           expense: [
-            { key: 'living', name: '生活費（食費・光熱費など）', amount: 今年の生活費 },
+            { key: 'living', name: '生活費（食費・光熱費など）', amount: 今年の生活費,
+              baseline: 生活費, increase: 今年の生活費 - 生活費 },
             { key: 'housing', name: '住居費', amount: 住居 },
-            { key: 'tuition', name: '学校にかかるお金（支援を引いたあと）', amount: Math.round(学 / 12) },
-            { key: 'childcare', name: '保育料（0歳から2歳）', amount: 今年の保育料 }
+            { key: 'tuition', name: '学校にかかるお金（支援を引いたあと）', amount: Math.round(学 / 12),
+              gross: Math.round(学の総額 / 12), support: Math.round(学の総額 / 12) - Math.round(学 / 12) },
+            { key: 'childcare', name: '保育料（0歳から2歳）', amount: 今年の保育料,
+              gross: 保育の内訳2.gross, discount: 保育の内訳2.discount }
           ]
         }
       });
@@ -1238,6 +1259,7 @@
     学費: 学費,
     その年の学費: その年の学費,
     保育料: 保育料,
+    保育料の内訳: 保育料の内訳,
     学費の支援: 学費の支援,
     大学の支援割合: 大学の支援割合,
     いちばん安いプラン: いちばん安いプラン,

@@ -1054,17 +1054,23 @@
     h.push('<tr class="sum"><td>入ってくるお金の合計</td><td class="num">' + SPS.円(収入計) + '</td></tr>');
     h.push('<tr class="sec"><th colspan="2">出ていくお金（ひと月）</th></tr>');
     b.expense.forEach(function (r) {
+      /* 補足の数字は、その行が持っている数字だけから作る。
+         別のところから持ってくると、行の金額と合わなくなる（実際に合わなくなっていた）。 */
       var 追記 = '';
-      if (r.key === 'living' && c.points[0]) {
-        var 差 = r.amount - c.points[0].breakdown.all.expense[0].amount;
-        if (差 > 0) { 追記 = '<span class="why">いまより ' + SPS.円(差) + ' 多い（お子さんの成長ぶん）</span>'; }
+      if (r.key === 'living' && r.increase > 0) {
+        追記 = '<span class="why">いまより ' + SPS.円(r.increase) + ' 多い（お子さんの成長ぶん）</span>';
       }
-      if (r.key === 'childcare' && r.amount > 0 && データ.childcare) {
-        追記 = '<span class="why">' + esc(データ.childcare.note_municipality) + '</span>';
+      if (r.key === 'childcare') {
+        if (r.discount > 0) {
+          追記 = '<span class="why">きょうだいの軽減で ' + SPS.円(r.discount) + ' 安くなっています（軽減前 ' +
+            SPS.円(r.gross) + '）。' + esc((データ.childcare || {}).note_municipality || '') + '</span>';
+        } else if (r.amount > 0 && データ.childcare) {
+          追記 = '<span class="why">' + esc(データ.childcare.note_municipality) + '</span>';
+        }
       }
-      if (r.key === 'tuition' && pt.tuitionSupport > 0) {
-        追記 = '<span class="why">もとの額は ' + SPS.円(Math.round(pt.tuitionGross / 12)) +
-          '。制度が ' + SPS.円(Math.round(pt.tuitionSupport / 12)) + ' 助けてくれた後の額です</span>';
+      if (r.key === 'tuition' && r.support > 0) {
+        追記 = '<span class="why">もとの額は ' + SPS.円(r.gross) +
+          '。制度が ' + SPS.円(r.support) + ' 助けてくれた後の額です</span>';
       }
       h.push('<tr' + (r.amount === 0 ? ' class="zero"' : '') + '><td>' + esc(r.name) + 追記 +
         '</td><td class="num">' + SPS.円(r.amount) + '</td></tr>');

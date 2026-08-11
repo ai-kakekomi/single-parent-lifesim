@@ -768,6 +768,80 @@ var 児扶が消える年 = null;
 eq(児扶が消える年, 19, '児童扶養手当がなくなる年（18歳をこえた年）を、うちわけから見つけられる');
 
 /* ------------------------------------------------------------ */
+見出し('8-3-5-2. うちわけの各行の、数字のつじつま');
+
+/* 行の中の数字どうしが合っているか（もとの額 − 支援 ＝ 表示額）。
+   合計だけを見ていると、行の中のずれを見のがす。実際に見のがしていた。 */
+var 行の点検 = 0, 行のずれ = [];
+function 行を点検する(名前, b, 印) {
+  b.expense.forEach(function (r) {
+    行の点検++;
+    if (r.key === 'tuition') {
+      if (r.gross == null || r.support == null) {
+        行のずれ.push(名前 + ' ' + 印 + ' 学費に もとの額／支援 が入っていない');
+      } else if (r.gross - r.support !== r.amount) {
+        行のずれ.push(名前 + ' ' + 印 + ' 学費: ' + r.gross + ' − ' + r.support + ' ≠ ' + r.amount);
+      } else if (r.support < 0 || r.gross < 0 || r.amount < 0) {
+        行のずれ.push(名前 + ' ' + 印 + ' 学費にマイナスの数字がある');
+      }
+    }
+    if (r.key === 'living') {
+      if (r.baseline == null || r.increase == null) {
+        行のずれ.push(名前 + ' ' + 印 + ' 生活費に もとの額／ふえた額 が入っていない');
+      } else if (r.baseline + r.increase !== r.amount) {
+        行のずれ.push(名前 + ' ' + 印 + ' 生活費: ' + r.baseline + ' ＋ ' + r.increase + ' ≠ ' + r.amount);
+      } else if (r.increase < 0) {
+        行のずれ.push(名前 + ' ' + 印 + ' 生活費が入力より減っている');
+      }
+    }
+    if (r.key === 'childcare') {
+      if (r.gross == null || r.discount == null) {
+        行のずれ.push(名前 + ' ' + 印 + ' 保育料に 軽減前／軽減額 が入っていない');
+      } else if (r.gross - r.discount !== r.amount) {
+        行のずれ.push(名前 + ' ' + 印 + ' 保育料: ' + r.gross + ' − ' + r.discount + ' ≠ ' + r.amount);
+      } else if (r.discount < 0 || r.gross < 0 || r.amount < 0) {
+        行のずれ.push(名前 + ' ' + 印 + ' 保育料にマイナスの数字がある');
+      }
+    }
+  });
+}
+
+見本.samples.forEach(function (sm) {
+  var 入 = Object.assign({}, sm.input, { divorced_childSupportMonthly: sm.input.childSupportMonthly });
+  [[], [{ high: 'private', university: 'private_away' }, { high: 'private', university: 'private_away' }]]
+    .forEach(function (プラン, pi) {
+      var 入2 = Object.assign({}, 入, { plans: プラン });
+      var c3 = SPS.資産カーブ(入2, データ);
+      c3.points.forEach(function (pt) {
+        ['all', 'now'].forEach(function (線) {
+          行を点検する(sm.id + (pi ? '(私立)' : ''), pt.breakdown[線], pt.youngestAge + '歳・' + 線);
+        });
+      });
+      var tr2 = SPS.資産カーブ(Object.assign({}, 入2,
+        { training: { enabled: true, years: 2, afterIncome: 3200000 } }), データ).training;
+      if (tr2) {
+        tr2.points.forEach(function (pt) {
+          行を点検する(sm.id + (pi ? '(私立)' : ''), pt.breakdown, pt.youngestAge + '歳・資格ルート');
+        });
+      }
+    });
+});
+ok(行のずれ.length === 0,
+  'うちわけの各行で「もとの額 − 支援 ＝ 表示額」などのつじつまが合っている（' + 行の点検 + '行を点検）',
+  行のずれ.slice(0, 3).join(' / '));
+
+/* 表に出す数字は、その行の中だけで完結していること（別のところから持ってこない） */
+var 混線c = SPS.資産カーブ(Object.assign({}, 入力F, { children: [18], myIncome: 3200000 }), データ);
+var 混線pt = 混線c.points[0];
+var 全部行 = 混線pt.breakdown.all.expense.filter(function (r) { return r.key === 'tuition'; })[0];
+var いま行 = 混線pt.breakdown.now.expense.filter(function (r) { return r.key === 'tuition'; })[0];
+ok(全部行.support > 0, '「全部使う」では、大学の支援が入っている', String(全部行.support));
+eq(いま行.support, 0, '「いまのまま」では、申請していないので支援は0円');
+eq(いま行.amount, いま行.gross, '「いまのまま」の表示額は、もとの額と同じになる');
+ok(全部行.amount < いま行.amount, '「全部使う」のほうが、実際に払う額は少ない');
+eq(全部行.gross, いま行.gross, 'もとの額は、どちらの線でも同じ');
+
+/* ------------------------------------------------------------ */
 見出し('8-3-6. 0歳から2歳の保育料');
 
 var 保 = データ.childcare;

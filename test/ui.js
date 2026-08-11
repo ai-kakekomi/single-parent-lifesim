@@ -281,6 +281,31 @@ server.listen(0, '127.0.0.1', function () {
         var いまの表 = d.querySelector('#stage2b-body table.balance').textContent;
         ok(いまの表 !== 後の表, 'シナリオを変えると、表の中身が変わる');
         d.querySelector('#stage2b-body button[data-scenario="all"]').click();
+        /* 表に出ている数字どうしが合っていること（画面の文字から読みとって確かめる） */
+        (function () {
+          function 円を数に(t) { var m = /([\d,]+)円/.exec(t); return m ? Number(m[1].replace(/,/g, '')) : null; }
+          ['now', 'all'].forEach(function (線) {
+            d.querySelector('#stage2b-body button[data-scenario="' + 線 + '"]').click();
+            var 行たち = d.querySelectorAll('#stage2b-body table.balance tr');
+            [].forEach.call(行たち, function (tr) {
+              var 名 = (tr.cells[0] || {}).textContent || '';
+              if (名.indexOf('学校にかかるお金') < 0) { return; }
+              var 表示 = 円を数に((tr.cells[1] || {}).textContent || '');
+              var 補足 = tr.querySelector('.why');
+              if (!補足) { return; }
+              var 数字 = (補足.textContent.match(/([\d,]+)円/g) || []).map(function (x) {
+                return Number(x.replace(/[円,]/g, ''));
+              });
+              if (数字.length >= 2) {
+                eq(数字[0] - 数字[1], 表示,
+                  '[' + 線 + '] 学費の行「もとの額 − 支援 ＝ 表示額」が画面上で合っている',
+                  数字[0] + ' − ' + 数字[1] + ' ≠ ' + 表示);
+              }
+            });
+          });
+          d.querySelector('#stage2b-body button[data-scenario="all"]').click();
+        }());
+
         /* 0円の項目には理由が出る */
         ok(d.querySelector('#stage2b-body table.balance .why') !== null,
           '0円の項目や増えた項目に、理由が書いてある');
