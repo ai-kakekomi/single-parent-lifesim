@@ -393,6 +393,96 @@
   }
 
   /* ------------------------------------------------------------
+   * 6-2. 貯金のたまり方（資産カーブ）
+   *
+   *   ひと月の残り ＝ 手取り ＋ 手当 ＋ 養育費 ＋ 親の援助 − 住居費 − 生活費
+   *   これを、いちばん下のお子さんが22歳になるまで、1か月ずつ積み上げます。
+   *
+   *   線は2本
+   *     ・制度を申請した場合   ... 児童扶養手当・児童手当・ひとり親控除が入る
+   *     ・申請しなかった場合   ... それらが入らない
+   *   ひらいた差が、取りこぼしの金額です。
+   *
+   *   ひとり親になったあとの姿を出します。
+   *   （離婚を考えている段階の方には「離婚した場合」の姿として出します）
+   *
+   *   貯金は0円から始まるものとして計算します。
+   *   いま持っているお金は聞いていないので、足し引きの積み上がり方だけを見てください。
+   *   赤字になる場合も、0で止めずにマイナスのまま描きます。
+   *
+   *   生活防衛資金（生活費の3か月分から6か月分）の帯もいっしょに返します。
+   * ---------------------------------------------------------- */
+  function 資産カーブ(入力, データ) {
+    var sim = シミュレーション(入力, データ);
+    if (!sim.years.length) { return null; }
+
+    var 生活費 = Math.max(0, Math.floor(入力.livingCost || 0));
+    /* ひとり親控除があるときと、ないときの手取りの差（ひと月あたり） */
+    var 控除の効果 = Math.floor(手取りめやす(入力.myIncome, true) / 12)
+      - Math.floor(手取りめやす(入力.myIncome, false) / 12);
+
+    var 月ごと = [];   // 1か月ずつの積み上げ
+    var 貯金あり = 0, 貯金なし = 0;
+    var 到達月 = null, 赤字になる月 = null;
+    var 防衛下限 = 生活費 * 3, 防衛上限 = 生活費 * 6;
+
+    var points = [];
+    sim.years.forEach(function (y) {
+      var d = y.divorced;
+      var 月収支あり = d.total - 生活費;
+      /* 制度を申請しなかった場合は、手当も控除の効果も入らない */
+      var 月収支なし = d.total - d.jidoFuyoTeate - d.jidoTeate - 控除の効果 - 生活費;
+
+      for (var m = 0; m < 12; m++) {
+        貯金あり += 月収支あり;
+        貯金なし += 月収支なし;
+        月ごと.push({ month: 月ごと.length + 1, withPrograms: 貯金あり, withoutPrograms: 貯金なし });
+        if (到達月 === null && 防衛下限 > 0 && 貯金あり >= 防衛下限) { 到達月 = 月ごと.length; }
+        if (赤字になる月 === null && 貯金あり < 0) { 赤字になる月 = 月ごと.length; }
+      }
+
+      points.push({
+        offset: y.offset,
+        youngestAge: y.youngestAge,
+        monthlyWith: 月収支あり,
+        monthlyWithout: 月収支なし,
+        withPrograms: 貯金あり,
+        withoutPrograms: 貯金なし
+      });
+    });
+
+    /* 10年後（120か月）の差。届かない場合はいちばん最後の年で */
+    var 十年 = 月ごと[Math.min(119, 月ごと.length - 1)];
+    var 最後 = 月ごと[月ごと.length - 1];
+
+    return {
+      points: points,
+      livingCost: 生活費,
+      safetyMin: 防衛下限,
+      safetyMax: 防衛上限,
+      reachMonths: 到達月,
+      negativeFromMonth: 赤字になる月,
+      goesNegative: 赤字になる月 !== null,
+      monthlyBalance: points.length ? points[0].monthlyWith : 0,
+      finalWith: 最後.withPrograms,
+      finalWithout: 最後.withoutPrograms,
+      finalDiff: 最後.withPrograms - 最後.withoutPrograms,
+      diffAtTenYears: 十年.withPrograms - 十年.withoutPrograms,
+      tenYearsMonths: Math.min(120, 月ごと.length),
+      totalMonths: 月ごと.length
+    };
+  }
+
+  /** 月数を「◯年◯か月」の日本語にする */
+  function 年月表示(月数) {
+    if (月数 == null) { return null; }
+    var y = Math.floor(月数 / 12), m = 月数 % 12;
+    if (y === 0) { return m + 'か月'; }
+    if (m === 0) { return y + '年'; }
+    return y + '年' + m + 'か月';
+  }
+
+  /* ------------------------------------------------------------
    * 7. 制度の当てはまりを判定する（Stage 1）
    *    judgment_type が 'auto' のものだけ、入力から判定する。
    *    'check' のものは「窓口で確認」として、そのまま案内に回す。
@@ -503,6 +593,8 @@
     手取りめやす: 手取りめやす,
     等価所得: 等価所得,
     シミュレーション: シミュレーション,
+    資産カーブ: 資産カーブ,
+    年月表示: 年月表示,
     制度判定: 制度判定,
     限度額: 限度額,
     十円丸め: 十円丸め,

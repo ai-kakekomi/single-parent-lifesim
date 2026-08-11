@@ -34,7 +34,8 @@
         "childSupportState": "取り決めをしていない",
         "childSupportMonthly": 0,
         "parentSupportMonthly": 0,
-        "parentAge": 0
+        "parentAge": 0,
+        "livingCost": 130000
       },
       "expect": {
         "jidoFuyoTeate": { "status": "full", "monthly": 59400, "income": 670000 },
@@ -59,7 +60,8 @@
         "childSupportState": "公正証書で取り決めている",
         "childSupportMonthly": 40000,
         "parentSupportMonthly": 0,
-        "parentAge": 0
+        "parentAge": 0,
+        "livingCost": 150000
       },
       "expect": {
         "jidoFuyoTeate": { "status": "partial", "monthly": 13870, "income": 2364000 },
@@ -84,7 +86,8 @@
         "childSupportState": "受け取っていない",
         "childSupportMonthly": 0,
         "parentSupportMonthly": 0,
-        "parentAge": 0
+        "parentAge": 0,
+        "livingCost": 175000
       },
       "expect": {
         "jidoFuyoTeate": { "status": "none", "monthly": 0, "income": 2980000 },
@@ -109,7 +112,8 @@
         "childSupportState": "これから取り決める",
         "childSupportMonthly": 40000,
         "parentSupportMonthly": 0,
-        "parentAge": 0
+        "parentAge": 0,
+        "livingCost": 125000
       },
       "expect": {
         "jidoFuyoTeate": { "status": "notApplicableNow" },
@@ -135,7 +139,8 @@
         "childSupportState": "受け取っていない",
         "childSupportMonthly": 0,
         "parentSupportMonthly": 0,
-        "parentAge": 0
+        "parentAge": 0,
+        "livingCost": 120000
       },
       "expect": {
         "jidoFuyoTeate": { "status": "full", "monthly": 48050, "income": 1070000 },
@@ -160,7 +165,8 @@
         "childSupportState": "取り決めをしていない",
         "childSupportMonthly": 0,
         "parentSupportMonthly": 30000,
-        "parentAge": 68
+        "parentAge": 68,
+        "livingCost": 150000
       },
       "expect": {
         "jidoFuyoTeate": { "status": "partial", "monthly": 56030, "income": 1560000 },

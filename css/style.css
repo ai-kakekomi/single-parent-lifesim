@@ -250,3 +250,7 @@ table.compare td:first-child, table.compare th:first-child { text-align: left; }
 
 .prog:target { outline: 3px solid var(--accent); outline-offset: 2px; }
 table.compare caption { padding-bottom: .25rem; }
+
+/* ---- 落とし穴チェック ---- */
+.checklist.danger-list { background: var(--warn-soft); border-color: #ecd9ac; }
+.checklist.danger-list input[type="checkbox"] { accent-color: var(--warn); }

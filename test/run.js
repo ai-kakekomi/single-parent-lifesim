@@ -254,6 +254,78 @@ simE.years.forEach(function (y) {
 });
 
 /* ------------------------------------------------------------ */
+見出し('8-3. 貯金のたまり方（資産カーブ）');
+
+var 入力F = {
+  isSingleParent: true, myIncome: 3200000, spouseIncome: 0,
+  children: [14], housingNow: 90000, housingAfter: 90000, livingCost: 150000,
+  divorced_childSupportMonthly: 40000, parentSupportMonthly: 0, parentAge: 0
+};
+var 資産F = SPS.資産カーブ(入力F, データ);
+var simF = SPS.シミュレーション(入力F, データ);
+
+eq(資産F.points.length, simF.years.length, '比較グラフと同じ年数ぶん出る');
+eq(資産F.livingCost, 150000, '入力した生活費がそのまま使われる');
+eq(資産F.safetyMin, 150000 * 3, '生活防衛資金の下は生活費の3か月分');
+eq(資産F.safetyMax, 150000 * 6, '生活防衛資金の上は生活費の6か月分');
+
+/* ひと月の残り ＝ 使えるお金 − 生活費 */
+eq(資産F.points[0].monthlyWith, simF.years[0].divorced.total - 150000, 'ひと月の残りは、使えるお金から生活費を引いた額');
+/* 1年目の貯金は、ひと月の残りの12倍 */
+eq(資産F.points[0].withPrograms, 資産F.points[0].monthlyWith * 12, '1年目の貯金は、ひと月の残りの12倍');
+eq(資産F.points[1].withPrograms,
+   資産F.points[0].withPrograms + 資産F.points[1].monthlyWith * 12, '2年目は1年目に積み増される（累積になっている）');
+
+/* 制度を申請しなかった場合 */
+var d0 = simF.years[0].divorced;
+var 控除の効果 = Math.floor(SPS.手取りめやす(3200000, true) / 12) - Math.floor(SPS.手取りめやす(3200000, false) / 12);
+eq(資産F.points[0].monthlyWithout, d0.total - d0.jidoFuyoTeate - d0.jidoTeate - 控除の効果 - 150000,
+  '申請しなかった場合は、児童扶養手当・児童手当・ひとり親控除の分が入らない');
+ok(資産F.points[0].monthlyWithout < 資産F.points[0].monthlyWith, '申請しないほうが、ひと月の残りは少ない');
+ok(資産F.finalDiff > 0, '申請したほうが、最後には貯金が多い');
+eq(資産F.finalDiff, 資産F.finalWith - 資産F.finalWithout, '差は2本の線の開きそのもの');
+ok(資産F.diffAtTenYears > 0, '10年でも差がついている');
+ok(資産F.finalDiff >= 資産F.diffAtTenYears, '年数が長いほど、差は開く（または同じ）');
+eq(資産F.tenYearsMonths, Math.min(120, 資産F.totalMonths), '10年の差は、120か月時点（足りなければ最後の月）で出す');
+
+/* 生活防衛資金にとどくまで */
+ok(資産F.reachMonths !== null, '黒字ならいつかは生活防衛資金にとどく');
+eq(資産F.reachMonths, Math.ceil(資産F.safetyMin / 資産F.points[0].monthlyWith),
+  'とどくまでの月数が、ひと月の残りから計算した月数と合う');
+eq(SPS.年月表示(1), '1か月', '月数の表示（1か月）');
+eq(SPS.年月表示(12), '1年', '月数の表示（ちょうど1年）');
+eq(SPS.年月表示(28), '2年4か月', '月数の表示（2年4か月）');
+eq(SPS.年月表示(null), null, '月数がないときは何も出さない');
+
+/* 赤字になる場合は、0で止めずマイナスのまま描く */
+var 赤字入力 = Object.assign({}, 入力F, { livingCost: 400000 });
+var 赤字 = SPS.資産カーブ(赤字入力, データ);
+ok(赤字.points[0].monthlyWith < 0, '生活費が多すぎればひと月の残りはマイナス');
+ok(赤字.goesNegative, '貯金がマイナスになることを見つけている');
+eq(赤字.negativeFromMonth, 1, '1か月目からマイナスになる');
+ok(赤字.points[赤字.points.length - 1].withPrograms < 0, '最後までマイナスのまま。0で切っていない');
+ok(赤字.reachMonths === null, '赤字なら生活防衛資金にはとどかない');
+ok(赤字.safetyMin === 400000 * 3, '赤字でも生活防衛資金の帯は出す');
+
+/* 生活費が0のとき（未入力） */
+var 生活費なし = SPS.資産カーブ(Object.assign({}, 入力F, { livingCost: 0 }), データ);
+eq(生活費なし.safetyMin, 0, '生活費が未入力なら帯は0');
+ok(生活費なし.reachMonths === null, '生活費が未入力なら、とどく時期は出さない');
+ok(SPS.資産カーブ(Object.assign({}, 入力F, { children: [] }), データ) === null, 'お子さんがいなければ何も返さない');
+
+/* 見本すべてで、累積の計算が破綻しないこと */
+見本.samples.forEach(function (s) {
+  var 入 = Object.assign({}, s.input, { divorced_childSupportMonthly: s.input.childSupportMonthly });
+  var c = SPS.資産カーブ(入, データ);
+  ok(c !== null && c.points.length > 0, '[' + s.id + '] 貯金のたまり方が計算できる');
+  ok(s.input.livingCost > 0, '[' + s.id + '] 見本に毎月の生活費が入っている');
+  ok(c.finalDiff > 0, '[' + s.id + '] 制度を申請したほうが、必ず貯金が多くなる');
+  var 手 = 0;
+  c.points.forEach(function (pt) { 手 += pt.monthlyWith * 12; });
+  eq(c.points[c.points.length - 1].withPrograms, 手, '[' + s.id + '] 積み上げの合計が合っている');
+});
+
+/* ------------------------------------------------------------ */
 見出し('9. 見本（画面の「例で試す」と同じ数字）');
 
 見本.samples.forEach(function (s) {
@@ -396,6 +468,22 @@ var 風俗 = 落とし穴.items.filter(function (i) { return i.id === 'fuzoku'; 
 ok(風俗.exit_support && 風俗.exit_support.length >= 3, '風俗の節に、抜けるときの相談先が3つ以上ある');
 ok(風俗.exit_support.some(function (e) { return e.url.indexOf('futeras.org') > 0; }), '風テラスが相談先に入っている');
 
+/* 落とし穴チェック（行動のルール） */
+var 行動 = 落とし穴.action_checklist;
+ok(Array.isArray(行動), '落とし穴チェックの一覧がある');
+ok(行動.length >= 6 && 行動.length <= 8, '落とし穴チェックは6〜8個', 行動.length + '個');
+var 落とし穴id = {};
+落とし穴.items.forEach(function (i) { 落とし穴id[i.id] = true; });
+行動.forEach(function (r) {
+  ok(!!r.text, '落とし穴チェックの項目に文がある');
+  ok(r.text.length <= 40, '「' + r.text + '」が40文字以内', r.text.length + '文字');
+  ok(r.text.indexOf('\n') === -1, '1行におさまっている');
+  if (r.pit) { ok(落とし穴id[r.pit], '「' + r.text + '」のリンク先の説明が実在する', r.pit); }
+});
+['yami_baito', 'toushi_sagi', 'high_risk_toushi', 'chochiku_hoken'].forEach(function (id) {
+  ok(行動.some(function (r) { return r.pit === id; }), '「' + id + '」を避けるためのチェック項目がある');
+});
+
 /* ------------------------------------------------------------ */
 見出し('12. AIに相談する文章');
 
@@ -439,6 +527,18 @@ ok(Chart.表(simE.years, 'total').indexOf('家ぜんたいの金額') > 0, '表�
 ok(Chart.表(simE.years).indexOf(Math.round(y0.married.perPerson).toLocaleString('ja-JP')) > 0,
   '表に、ひとりあたりに直した金額がそのまま出ている');
 
+/* 貯金のたまり方のグラフ */
+var 資産svg = Chart.資産を描く(資産F);
+ok(資産svg.indexOf('<svg') === 0, '貯金のたまり方の絵ができる');
+ok((資産svg.match(/<path /g) || []).length === 2, '線は2本（申請あり・申請なし）');
+ok(資産svg.indexOf('申請あり') > 0 && 資産svg.indexOf('申請なし') > 0, '線のはしに名前が直接書いてある');
+ok(資産svg.indexOf('まずここまで貯める（生活費の3〜6か月分）') > 0, '生活防衛資金の帯に説明が入っている');
+ok(資産svg.indexOf('<rect x="74"') > 0, '生活防衛資金の帯そのものが描かれている');
+ok(Chart.資産を描く(null).indexOf('<svg') === -1, 'データがないときは絵を描かない');
+ok(Chart.資産の凡例().indexOf('生活防衛資金のゾーン') > 0, '凡例に帯の説明がある');
+var 赤字svg = Chart.資産を描く(赤字);
+ok(赤字svg.indexOf('<svg') === 0, '赤字のときも絵は描ける');
+
 /* ------------------------------------------------------------ */
 見出し('14. 画面と処理のつながり');
 
@@ -450,7 +550,7 @@ app.replace(/\$\('([a-z0-9-]+)'\)/g, function (_, id) { 使っているid.push(i
   .filter(function (id) {
     /* 画面のうごきの中で作られる欄は、index.html には書かれていない */
     return id.indexOf('child-age-') !== 0 && id.indexOf('pr-') !== 0 &&
-      id.indexOf('msg-') !== 0 && id.indexOf('copy-todo') !== 0;
+      id.indexOf('msg-') !== 0 && id.indexOf('copy-todo') !== 0 && id.indexOf('copy-rule') !== 0;
   })
   .forEach(function (id) {
     ok(html.indexOf('id="' + id + '"') > 0, '画面に「' + id + '」の欄がある');

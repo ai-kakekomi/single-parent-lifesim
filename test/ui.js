@@ -84,23 +84,61 @@ server.listen(0, '127.0.0.1', function () {
         ok(d.querySelector('#stage2-body a[href="#stage3"]') !== null,
           '身の安全のことを見に行くリンクがある');
 
+        /* 貯金のたまり方（資産カーブ） */
+        ok(d.getElementById('stage2b').classList.contains('shown'), '貯金のたまり方の欄が出る');
+        eq(d.querySelectorAll('#stage2b-body svg path').length, 2, '貯金のグラフの線が2本');
+        ok(d.getElementById('stage2b-body').textContent.indexOf('10年で約') > 0,
+          '10年でいくら差がつくかが数字で出る');
+        ok(d.getElementById('stage2b-body').textContent.indexOf('生活防衛資金') > 0,
+          '生活防衛資金の説明が出る');
+        ok(d.getElementById('stage2b-body').textContent.indexOf('ここにとどくまで、投資のことは考えなくていいです') > 0,
+          '帯の説明が、断言の形で書かれている');
+        ok(d.getElementById('stage2b-body').textContent.indexOf('とどくまで 約') > 0,
+          '帯にとどくまでの時期が数字で出る', d.getElementById('stage2b-body').textContent.slice(0, 200));
+        ok(d.querySelector('#stage2b-body .stance') !== null,
+          '3〜6か月分という幅が、私たちの立場の表明として分けて書かれている');
+        ok(d.querySelector('#stage2b-body a[href*="fsa.go.jp"]') !== null, '金融庁の出典リンクがある');
+        ok(d.querySelector('#stage2b-body a[href*="shiruporuto.jp"]') !== null, '金融広報中央委員会の出典リンクがある');
+
         /* まずやること（チェックリスト） */
-        var todo = d.querySelectorAll('#stage3-body .checklist li');
+        var todo = d.querySelectorAll('#stage3-body .checklist:not(.danger-list) li');
         ok(todo.length >= 5 && todo.length <= 7, 'まずやることが5〜7個に絞られている', todo.length + '個');
-        eq(d.querySelectorAll('#stage3-body .checklist input[type="checkbox"]').length, todo.length,
+        eq(d.querySelectorAll('#stage3-body .checklist:not(.danger-list) input[type="checkbox"]').length, todo.length,
           'どの項目にもチェックの四角が付いている');
         ok(d.getElementById('copy-todo') !== null, 'リストをコピーするボタンがある');
-        ok(d.querySelector('#stage3-body .checklist a.jump[href^="#prog-"]') !== null,
+        ok(d.querySelector('#stage3-body .checklist:not(.danger-list) a.jump[href^="#prog-"]') !== null,
           '該当する制度カードへのリンクが付いている');
-        var 飛び先 = d.querySelector('#stage3-body .checklist a.jump').getAttribute('href').slice(1);
+        var 飛び先 = d.querySelector('#stage3-body .checklist:not(.danger-list) a.jump').getAttribute('href').slice(1);
         ok(d.getElementById(飛び先) !== null, 'リンク先の制度カードが実在する', 飛び先);
+
+        /* 長い解説は、はじめは全部閉じている（ここは何も押す前に確かめる） */
+        eq([].filter.call(d.querySelectorAll('#stage3-body .pit details'), function (x) { return x.open; }).length, 0,
+          'はじめは、どの説明も閉じている');
+
+        /* 落とし穴チェック（行動のルール） */
+        var rules = d.querySelectorAll('#stage3-body .danger-list li');
+        ok(rules.length >= 6, '落とし穴チェックが6個以上ある', rules.length + '個');
+        eq(d.querySelectorAll('#stage3-body .danger-list input[type="checkbox"]').length, rules.length,
+          'どの項目にもチェックの四角が付いている');
+        ok(d.getElementById('copy-rule') !== null, '落とし穴チェックにもコピーのボタンがある');
+        ok(d.getElementById('stage3-body').textContent.indexOf('生活防衛資金（生活費の3〜6か月分）が貯まるまで、投資はしない') > 0,
+          '投資は生活防衛資金のあと、という項目がある');
+        ok(d.getElementById('stage3-body').textContent.indexOf('FX・暗号資産・信用取引はやらない') > 0,
+          'FXなどをやらない、という項目がある');
+        /* 「くわしく」を押すと、折りたたみが開く */
+        var 飛ぶ = d.querySelector('#stage3-body .danger-list a.jump');
+        var 先id = 飛ぶ.getAttribute('href').slice(1);
+        var 先 = d.getElementById(先id);
+        ok(先 !== null, '落とし穴チェックのリンク先が実在する', 先id);
+        ok(!先.querySelector('details').open, '飛ぶ前は閉じている');
+        飛ぶ.click();
+        ok(先.querySelector('details').open, '「くわしく」を押すと、その説明が開く');
 
         /* 長い解説は折りたたまれている */
         eq(d.querySelectorAll('#stage3-body .pit.red').length, 5, '赤い注意書きが5つ');
         ok(d.querySelectorAll('#stage3-body .pit.yellow').length >= 1, '黄色い注意書きが出る');
         eq(d.querySelectorAll('#stage3-body .pit details').length,
           d.querySelectorAll('#stage3-body .pit').length, 'どの注意書きも折りたたまれている');
-        ok(!d.querySelector('#stage3-body .pit details').open, 'はじめは閉じている');
         ok(d.querySelector('#stage3-body .pit h4').textContent.indexOf('闇バイト') > 0,
           '閉じたままでも、結論の1行が読める', d.querySelector('#stage3-body .pit h4').textContent);
         ok(d.querySelectorAll('#stage3-body .stance').length >= 4, '立場表明の枠が、事実と分けて表示される');

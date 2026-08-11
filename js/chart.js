@@ -21,7 +21,11 @@
     axis: '#9aa7b3',
     ink: '#1b2733',
     sub: '#52616f',
-    cliff: '#8a5a00'
+    cliff: '#8a5a00',
+    withProg: '#2f6f9f',    // 制度を申請した場合
+    withoutProg: '#c2591a', // 申請しなかった場合
+    band: '#dff0e6',        // 生活防衛資金のゾーン
+    bandLine: '#1c7a4a'
   };
 
   function esc(s) {
@@ -155,5 +159,96 @@
       '</div>';
   }
 
-  return { 描く: 描く, 表: 表, 凡例: 凡例, 色: 色 };
+  /* ============================================================
+   * 貯金のたまり方のグラフ
+   *   帯 ... 生活防衛資金のゾーン（生活費の3か月分から6か月分）
+   *   線 ... 制度を申請した場合 と、申請しなかった場合
+   * ============================================================ */
+  function 資産を描く(curve) {
+    if (!curve || !curve.points.length) { return '<p class="hint">毎月の生活費を入れると、ここにグラフが出ます。</p>'; }
+    var pts = curve.points;
+
+    var W = Math.max(520, 60 + pts.length * 46), H = 320;
+    var 左 = 74, 右 = 84, 上 = 18, 下 = 52;
+    var 幅 = W - 左 - 右, 高 = H - 上 - 下;
+
+    var 全値 = [0, curve.safetyMax];
+    pts.forEach(function (p) { 全値.push(p.withPrograms, p.withoutPrograms); });
+    var 上限 = Math.max.apply(null, 全値), 下限 = Math.min.apply(null, 全値);
+    var 余白 = Math.max((上限 - 下限) * 0.1, 100000);
+    上限 += 余白; 下限 -= 余白;
+
+    var 幅1 = pts.length > 1 ? 幅 / (pts.length - 1) : 0;
+    function X(i) { return 左 + 幅1 * i; }
+    function Y(v) { return 上 + 高 - (v - 下限) / (上限 - 下限) * 高; }
+
+    var s = [];
+    s.push('<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H +
+      '" role="img" aria-label="貯金のたまり方。制度を申請した場合と、しなかった場合の比較。生活防衛資金のゾーンつき">');
+
+    /* --- 生活防衛資金の帯 --- */
+    if (curve.safetyMax > 0) {
+      var y上 = Y(curve.safetyMax), y下 = Y(curve.safetyMin);
+      s.push('<rect x="' + 左 + '" y="' + y上.toFixed(1) + '" width="' + 幅 + '" height="' + Math.max(1, y下 - y上).toFixed(1) +
+        '" fill="' + 色.band + '"/>');
+      s.push('<line x1="' + 左 + '" y1="' + y下.toFixed(1) + '" x2="' + (左 + 幅) + '" y2="' + y下.toFixed(1) +
+        '" stroke="' + 色.bandLine + '" stroke-width="1" stroke-dasharray="4 3"/>');
+      s.push('<line x1="' + 左 + '" y1="' + y上.toFixed(1) + '" x2="' + (左 + 幅) + '" y2="' + y上.toFixed(1) +
+        '" stroke="' + 色.bandLine + '" stroke-width="1" stroke-dasharray="4 3"/>');
+      s.push('<text x="' + (左 + 6) + '" y="' + (y上 - 4).toFixed(1) + '" font-size="10" font-weight="700" fill="' + 色.bandLine +
+        '">まずここまで貯める（生活費の3〜6か月分）</text>');
+    }
+
+    /* --- 横の目盛り線 --- */
+    var 幅目 = 目盛り幅(上限 - 下限);
+    var 開始 = Math.ceil(下限 / 幅目) * 幅目;
+    for (var v = 開始; v <= 上限; v += 幅目) {
+      var yy = Y(v);
+      s.push('<line x1="' + 左 + '" y1="' + yy.toFixed(1) + '" x2="' + (左 + 幅) + '" y2="' + yy.toFixed(1) +
+        '" stroke="' + (v === 0 ? '#8899a6' : 色.grid) + '" stroke-width="' + (v === 0 ? 1.5 : 1) + '"/>');
+      s.push('<text x="' + (左 - 8) + '" y="' + (yy + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="' + 色.sub + '">' +
+        Math.round(v / 10000) + '万</text>');
+    }
+
+    /* --- 横軸 --- */
+    var 間引き = pts.length > 14 ? 2 : 1;
+    pts.forEach(function (p, i) {
+      if (i % 間引き !== 0 && i !== pts.length - 1) { return; }
+      s.push('<text x="' + X(i).toFixed(1) + '" y="' + (上 + 高 + 16) + '" text-anchor="middle" font-size="11" fill="' + 色.sub + '">' + p.youngestAge + '</text>');
+    });
+    s.push('<text x="' + (左 + 幅 / 2) + '" y="' + (H - 20) + '" text-anchor="middle" font-size="11" fill="' + 色.sub + '">いちばん下のお子さんの年齢（歳）</text>');
+    s.push('<text x="' + 左 + '" y="' + (上 - 4) + '" font-size="11" fill="' + 色.sub + '">たまっていく貯金</text>');
+
+    /* --- 折れ線 --- */
+    function 線(key, col, dash, 名) {
+      var d = pts.map(function (p, i) { return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p[key]).toFixed(1); }).join(' ');
+      s.push('<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"' +
+        (dash ? ' stroke-dasharray="6 4"' : '') + '/>');
+      var 末 = pts.length - 1;
+      s.push('<text x="' + (X(末) + 6) + '" y="' + (Y(pts[末][key]) + 4).toFixed(1) + '" font-size="11" font-weight="700" fill="' + col + '">' + 名 + '</text>');
+    }
+    線('withoutPrograms', 色.withoutProg, true, '申請なし');
+    線('withPrograms', 色.withProg, false, '申請あり');
+
+    pts.forEach(function (p, i) {
+      var x0 = X(i) - 幅1 / 2, w = 幅1 || 40;
+      s.push('<rect class="hit" x="' + Math.max(左, x0).toFixed(1) + '" y="' + 上 + '" width="' + w.toFixed(1) + '" height="' + 高 +
+        '" fill="transparent" style="cursor:crosshair"><title>' +
+        'お子さん' + p.youngestAge + '歳／申請あり ' + Math.round(p.withPrograms).toLocaleString('ja-JP') + '円・申請なし ' +
+        Math.round(p.withoutPrograms).toLocaleString('ja-JP') + '円</title></rect>');
+    });
+
+    s.push('</svg>');
+    return s.join('');
+  }
+
+  function 資産の凡例() {
+    return '<div class="legend">' +
+      '<span><span class="swatch" style="background:' + 色.withProg + '"></span>制度を申請した場合（実線）</span>' +
+      '<span><span class="swatch" style="background:' + 色.withoutProg + '"></span>申請しなかった場合（破線）</span>' +
+      '<span><span class="swatch" style="background:' + 色.band + ';height:.7rem;border:1px solid ' + 色.bandLine + '"></span>生活防衛資金のゾーン</span>' +
+      '</div>';
+  }
+
+  return { 描く: 描く, 表: 表, 凡例: 凡例, 資産を描く: 資産を描く, 資産の凡例: 資産の凡例, 色: 色 };
 }));

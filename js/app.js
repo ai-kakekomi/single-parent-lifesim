@@ -6,6 +6,7 @@
 
   var データ = null, 見本 = null, 落とし穴 = null;
   var 最新入力 = null, 最新判定 = null, 最新シミュ = null;
+  var 最新資産 = null;
   var グラフの見方 = 'perPerson';   // 'perPerson' ひとりあたり ／ 'total' 家ぜんたい
 
   function $(id) { return document.getElementById(id); }
@@ -80,6 +81,7 @@
       eligibleChildCount: 子.filter(function (a) { return a <= 18; }).length,
       area: $('area').value.trim(),
       housingType: 選択('housing-type'),
+      livingCost: 数('living-cost'),
       housingNow: 数('housing-now'),
       housingAfter: (選択('status') === 'single') ? 数('housing-now') : 数('housing-after'),
       childSupportState: 選択('cs-state'),
@@ -105,6 +107,7 @@
     $('area').value = i.area;
     var ht = document.querySelector('input[name="housing-type"][value="' + i.housingType + '"]');
     if (ht) { ht.checked = true; }
+    $('living-cost').value = i.livingCost;
     $('housing-now').value = i.housingNow;
     $('housing-after').value = i.housingAfter;
     var cs = document.querySelector('input[name="cs-state"][value="' + i.childSupportState + '"]');
@@ -245,6 +248,78 @@
       '</div>';
   }
 
+  /* ---------- 貯金のたまり方（資産カーブ） ---------- */
+  function 資産を描く() {
+    var 入力 = 最新入力;
+    if (!入力.children.length) { return; }
+    if (!入力.livingCost) {
+      $('stage2b-body').innerHTML = '<p class="hint">「毎月の生活費」を入れると、貯金のたまり方のグラフが出ます。' +
+        '住居費をのぞいた、食費・光熱費・通信費・日用品などの合計のめやすで大丈夫です。</p>';
+      return;
+    }
+    最新資産 = SPS.資産カーブ(入力, データ);
+    var c = 最新資産;
+
+    /* 見出しの1行（結論を先に） */
+    var 頭;
+    if (c.monthlyBalance >= 0) {
+      頭 = '<p><strong>いまの入力だと、ひと月に約' + SPS.円(c.monthlyBalance) + ' 残る計算です。</strong></p>';
+    } else {
+      頭 = '<p><strong>いまの入力だと、ひと月に約' + SPS.円(-c.monthlyBalance) + ' 足りません。</strong></p>';
+    }
+
+    var 到達 = (c.reachMonths !== null)
+      ? '<p>いまのペースだと、生活防衛資金（' + SPS.円(c.safetyMin) + '）にとどくまで <strong>約' +
+        SPS.年月表示(c.reachMonths) + '</strong> です。</p>'
+      : '<p>いまのペースでは、生活防衛資金（' + SPS.円(c.safetyMin) + '）にとどきません。' +
+        '下の「まずやること」を1つずつ進めて、入る額をふやすことから始めてください。</p>';
+
+    var 差 = '<p><strong>制度を申請するかどうかで、10年で約' +
+      Math.round(c.diffAtTenYears / 10000).toLocaleString('ja-JP') + '万円の差</strong>がつきます。' +
+      'いちばん下のお子さんが22歳になるまでだと、約' +
+      Math.round(c.finalDiff / 10000).toLocaleString('ja-JP') + '万円の差です。</p>';
+
+    var 赤字 = c.goesNegative
+      ? '<div class="pit red"><h4>🔴 このままだと、貯金がマイナスになります</h4>' +
+        '<p>グラフの線が0円より下に行くところがあります。借金をしないと暮らせない、ということです。</p>' +
+        '<p>すぐにできることが3つあります。' +
+        '<a href="#stage3">「まずやること」を上から進める</a>／' +
+        '生活費の内訳を書き出して、減らせるものを探す／' +
+        'お住まいの地域の自立相談支援機関に相談する（' +
+        '<a href="https://minna-tunagaru.jp/ichiran/" target="_blank" rel="noopener">全国の窓口一覧</a>）。</p>' +
+        '<p>ひとりで抱えないでください。滞納してからより、いまのほうが選べる手が多いです。</p></div>'
+      : '';
+
+    $('stage2b-body').innerHTML =
+      頭 + 差 + 到達 + 防衛資金の説明() + SPSChart.資産の凡例() +
+      '<div class="chart-box">' + SPSChart.資産を描く(c) + '</div>' +
+      '<p class="hint">貯金は0円から始まるものとして計算しています。いま持っているお金は聞いていないので、' +
+      '「これからどう増えていくか（減っていくか）」の形だけを見てください。</p>' +
+      赤字;
+  }
+
+  function 防衛資金の説明() {
+    return '<div class="notice">' +
+      '<h4>緑の帯は「生活防衛資金」です</h4>' +
+      '<p style="margin:.3rem 0"><strong>まずはこの帯にとどくまで貯めることだけ考えれば大丈夫です。' +
+      'ここにとどくまで、投資のことは考えなくていいです。</strong></p>' +
+      '<p style="margin:.3rem 0">仕事を失ったとき、体をこわしたとき、家電がこわれたとき。' +
+      'このお金があれば、借金をせずに乗りきれます。ひとり親家庭は収入が一人分なので、ここがいちばん効きます。</p>' +
+      '<p class="hint" style="margin:.4rem 0 0">' +
+      '<strong>事実:</strong> 金融庁は「家計管理の基本は、収入と支出をきちんと把握・管理すること、収支を黒字にすること、' +
+      'そして黒字分を貯蓄することです」としています（' +
+      '<a href="https://www.fsa.go.jp/policy/nisa2/invest/" target="_blank" rel="noopener">金融庁「資産形成の基本」</a>）。' +
+      'また金融広報中央委員会は、緊急時の予備資金について「金額は生活費の半年分が目安です」としています（' +
+      '<a href="https://www.shiruporuto.jp/public/family/marriage/shinkon/" target="_blank" rel="noopener">知るぽると</a>' +
+      '／アーカイブ。最終確認 8/11(火)）。</p>' +
+      '<div class="stance" style="background:#fff"><span class="stance-tag">ここからは、私たちの立場の表明です（事実ではありません）</span>' +
+      '私たちAIかけこみ寺は、ひとり親家庭にとっては生活費の3か月分から6か月分を手元に置くことが、' +
+      'どんな資産運用よりも先に来ると考えます。3か月分でもまず十分に効きます。' +
+      'この帯にとどくまでは、投資のことは考えなくていい、というのが私たちの立場です。' +
+      'なお「3か月分から6か月分」という幅は、私たちが目安として置いたものです。</div>' +
+      '</div>';
+  }
+
   function 崖の説明(cliffs) {
     if (!cliffs.length) { return ''; }
     return '<h3>金額が変わるところ</h3><ul class="hint">' + cliffs.map(function (c) {
@@ -344,6 +419,38 @@
     return h.join('');
   }
 
+  /* ---------- 落とし穴チェック（自分で確かめるための行動のルール） ---------- */
+  function 落とし穴チェックを描く(行動) {
+    if (!行動.length) { return ''; }
+    var h = ['<div class="checklist danger-list">',
+      '<h3 style="margin-top:0">落とし穴チェック</h3>',
+      '<p class="hint">全部にチェックが付けば、大きく転ぶ道はだいたい避けられます。' +
+      'いま付かないものがあっても大丈夫です。付けられるようにしていけば十分です。</p>',
+      '<ul>'];
+    行動.forEach(function (r, i) {
+      h.push('<li><label><input type="checkbox" id="rule-' + i + '"><span>' + esc(r.text) + '</span></label>' +
+        (r.pit ? ' <a class="jump" href="#pit-' + esc(r.pit) + '">くわしく</a>' : '') + '</li>');
+    });
+    h.push('</ul>',
+      '<div class="copy-row"><button type="button" class="ghost" id="copy-rule">このチェックをコピーする</button>',
+      '<span class="copy-msg" id="copy-rule-msg"></span></div>',
+      '<p class="hint">チェックを入れても、どこにも保存されません。</p>',
+      '</div>');
+    return h.join('');
+  }
+
+  /** 「くわしく」で飛んだ先の折りたたみを開く */
+  function 飛び先を開く() {
+    document.addEventListener('click', function (e) {
+      var a = e.target.closest('a.jump');
+      if (!a) { return; }
+      var 先 = document.getElementById(a.getAttribute('href').slice(1));
+      if (!先) { return; }
+      var d = 先.querySelector('details');
+      if (d) { d.open = true; }
+    });
+  }
+
   function 落とし穴を描く(入力, 判定) {
     var items = 当てはまる落とし穴(入力, 判定);
     var 赤 = items.filter(function (i) { return i.tone === 'red'; });
@@ -379,14 +486,19 @@
     }
 
     function 一件(it) {
-      return '<div class="pit ' + it.tone + '">' +
+      return '<div class="pit ' + it.tone + '" id="pit-' + esc(it.id) + '">' +
         '<h4>' + (it.tone === 'red' ? '🔴 ' : '🟡 ') + esc(it.headline || it.title) + '</h4>' +
         '<details><summary>くわしく読む</summary><div class="pit-detail">' + 中身(it) + '</div></details>' +
         '</div>';
     }
 
+    var 出ている = {};
+    items.forEach(function (it) { 出ている[it.id] = true; });
+    var 行動 = (落とし穴.action_checklist || []).filter(function (r) { return !r.pit || 出ている[r.pit]; });
+
     $('stage3-body').innerHTML =
       チェックリストを描く(やること) +
+      落とし穴チェックを描く(行動) +
       '<h3>とくに気をつけてほしいこと</h3>' +
       '<p class="hint">見出しだけ読めば大丈夫です。気になるものだけ開いてください。</p>' +
       赤.map(一件).join('') +
@@ -400,6 +512,14 @@
           やること.map(function (it) { return '□ ' + it.text; }),
           ['', '※ 金額はすべて概算です。正確な額は市区町村の窓口で確認してください。']).join('\n');
         コピーする(文, $('copy-todo-msg'));
+      });
+    }
+    var b2 = $('copy-rule');
+    if (b2) {
+      b2.addEventListener('click', function () {
+        var 文 = ['落とし穴チェック（ひとり親ライフチョイス・シミュレータ）', ''].concat(
+          行動.map(function (r) { return '□ ' + r.text; })).join('\n');
+        コピーする(文, $('copy-rule-msg'));
       });
     }
   }
@@ -463,9 +583,10 @@
     最新判定 = SPS.制度判定(最新入力, データ);
     制度を描く(最新判定);
     グラフを描く();
+    資産を描く();
     落とし穴を描く(最新入力, 最新判定);
     プロンプトを描く(最新入力, 最新判定);
-    ['stage1', 'stage2', 'stage3', 'stage4'].forEach(function (id) { $(id).classList.add('shown'); });
+    ['stage1', 'stage2', 'stage2b', 'stage3', 'stage4'].forEach(function (id) { $(id).classList.add('shown'); });
     if ($('stage1').scrollIntoView) { $('stage1').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   }
 
@@ -499,6 +620,7 @@
 
       $('calc').addEventListener('click', 計算する);
       コピー設定();
+      飛び先を開く();
       $('loading').style.display = 'none';
       $('form-area').style.display = '';
     } catch (err) {
