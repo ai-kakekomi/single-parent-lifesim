@@ -1,0 +1,521 @@
+{
+  "version": "1.0.0",
+  "generated": "2026-08-11",
+  "note": "全国共通の制度だけを収めています。お住まいの市区町村だけの制度は入っていません。",
+  "tables": {
+    "simulate_until_youngest_age": 22,
+    "parent_support_end_age_default": 75,
+    "parent_support_end_age_min": 65,
+    "parent_support_end_age_max": 90
+  },
+  "programs": [
+    {
+      "id": "jido_fuyo_teate",
+      "name": "児童扶養手当",
+      "category": "毎月お金が入るもの",
+      "judgment_type": "auto",
+      "summary": "ひとり親家庭などのお子さんのために、市区町村から毎月（実際は2か月分ずつ年6回）支払われるお金です。",
+      "eligibility": {
+        "pay_upto_age": 18,
+        "pay_upto_age_note": "18歳になった年度の3月31日まで。心身に一定の障害があるお子さんは20歳未満まで。",
+        "child_support_inclusion_rate": 0.8,
+        "social_insurance_flat_deduction": 80000,
+        "salary_income_flat_deduction": 100000,
+        "amounts": {
+          "first": { "full": 48050, "partial_max": 48040, "partial_min": 11340, "coefficient": 0.0264029 },
+          "second": { "full": 11350, "partial_max": 11340, "partial_min": 5680, "coefficient": 0.0040719 },
+          "third_plus": { "full": 11350, "partial_max": 11340, "partial_min": 5680, "coefficient": 0.0040719 }
+        },
+        "income_limits_recipient": {
+          "per_extra_dependent": 380000,
+          "rows": [
+            { "dependents": 0, "full": 690000, "partial": 2080000, "full_salary_ref": 1520000, "partial_salary_ref": 3343000 },
+            { "dependents": 1, "full": 1070000, "partial": 2460000, "full_salary_ref": 1900000, "partial_salary_ref": 3850000 },
+            { "dependents": 2, "full": 1450000, "partial": 2840000, "full_salary_ref": 2443000, "partial_salary_ref": 4325000 },
+            { "dependents": 3, "full": 1830000, "partial": 3220000, "full_salary_ref": 2986000, "partial_salary_ref": 4800000 },
+            { "dependents": 4, "full": 2210000, "partial": 3600000, "full_salary_ref": 3529000, "partial_salary_ref": 5275000 },
+            { "dependents": 5, "full": 2590000, "partial": 3980000, "full_salary_ref": 4013000, "partial_salary_ref": 5750000 }
+          ]
+        },
+        "income_limits_others": {
+          "note": "同居している親きょうだいなど、扶養義務者がいる場合は、その人の所得も見られます。",
+          "per_extra_dependent": 380000,
+          "rows": [
+            { "dependents": 0, "limit": 2360000 },
+            { "dependents": 1, "limit": 2740000 },
+            { "dependents": 2, "limit": 3120000 },
+            { "dependents": 3, "limit": 3500000 },
+            { "dependents": 4, "limit": 3880000 },
+            { "dependents": 5, "limit": 4260000 }
+          ]
+        }
+      },
+      "benefit_summary": "お子さん1人なら、全部支給で月48,050円。2人目からは1人につき月11,350円が足されます。所得が全部支給の限度額をこえると、そこから少しずつ減っていきます（一部支給）。",
+      "how_to_apply": "お住まいの市区町村の、ひとり親支援・こども家庭の担当窓口",
+      "cautions": [
+        "受け取り始めてから5年（申請できる状態になってから7年）たつと、はたらいていることなどの届出をしないかぎり半分に減らされます。届出を忘れないでください。",
+        "養育費を受け取っている場合、その8割が所得に足されて判定されます。",
+        "同居している親やきょうだいの所得も見られます。同居の相談も含めて窓口へ。"
+      ],
+      "source": {
+        "law": "児童扶養手当法／児童扶養手当法施行令（昭和36年政令第405号）第2条の4・第4条",
+        "url": "https://www.cfa.go.jp/policies/hitori-oya/fuyou-teate",
+        "url_detail": "https://www.cfa.go.jp/assets/contents/node/basic_page/field_ref_resources/0a870592-1814-4b21-bf56-16f06080c594/0f69b7f8/20260424_policies_hitori-oya_112.pdf",
+        "publisher": "こども家庭庁",
+        "last_verified": "2026-08-11"
+      }
+    },
+    {
+      "id": "jido_teate",
+      "name": "児童手当",
+      "category": "毎月お金が入るもの",
+      "judgment_type": "auto",
+      "summary": "高校生年代までのお子さんがいる家庭に支払われるお金です。2024年10月から、所得による制限がなくなりました。",
+      "eligibility": {
+        "pay_upto_age": 18,
+        "pay_upto_age_note": "18歳になった年度の3月31日まで",
+        "count_child_upto_age": 22,
+        "count_child_upto_age_note": "第3子かどうかを数えるときは、22歳になった年度の3月31日までのお子さんを、年上から順に数えます。",
+        "monthly": {
+          "under3": 15000,
+          "under3_third_plus": 30000,
+          "age3_to_18": 10000,
+          "age3_to_18_third_plus": 30000
+        }
+      },
+      "benefit_summary": "3歳未満は月15,000円、3歳から高校生年代までは月10,000円。第3子からは年齢にかかわらず月30,000円です。",
+      "how_to_apply": "お住まいの市区町村の子育て支援担当窓口（公務員の方は勤め先）",
+      "cautions": [
+        "さかのぼって受け取れる分にはかぎりがあります。まだ手続きしていない場合は急いでください。",
+        "離婚して別居している場合は、お子さんと一緒に暮らしている側が受け取れます。手続きが必要です。"
+      ],
+      "source": {
+        "law": "児童手当法（子ども・子育て支援法等の一部を改正する法律による改正。令和6年10月分から）",
+        "url": "https://www.cfa.go.jp/policies/kokoseido/jidouteate/annai",
+        "publisher": "こども家庭庁",
+        "last_verified": "2026-08-11"
+      }
+    },
+    {
+      "id": "hitorioya_kojo",
+      "name": "ひとり親控除・寡婦控除（税が軽くなる）",
+      "category": "税が軽くなるもの",
+      "judgment_type": "auto",
+      "summary": "ひとり親であることを申告すると、所得税と住民税が軽くなります。申告しないと自動では適用されません。",
+      "eligibility": {
+        "income_ceiling": 5000000,
+        "income_ceiling_note": "合計所得金額が500万円以下（給与だけの方なら、額面でおよそ677万円以下）",
+        "child_income_ceiling": 580000,
+        "child_income_ceiling_note": "生計を一にするお子さんの総所得金額等が58万円以下（令和7年12月1日以降）",
+        "deduction_income_tax": 350000,
+        "deduction_resident_tax": 300000,
+        "widow_deduction_income_tax": 270000,
+        "widow_deduction_resident_tax": 260000,
+        "not_de_facto_marriage": true
+      },
+      "benefit_summary": "所得税で35万円、住民税で30万円を、税をかける前の所得から差し引けます。手取りベースでは年におよそ5万円から8万円ほど変わります（収入により違います）。",
+      "how_to_apply": "勤め先の年末調整（扶養控除等申告書）、または確定申告",
+      "cautions": [
+        "申告しそこねた年があっても、5年前までさかのぼって取り戻せます（更正の請求・還付申告）。",
+        "事実上の婚姻関係にある方がいる場合は使えません。",
+        "死別などでひとり親にあたらない場合は、寡婦控除（所得税27万円・住民税26万円）を確認してください。"
+      ],
+      "source": {
+        "law": "所得税法第81条（ひとり親控除）・第80条（寡婦控除）、地方税法",
+        "url": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1171.htm",
+        "url_detail": "https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/144643_01.html",
+        "publisher": "国税庁／総務省",
+        "last_verified": "2026-08-11"
+      }
+    },
+    {
+      "id": "shugaku_enjo",
+      "name": "就学援助（小中学校の費用を助けてもらう）",
+      "category": "学校のお金",
+      "judgment_type": "check",
+      "summary": "小中学校の学用品費・給食費・修学旅行費などを、市区町村が援助してくれる制度です。",
+      "eligibility": {
+        "note": "誰が対象になるかは市区町村ごとに決めています。このツールでは判定できません。",
+        "typical_standard": "生活保護の基準額に一定の倍率をかけた額を基準にしている市町村が79.2%（1,397／1,763）。そのうち1.3倍以下としているところが45.6%でいちばん多い。",
+        "other_standards": "生活保護の停止・廃止（77.1%）、児童扶養手当を受けていること（75.9%）、市町村民税が非課税（74.5%）なども基準に使われています。"
+      },
+      "benefit_summary": "学用品費、体育の用具、新入学の学用品費、通学費、修学旅行費、校外活動費、医療費、給食費、クラブ活動費、卒業アルバム代、オンライン学習の通信費などが対象です。",
+      "how_to_apply": "お子さんが通う学校、または市区町村の教育委員会",
+      "cautions": [
+        "児童扶養手当を受けていることを基準のひとつにしている市町村が約4分の3あります。手当を受けている方は、ほぼ確実に確認する価値があります。",
+        "年度の途中でも受け付けている市町村が95.1%あります。「今年はもう遅い」とあきらめないでください。",
+        "小中学校の入学前に前倒しで支給しているところが約87%あります。入学の前年の秋には確認を。"
+      ],
+      "source": {
+        "law": "学校教育法第19条",
+        "url": "https://www.mext.go.jp/a_menu/shotou/career/05010502/017.htm",
+        "url_detail": "https://www.mext.go.jp/content/20260708-mxt_shuugaku-000018788_1.pdf",
+        "publisher": "文部科学省",
+        "last_verified": "2026-08-11"
+      }
+    },
+    {
+      "id": "koutou_shokugyo_kunren",
+      "name": "高等職業訓練促進給付金",
+      "category": "仕事・資格",
+      "judgment_type": "check",
+      "summary": "ひとり親の方が資格を取るために学校に通う間、生活費として毎月お金を受け取れる制度です。",
+      "eligibility": {
+        "note": "児童扶養手当を受けている方、または同じくらいの所得水準の方が対象です。仕事や子育てと勉強の両立が難しいことも要件です。",
+        "income_example": "こども1人の場合、年収385万円未満が目安（こども家庭庁ページの例示）",
+        "course_min_months": 6,
+        "monthly_non_taxable": 100000,
+        "monthly_taxable": 70500,
+        "final_year_bonus": 40000,
+        "completion_non_taxable": 50000,
+        "completion_taxable": 25000
+      },
+      "benefit_summary": "住民税が非課税の世帯なら月100,000円（課税世帯は月70,500円）。最後の1年間はさらに月40,000円が足されます。修了したときに50,000円（課税世帯25,000円）。",
+      "how_to_apply": "お住まいの市区町村（町村にお住まいの方は都道府県）のひとり親支援窓口。必ず通い始める前に相談してください。",
+      "cautions": [
+        "看護師・准看護師・保育士・介護福祉士・理学療法士・作業療法士・調理師・製菓衛生師などの国家資格のほか、シスコシステムズ認定資格やLPI認定資格といったデジタル分野の民間資格も対象です。",
+        "6か月以上のカリキュラムであることが必要です。",
+        "この給付金は「これから通う人」のための制度です。通い始めてからでは間に合わないことがあります。"
+      ],
+      "source": {
+        "law": "母子及び父子並びに寡婦福祉法（令和8年4月9日 こ支家第181号 こども家庭庁支援局長通知）",
+        "url": "https://www.cfa.go.jp/policies/hitori-oya/syokugyou-kunren",
+        "publisher": "こども家庭庁",
+        "last_verified": "2026-08-11"
+      }
+    },
+    {
+      "id": "jiritsu_shien_kyoiku",
+      "name": "自立支援教育訓練給付金",
+      "category": "仕事・資格",
+      "judgment_type": "check",
+      "summary": "ひとり親の方が指定された講座を受けたとき、受講料の一部が戻ってくる制度です。",
+      "eligibility": {
+        "note": "20歳未満のお子さんを扶養しているひとり親の方で、自立支援プログラムの策定などを受けていることが要件です。",
+        "rate": 0.6,
+        "min_amount": 12001,
+        "cap_general": 200000,
+        "cap_specialized_per_year": 400000,
+        "cap_specialized_total": 1600000
+      },
+      "benefit_summary": "受講にかかった費用の6割（下限12,001円）。一般教育訓練で上限20万円、専門実践教育訓練では修業年数×40万円で上限160万円。資格を取って就職した場合は8割5分（上限240万円）になる仕組みもあります。",
+      "how_to_apply": "お住まいの市（町村にお住まいの方は都道府県）のひとり親支援窓口",
+      "cautions": [
+        "受ける前に、自治体から講座の指定を受ける必要があります。申し込んでしまってからでは対象外になります。必ず先に相談してください。",
+        "雇用保険の教育訓練給付金を受けられる場合は、その分が差し引かれます。"
+      ],
+      "source": {
+        "law": "母子及び父子並びに寡婦福祉法",
+        "url": "https://www.cfa.go.jp/policies/hitori-oya/jiritsu-shien-kyuufukin",
+        "publisher": "こども家庭庁",
+        "last_verified": "2026-08-11"
+      }
+    },
+    {
+      "id": "kokuho_gengaku",
+      "name": "国民健康保険料の軽減・減免",
+      "category": "毎月の負担を減らすもの",
+      "judgment_type": "check",
+      "summary": "勤め先の健康保険ではなく国民健康保険に入っている方は、所得が低いと保険料が7割・5割・2割軽くなります。",
+      "eligibility": {
+        "note": "所得の基準で自動的に軽くなる部分（法定軽減）と、事情を申し立てて軽くしてもらう部分（条例減免）があります。金額や運用は市区町村ごとに違うため、このツールでは判定できません。",
+        "involuntary_unemployment": "会社の都合で仕事を失った方（65歳未満で雇用保険の特定受給資格者・特定理由離職者）は、前年の給与所得を100分の30とみなして計算してもらえます。これは申請しないと適用されません。"
+      },
+      "benefit_summary": "軽減されると、年間の保険料が数万円単位で変わることがあります。会社都合の離職による軽減は、離職した日の翌日が属する月からその年度の翌年度末まで続きます。",
+      "how_to_apply": "お住まいの市区町村の国民健康保険の窓口",
+      "cautions": [
+        "所得の基準による軽減は申請なしで適用されますが、そもそも所得の申告をしていないと適用されません。収入がなくても申告してください。",
+        "会社都合で辞めた方の軽減は、自分から申請しないと受けられません。離職票を持って窓口へ。"
+      ],
+      "source": {
+        "law": "国民健康保険法第77条（減免）、地方税法第703条の5（法定軽減）",
+        "url": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/iryouhoken/iryouhoken01/index.html",
+        "publisher": "厚生労働省",
+        "last_verified": "2026-08-11"
+      }
+    },
+    {
+      "id": "nenkin_menjo",
+      "name": "国民年金保険料の免除・納付猶予",
+      "category": "毎月の負担を減らすもの",
+      "judgment_type": "check",
+      "summary": "国民年金の保険料を払うのが難しいとき、全額または一部を免除してもらえます。ひとり親には専用の基準があります。",
+      "eligibility": {
+        "note": "本人・世帯主・配偶者の所得がそれぞれ基準以下であることが必要です（納付猶予は世帯主の所得を見ません）。",
+        "single_parent_threshold": 1350000,
+        "single_parent_note": "ひとり親・寡婦・障害のある方は、前年の所得が135万円以下なら全額免除の対象になります（申請が必要）。",
+        "full_exemption_formula": "（扶養親族等の数＋1）×35万円＋32万円",
+        "student_formula": "128万円＋扶養親族等の数×38万円＋社会保険料控除等"
+      },
+      "benefit_summary": "全額免除を受けた期間も、将来受け取る年金額に2分の1が反映されます。「払えないから放っておく」と、この2分の1すら残りません。10年以内ならあとから納めることもできます。",
+      "how_to_apply": "お住まいの市区町村の国民年金窓口、年金事務所、マイナポータル",
+      "cautions": [
+        "免除は自分から申請しないと受けられません。放置して未納にすると、老後の年金だけでなく、障害を負ったときの障害年金や、亡くなったときの遺族年金も受け取れなくなることがあります。",
+        "2年1か月前までさかのぼって申請できます。",
+        "納付猶予（50歳未満）は、受給資格の期間には入りますが、年金額には反映されません。"
+      ],
+      "source": {
+        "law": "国民年金法第89条・第90条・第90条の2・第90条の3",
+        "url": "https://www.nenkin.go.jp/service/kokunen/menjo/20150428.html",
+        "publisher": "日本年金機構",
+        "last_verified": "2026-08-11"
+      }
+    },
+    {
+      "id": "koei_jutaku",
+      "name": "公営住宅の優先入居",
+      "category": "住まい",
+      "judgment_type": "check",
+      "summary": "都道府県や市区町村が持っている住宅です。家賃が収入に応じて決まり、ひとり親世帯やDV被害者は入りやすくなる扱いがあります。",
+      "eligibility": {
+        "note": "収入基準も、ひとり親をどう優遇するかも、自治体の条例で決まります。このツールでは判定できません。",
+        "income_standard_general": 158000,
+        "income_standard_discretionary": 259000,
+        "income_standard_note": "月収（政令月収）の全国的なめやすは158,000円。高齢者や小学校就学前のお子さんがいる世帯などは259,000円まで広げられます。収入の計算ではひとり親控除35万円などが引かれます。",
+        "priority_types": "母子・父子世帯、DV被害者世帯などを含む8つの類型について、抽選の倍率を上げる・専用の戸数枠を設ける・点数をつけるといった方法で優先されます。"
+      },
+      "benefit_summary": "家賃は収入・立地・広さ・築年数などで決まります。事情によってはさらに減免を受けられます。民間の賃貸との差は、月に数万円になることがあります。",
+      "how_to_apply": "都道府県・市区町村の住宅担当課（住宅供給公社が窓口のこともあります）",
+      "cautions": [
+        "募集の時期が決まっていることが多く、いつでも申し込めるとはかぎりません。年間の募集スケジュールを先に調べてください。",
+        "DV被害を受けている方は、単身でも入居できる扱いがあります。まず配偶者暴力相談支援センターへ相談してください。"
+      ],
+      "source": {
+        "law": "公営住宅法／公営住宅法施行令第6条、国住備第57号（平成25年6月27日 優先入居の取扱いについて）",
+        "url": "https://www.mlit.go.jp/jutakukentiku/house/jutakukentiku_house_tk3_000096.html",
+        "url_detail": "https://www.cao.go.jp/bunken-suishin/doc/4-20-kokudokoutsu_yusennyukyo.pdf",
+        "publisher": "国土交通省",
+        "last_verified": "2026-08-11"
+      }
+    },
+    {
+      "id": "fukushi_shikin_kashitsuke",
+      "name": "母子父子寡婦福祉資金貸付金",
+      "category": "借りる",
+      "judgment_type": "check",
+      "summary": "ひとり親の方が、無利子または年1.0%という低い利率でお金を借りられる公的な制度です。12種類あります。",
+      "eligibility": {
+        "note": "貸付を受けられるかどうかは都道府県・指定都市・中核市が審査します。",
+        "kinds": ["事業開始", "事業継続", "修学", "技能習得", "修業", "就職支度", "医療介護", "生活", "住宅", "転宅", "就学支度", "結婚"],
+        "interest": "貸付金の種類と連帯保証人の有無によって、無利子または年利1.0%",
+        "repayment": "一定の据置期間ののち、3年から20年"
+      },
+      "benefit_summary": "たとえば修学資金は、大学で月71,000円から146,000円。就学支度資金は私立大学等で580,000円から590,000円。私立高校の入学時は410,000円から420,000円。",
+      "how_to_apply": "都道府県・指定都市・中核市のひとり親支援窓口（母子・父子自立支援員）",
+      "cautions": [
+        "カードローンや消費者金融に手を出す前に、必ずこちらを先に相談してください。利率がまったく違います。",
+        "審査と手続きに時間がかかります。お金が要る時期の2〜3か月前には相談を。"
+      ],
+      "source": {
+        "law": "母子及び父子並びに寡婦福祉法第13条ほか",
+        "url": "https://www.mhlw.go.jp/web/t_doc?dataId=00tc4886&dataType=1&pageNo=1",
+        "url_detail": "https://www.cfa.go.jp/assets/contents/node/basic_page/field_ref_resources/0a870592-1814-4b21-bf56-16f06080c594/0f69b7f8/20260424_policies_hitori-oya_112.pdf",
+        "publisher": "こども家庭庁／厚生労働省",
+        "last_verified": "2026-08-11"
+      }
+    },
+    {
+      "id": "koukou_shugaku_shienkin",
+      "name": "高等学校等就学支援金・高校生等奨学給付金",
+      "category": "学校のお金",
+      "judgment_type": "check",
+      "summary": "高校の授業料を国が負担する仕組み（就学支援金）と、授業料以外の費用を助ける仕組み（奨学給付金）の2本立てです。",
+      "eligibility": {
+        "shugaku_shienkin_income_limit": "令和8年度から所得による制限はありません",
+        "shugaku_shienkin_public": 118800,
+        "shugaku_shienkin_private": 457200,
+        "shugaku_shienkin_private_correspondence": 337200,
+        "kyufukin_note": "奨学給付金のほうは所得で決まります。令和8年度から年収490万円程度の世帯まで対象が広がりました。",
+        "kyufukin_amounts": {
+          "seikatsuhogo": { "public": 32300, "private": 52600 },
+          "hikazei_zennichi": { "public": 143700, "private": 152000 },
+          "hikazei_tsushin": { "public": 50500, "private": 52100 },
+          "kakudai_270_380_zennichi": { "public": 47900, "private": 50670 },
+          "kakudai_380_490_zennichi": { "public": 35930, "private": 38000 }
+        }
+      },
+      "benefit_summary": "授業料は公立で年118,800円、私立（全日制）で年457,200円まで国が持ちます。そのうえで、住民税が非課税の世帯なら、教科書代や通学費などにあてる奨学給付金が年143,700円（国公立・全日制）受け取れます。",
+      "how_to_apply": "就学支援金は在学する高校を通じてオンライン申請システム（e-Shien）で。奨学給付金は都道府県（通常は高校を通じて）。",
+      "cautions": [
+        "就学支援金は所得制限がなくなりましたが、申請しないと受け取れません。入学時と毎年7月ごろの手続きを忘れないでください。",
+        "奨学給付金は「授業料以外」のためのお金です。就学支援金とは別に申請が必要です。",
+        "私立高校を選択肢から外す前に、必ずいまの支給額を確認してください。数年前の常識とは変わっています。"
+      ],
+      "source": {
+        "law": "高等学校等就学支援金の支給に関する法律",
+        "url": "https://www.mext.go.jp/a_menu/shotou/mushouka/index.htm",
+        "url_detail": "https://www.mext.go.jp/content/20260408-mxt_shuukyo03-100002595_2.pdf",
+        "publisher": "文部科学省",
+        "last_verified": "2026-08-11"
+      }
+    },
+    {
+      "id": "koutou_kyoiku_shugaku_shien",
+      "name": "高等教育の修学支援新制度（返さなくてよい奨学金＋授業料の減免）",
+      "category": "学校のお金",
+      "judgment_type": "check",
+      "summary": "大学・短大・高専・専門学校の授業料や入学金を減らし、あわせて返さなくてよい奨学金を受け取れる制度です。",
+      "eligibility": {
+        "note": "世帯の収入と資産で区分が決まります。お子さんが3人以上いる世帯は、収入の制限なく授業料等の減免が受けられます。",
+        "income_guide": {
+          "full": "約300万円まで（住民税非課税）",
+          "two_thirds": "約400万円まで",
+          "one_third": "約460万円まで",
+          "one_fourth": "約700万円まで（お子さん3人以上の世帯、私立の理工農系学部など）"
+        },
+        "grant_yearly_full": {
+          "national_home": 350000, "national_away": 800000,
+          "private_home": 460000, "private_away": 910000
+        },
+        "tuition_waiver_cap_university": { "national_tuition": 540000, "national_entrance": 280000, "private_tuition": 700000, "private_entrance": 260000 }
+      },
+      "benefit_summary": "住民税が非課税の世帯なら、私立大学で自宅外から通う場合、返さなくてよい奨学金が年91万円。あわせて授業料が年70万円まで、入学金が26万円まで免除されます。",
+      "how_to_apply": "在学中の高校または大学等を通じて申し込みます（日本学生支援機構）。相談は 0570-666-301（平日9時〜20時）。",
+      "cautions": [
+        "申し込みは春（4月〜6月）と秋（9月〜11月）の年2回です。春に外れても秋にもう一度申し込めます。",
+        "お子さんが3人以上いる世帯で減免だけが対象になる場合も、申し込みは必要です。",
+        "「うちは大学は無理」と決める前に、必ずこの制度を確認してください。ひとり親家庭は満額の対象になることが多い制度です。"
+      ],
+      "source": {
+        "law": "大学等における修学の支援に関する法律",
+        "url": "https://www.mext.go.jp/a_menu/koutou/hutankeigen/",
+        "url_detail": "https://www.jasso.go.jp/shogakukin/about/kyufu/__icsFiles/afieldfile/2026/01/27/r8_zaigaku_leaflet_2.pdf",
+        "publisher": "文部科学省／日本学生支援機構",
+        "last_verified": "2026-08-11"
+      }
+    },
+    {
+      "id": "jukyo_kakuho_kyufukin",
+      "name": "住居確保給付金",
+      "category": "住まい",
+      "judgment_type": "check",
+      "summary": "仕事を失ったり収入が大きく減ったりして家賃が払えないとき、家賃を自治体が大家さんに直接支払ってくれる制度です。",
+      "eligibility": {
+        "note": "離職・廃業から2年以内、または自分のせいではない休業などで収入が減ったこと。世帯の収入と金融資産にも基準があります（基準額は自治体ごと）。",
+        "asset_test": "金融資産の合計が、基準額の6倍（100万円を超えない額）以下",
+        "period": "原則3か月。延長して最長9か月",
+        "job_search": "月4回以上の面談、月2回以上のハローワークでの職業相談、週1回以上の求人への応募",
+        "moving_cost_support": "2025年4月から、家賃の安い住宅へ引っ越す費用の補助が新しくできました。就労中の方も対象になり得ます。家財の運搬費・礼金・仲介手数料・保証料・鍵の交換費用などが対象で、上限は引っ越し先の住宅扶助基準額の3倍。敷金は対象外です。"
+      },
+      "benefit_summary": "家賃額（住宅扶助基準額が上限）が原則3か月、最長9か月支給されます。大家さんや不動産会社の口座へ自治体が直接振り込みます。",
+      "how_to_apply": "お住まいの地域の自立相談支援機関（全国の一覧 https://minna-tunagaru.jp/ichiran/ ）",
+      "cautions": [
+        "滞納してからでは選択肢が減ります。「来月あぶないかも」の段階で相談してください。",
+        "2025年4月の法改正で、就労中でも家賃の安い住まいへの引っ越し費用を助けてもらえる仕組みができました。知られていない新しい制度です。"
+      ],
+      "source": {
+        "law": "生活困窮者自立支援法第3条第3項（令和6年法律第21号による改正、令和7年4月1日施行）",
+        "url": "https://corona-support.mhlw.go.jp/jukyokakuhokyufukin/index.html",
+        "url_detail": "https://www.mhlw.go.jp/content/001506373.pdf",
+        "publisher": "厚生労働省",
+        "last_verified": "2026-08-11"
+      }
+    },
+    {
+      "id": "seikatsu_hogo",
+      "name": "生活保護",
+      "category": "くらしの土台",
+      "judgment_type": "check",
+      "summary": "収入が国の定める最低生活費に届かないとき、その差額が支給されます。ひとり親には母子加算があります。",
+      "eligibility": {
+        "note": "このツールでは金額の計算をしません。最低生活費はお住まいの地域・世帯の人数・年齢で変わるためです。該当するかどうかは福祉事務所で確認してください。",
+        "structure": "8つの扶助（生活・住宅・教育・医療・介護・出産・生業・葬祭）",
+        "additions": "母子加算（お子さん1人で月18,800円程度）、児童養育加算（18歳までのお子さん1人につき月10,190円程度）",
+        "temporary_addition": "令和7年度・令和8年度は臨時の特例として1人あたり月1,500円が加算されています（令和8年10月から1年間は2,500円に引き上げられることが決まっています）"
+      },
+      "benefit_summary": "住まいの費用（住宅扶助）や医療費（医療扶助・自己負担なし）も含まれます。「車があるから無理」「持ち家だから無理」と自己判断せず、まず相談してください。",
+      "how_to_apply": "お住まいの地域を担当する福祉事務所（市区は市区が、町村は都道府県が設置）",
+      "cautions": [
+        "生活保護は権利です。ためらう必要はありません。",
+        "一時的に受けて、生活を立て直してから抜けることもできます。",
+        "窓口で追い返されそうになったら、ひとりで行かず、支援団体に付き添いを頼んでください。"
+      ],
+      "source": {
+        "law": "生活保護法",
+        "url": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/hukushi_kaigo/seikatsuhogo/seikatuhogo/index.html",
+        "url_detail": "https://www.mhlw.go.jp/content/12002000/001662704.pdf",
+        "publisher": "厚生労働省",
+        "last_verified": "2026-08-11"
+      }
+    },
+    {
+      "id": "youikuhi",
+      "name": "養育費の取り決めと、受け取れないときの手立て",
+      "category": "養育費",
+      "judgment_type": "check",
+      "summary": "養育費は、取り決めの「形」で、あとで取り立てられるかどうかが決まります。口約束はほぼ無力です。",
+      "eligibility": {
+        "note": "強制執行認諾文言のついた公正証書があれば、裁判をしなくてもすぐに給料や預金を差し押さえられます。この文言がないと差し押さえはできません。調停調書・審判書も同じ効力があります。",
+        "enforcement": "財産開示手続や、第三者からの情報取得手続（預貯金・不動産・勤務先を裁判所を通じて調べる仕組み）が使えます。",
+        "law_change_2026": "民法等の改正（令和6年法律第33号）が令和8年4月1日に施行されました。取り決めがなくても一定額を請求できる法定養育費の仕組みと、養育費に先取特権（他の債権より優先して回収できる権利）が新しくできています。"
+      },
+      "benefit_summary": "取り決めの形を「公正証書（強制執行認諾文言つき）」にしておくだけで、あとから取り立てられる可能性が大きく変わります。費用は数万円です。",
+      "how_to_apply": "公証役場（公正証書）、家庭裁判所（調停）。相談は 法テラス・サポートダイヤル 0570-078374（平日9時〜21時、土曜9時〜17時）、養育費・親子交流相談支援センター 0120-965-419",
+      "cautions": [
+        "「もめたくないから」と口約束で済ませるのが、いちばん多い落とし穴です。",
+        "すでに離婚していて取り決めがない場合でも、あとから請求できます。あきらめないでください。",
+        "令和8年4月1日から、取り決めがない場合の法定養育費の仕組みが始まっています。相談窓口で最新の扱いを確認してください。"
+      ],
+      "source": {
+        "law": "民法（令和6年法律第33号による改正、令和8年4月1日施行）、民事執行法",
+        "url": "https://www.moj.go.jp/MINJI/minji07_00357.html",
+        "url_detail": "https://www.moj.go.jp/MINJI/1-1-1-2-2-3.html",
+        "publisher": "法務省",
+        "last_verified": "2026-08-11"
+      }
+    },
+    {
+      "id": "azukesaki",
+      "name": "ファミリー・サポート・センター／病児保育／ショートステイ",
+      "category": "預ける・助けてもらう",
+      "judgment_type": "check",
+      "summary": "子どもを一時的に預けたり、送り迎えを頼んだりできる仕組みです。判定はしません。存在を知っておいてください。",
+      "eligibility": {
+        "note": "いずれも市区町村が実施主体です。あるかないか、いくらかかるかは地域によって違います。",
+        "family_support": "地域の会員どうしの助け合いの仕組み。保育所への送り迎え、放課後の預かりなど。病児対応・緊急対応・ひとり親家庭への対応も要綱に位置づけられています。",
+        "byoji_hoiku": "病児対応型・病後児対応型・体調不良児対応型・訪問型・送迎対応の5つの型があります。",
+        "short_stay": "保護者の病気などで一時的に家庭で育てるのが難しいとき、児童養護施設などで数日間預かってもらえます（子育て短期支援事業）。"
+      },
+      "benefit_summary": "「熱を出したら仕事を休むしかない」を避けるための備えです。使う予定がなくても、先に登録だけしておくのが実践的です。",
+      "how_to_apply": "お住まいの市区町村の子育て支援担当課",
+      "cautions": [
+        "ファミリー・サポート・センターも病児保育も、事前の登録・面談が必要なことがほとんどです。必要になってからでは間に合いません。",
+        "ショートステイは「親が倒れたとき」の命綱です。ひとり親の方はとくに、使える施設を先に確認しておいてください。"
+      ],
+      "source": {
+        "law": "児童福祉法（子育て援助活動支援事業・病児保育事業・子育て短期支援事業）",
+        "url": "https://www.cfa.go.jp/policies/kosodateshien/family-support",
+        "url_detail": "https://www.cfa.go.jp/policies/kosodateshien/jido-short",
+        "publisher": "こども家庭庁",
+        "last_verified": "2026-08-11"
+      }
+    },
+    {
+      "id": "dv_support",
+      "name": "DVから離れるための仕組み（住民票の閲覧制限・保護命令・相談窓口）",
+      "category": "身の安全",
+      "judgment_type": "check",
+      "summary": "暴力から離れるときに、居場所を知られないようにする手立てと、法律で相手を近づけない手立てがあります。",
+      "eligibility": {
+        "note": "まず相談してください。手続きの多くは、警察や配偶者暴力相談支援センターへの相談が前提になります。",
+        "shien_sochi": "住民基本台帳の閲覧等制限（DV等支援措置）。住民票や戸籍の附票のある市区町村へ申し出ます。警察や支援センターに相談したうえで申出書を提出し、関係機関への意見照会を経て開始されます。期間は1年で、終了1か月前から延長できます。",
+        "hogo_meirei": "保護命令は地方裁判所へ書面で申し立てます。2024年4月施行の改正で、自由・名誉・財産への加害の告知（精神的な暴力）も対象になり、接近禁止命令の期間が6か月から1年に延び、罰則も2年以下の拘禁刑・200万円以下の罰金に引き上げられました。連続したSNS送信、深夜（22時〜6時）の送信、性的画像の送信、無断でのGPS位置情報の取得も禁止の対象です。",
+        "centers": "配偶者暴力相談支援センターは全国327か所（令和8年6月19日現在。うち市町村設置155か所）"
+      },
+      "benefit_summary": "住民票の閲覧制限をかけると、相手があなたの住所を役所で調べることができなくなります。保護命令が出れば、近づくこと自体が犯罪になります。",
+      "how_to_apply": "DV相談ナビ #8008（はれれば）／DV相談＋ 0120-279-889（24時間）／警察相談専用電話 #9110／お住まいの市区町村（住民票の閲覧制限）／地方裁判所（保護命令）",
+      "cautions": [
+        "引っ越しても、住民票を移すと相手に居場所が分かることがあります。移す前に必ず閲覧制限の相談をしてください。",
+        "証拠（けがの写真、診断書、録音、メッセージ）は、安全な場所に残しておいてください。",
+        "この画面は右上のボタンでいつでも消せます。"
+      ],
+      "source": {
+        "law": "配偶者からの暴力の防止及び被害者の保護等に関する法律（令和6年4月1日施行の改正を含む）、住民基本台帳事務におけるDV等支援措置",
+        "url": "https://www.gender.go.jp/policy/no_violence/dv_navi/index.html",
+        "url_detail": "https://www.soumu.go.jp/main_sosiki/jichi_gyousei/daityo/dv_shien.html",
+        "publisher": "内閣府男女共同参画局／総務省",
+        "last_verified": "2026-08-11"
+      }
+    }
+  ]
+}

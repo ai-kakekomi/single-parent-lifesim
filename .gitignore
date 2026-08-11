@@ -1,0 +1,7 @@
+# あなた個人のメモや下書きは、ここに置けば公開されません
+my/
+private/
+*.local.*
+.DS_Store
+Thumbs.db
+node_modules/

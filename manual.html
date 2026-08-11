@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>使い方マニュアル｜ひとり親ライフチョイス・シミュレータ</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .toc { background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:.8rem 1rem; }
+  .toc ol { margin:.3rem 0; padding-left:1.4rem; }
+  .toc a { color: var(--accent-dark); }
+  table.ex { width:100%; border-collapse:collapse; font-size:.86rem; margin:.6rem 0; }
+  table.ex th, table.ex td { border:1px solid var(--line); padding:.45rem .55rem; text-align:left; vertical-align:top; }
+  table.ex th { background:#eef2f6; white-space:nowrap; }
+  .yes { color: var(--ok); font-weight:700; }
+  .no { color: var(--danger); font-weight:700; }
+  pre.prompt {
+    background:#fbfcfd; border:1px solid #b9c4cf; border-radius:8px; padding:.8rem;
+    font-size:.8rem; line-height:1.65; white-space:pre-wrap; word-break:break-word;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace; max-height:26rem; overflow:auto;
+  }
+</style>
+</head>
+<body>
+
+<div class="escape-bar">
+  <span class="brand">使い方マニュアル</span>
+  <button type="button" class="escape-btn" id="esc">すぐ閉じる</button>
+</div>
+
+<div class="wrap">
+
+<h1>使い方マニュアル</h1>
+<p class="lead">ひとり親ライフチョイス・シミュレータの使い方を、画面より少していねいに説明します。</p>
+<p class="nav"><a href="index.html">ツールの画面にもどる</a></p>
+
+<div class="toc">
+  <strong>もくじ</strong>
+  <ol>
+    <li><a href="#can">このツールでできること・できないこと</a></li>
+    <li><a href="#sample">まずは例で試してみる</a></li>
+    <li><a href="#steps">操作の手順</a></li>
+    <li><a href="#read">判定の読み方</a></li>
+    <li><a href="#examples">機械が見ていること・見られないこと（動作例）</a></li>
+    <li><a href="#data-flow">あなたの情報がどこに行くか</a></li>
+    <li><a href="#erase">閲覧履歴の消し方・DVの当事者の方へ</a></li>
+    <li><a href="#ai">自分用に変えたい（AIに頼む）</a></li>
+    <li><a href="#help">困ったときの相談先</a></li>
+    <li><a href="#disclaimer">免責事項</a></li>
+  </ol>
+</div>
+
+<!-- ============================================ -->
+<h2 id="can">1. このツールでできること・できないこと</h2>
+
+<h3>できること</h3>
+<ul>
+  <li>全国どこでも共通の制度<strong>17件</strong>について、あなたが対象になりそうかを整理します</li>
+  <li>児童扶養手当については、<strong>全部支給・一部支給・対象外</strong>の区分と、ひと月あたりのおよその金額を出します</li>
+  <li>「結婚を続けた場合」と「離婚した場合」で、ひと月あたりに使えるお金がどう変わるかを、いちばん下のお子さんが22歳になるまでグラフにします</li>
+  <li>手当が減ったり終わったりする「制度の切りかわり」を、グラフの縦線で示します</li>
+  <li>お使いのAIに相談するための文章を5本作ります</li>
+</ul>
+
+<h3>できないこと（対象外）</h3>
+<table class="ex">
+  <tr><th>できません</th><td><strong>お住まいの市区町村だけの制度</strong>の判定。ひとり親医療費の助成、水道料金の減免、交通機関の割引、保育料の軽減などは、自治体ごとに中身が違うため入っていません</td></tr>
+  <tr><th>できません</th><td><strong>財産分与・年金分割・慰謝料</strong>の計算。離婚の条件しだいで数百万円変わります。弁護士に相談する領域です</td></tr>
+  <tr><th>できません</th><td><strong>正確な手当の額</strong>。このツールが出すのは概算です。同居のご家族の所得、障害者控除などの事情で変わります</td></tr>
+  <tr><th>できません</th><td><strong>生活保護の金額</strong>。地域と世帯の人数で変わるため、該当しそうかを示すだけにとどめています</td></tr>
+  <tr><th>できません</th><td><strong>手取り額の正確な計算</strong>。社会保険料と税をおおまかに見積もっているだけで、給与明細とはずれます</td></tr>
+  <tr><th>できません</th><td><strong>昇給や転職の見込み</strong>。年収は変わらないものとして計算しています</td></tr>
+  <tr><th>できません</th><td><strong>物価の上昇と、これから先の制度改正</strong>の織り込み</td></tr>
+</table>
+
+<!-- ============================================ -->
+<h2 id="sample">2. まずは例で試してみる</h2>
+<p>入力欄の上に、架空の例のボタンが6つ並んでいます。押すと全部の欄が埋まり、そのまま結果が出ます。</p>
+<table class="ex">
+  <tr><th>パート勤務・保育園児と小学生のおかあさん</th><td>年150万円・子2人。児童扶養手当が<strong>全部支給</strong>になる例</td></tr>
+  <tr><th>正社員・中学生のおかあさん（養育費あり）</th><td>年320万円・養育費月4万円。養育費の8割が所得に足されて<strong>一部支給</strong>になる例</td></tr>
+  <tr><th>フルタイム勤務・所得の制限をこえているおとうさん</th><td>年450万円。児童扶養手当は<strong>対象外</strong>でも、ほかの制度は使える例</td></tr>
+  <tr><th>離婚を考えている段階・パート勤務のおかあさん</th><td>配偶者の年収500万円。<strong>くらべるグラフ</strong>がいちばん分かりやすく出る例</td></tr>
+  <tr><th>あと少しで手当が減るところにいるおかあさん</th><td>年190万円。<strong>収入の崖</strong>の注意書きが出る例</td></tr>
+  <tr><th>実家の援助を受けているおかあさん</th><td>親御さんが68歳。<strong>援助が終わる崖</strong>がグラフに出る例</td></tr>
+</table>
+<p class="hint">ここに出てくる人はすべて架空です。実在の方とは関係ありません。</p>
+
+<!-- ============================================ -->
+<h2 id="steps">3. 操作の手順</h2>
+<ol>
+  <li><strong>例のボタンを押して、動きを見る</strong></li>
+  <li><strong>自分の数字に入れ替える</strong>。分かるところだけで大丈夫です</li>
+  <li><strong>「この内容で見てみる」を押す</strong></li>
+  <li><strong>「対象の可能性が高い」の制度から、申請先を確認する</strong></li>
+  <li><strong>「窓口で確認したいもの」を、メモして市区町村の窓口へ持っていく</strong></li>
+  <li><strong>グラフで、これから金額が変わるところを見ておく</strong></li>
+  <li><strong>AIに相談する文章をコピーして、分からないところを掘る</strong></li>
+  <li><strong>最後は必ず、窓口で確認する</strong></li>
+</ol>
+
+<h3>年収は「額面」で入れてください</h3>
+<p>源泉徴収票の「支払金額」の欄の数字です。税金や社会保険料が引かれる前の金額で、手取りではありません。制度の判定は、すべてこの額面をもとにした「所得」で行われるためです。<br>
+グラフに出てくる手取りの額は、こちらで額面から計算しています（表示のためだけの概算です）。</p>
+
+<h3>お住まいの地域の欄について</h3>
+<p>市区町村までで大丈夫です。番地は入れないでください。この欄は判定にはまったく使わず、AIに相談する文章に入るだけです。</p>
+
+<!-- ============================================ -->
+<h2 id="read">4. 判定の読み方</h2>
+<table class="ex">
+  <tr><th>対象の可能性が高い</th><td>入力された数字から見て、条件を満たしていそうなものです。<strong>それでも窓口での確認は必要です。</strong>同居のご家族の所得など、このツールが聞いていない条件があります</td></tr>
+  <tr><th>窓口で確認したいもの</th><td>市区町村ごとに中身が違う制度や、書類を見ないと判断できない制度です。このツールは判定しません。<strong>「対象外」という意味ではありません。</strong>むしろ、ここに一番のお宝が眠っています</td></tr>
+  <tr><th>対象外の見込み</th><td>入力された数字では条件から外れているものです。収入や家族の状況が変われば対象になります</td></tr>
+</table>
+<p>児童扶養手当だけは、さらに「<strong>全部支給の可能性が高い</strong>」「<strong>一部支給の可能性が高い</strong>」に分かれます。一部支給は、所得が全部支給の限度額をこえたところから、こえた分に応じて少しずつ減っていく仕組みです。</p>
+
+<h3>出典と最終確認日</h3>
+<p>各制度カードのいちばん下に、<strong>根拠になる条文の名前</strong>と、<strong>官公庁のページへのリンク</strong>と、<strong>私たちが最後に中身を確認した日付</strong>を出しています。<br>
+制度は年度ごとに変わります。日付が古いと感じたら、リンク先の官公庁のページで最新の数字を見てください。</p>
+
+<h3>赤と黄の警告について</h3>
+<p>「気をつけてほしいこと」には2種類のことが書いてあります。</p>
+<table class="ex">
+  <tr><th>事実</th><td>官公庁の資料に書いてあることです。かならず出典のリンクをつけています</td></tr>
+  <tr><th>私たちの立場の表明</th><td>灰色の枠で囲み、「ここからは、私たちの立場の表明です（事実ではありません）」と明記しています。私たちAIかけこみ寺がそう考えている、というだけのことです。事実の顔をさせないために分けています</td></tr>
+</table>
+
+<!-- ============================================ -->
+<h2 id="examples">5. 機械が見ていること・見られないこと（動作例）</h2>
+<p>このツールの中の機械が何をしているのかを、実際の例で見せます。</p>
+
+<h3>A. 児童扶養手当の判定</h3>
+<table class="ex">
+  <tr><th>入力</th><th>出る答え</th></tr>
+  <tr><td>年収150万円・お子さん2人（5歳・8歳）・養育費なし</td>
+      <td><span class="yes">全部支給の可能性が高い</span><br>ひと月あたり およそ 59,400円<br><span class="hint">所得67万円。扶養2人の全部支給限度額は145万円なので、余裕をもって中に入っています</span></td></tr>
+  <tr><td>年収320万円・お子さん1人（14歳）・<strong>養育費 月4万円</strong></td>
+      <td><span class="yes">一部支給の可能性が高い</span><br>ひと月あたり およそ 13,870円<br><span class="hint">所得236万4千円。養育費48万円のうち<strong>8割の38万4千円が所得に足されて</strong>、限度額の246万円にかなり近づいています</span></td></tr>
+  <tr><td>同じ条件で<strong>養育費なし</strong>にすると</td>
+      <td>ひと月あたり およそ 24,010円<br><span class="hint">養育費を受け取ると手当が減るという構造が、数字で見えます</span></td></tr>
+  <tr><td>年収450万円・お子さん2人（10歳・16歳）</td>
+      <td><span class="no">対象外の見込み</span><br><span class="hint">所得298万円。扶養2人の一部支給の限度額284万円をこえています</span></td></tr>
+</table>
+
+<h3>B. 収入の崖（境目をまたぐと何が起きるか）</h3>
+<table class="ex">
+  <tr><th>入力</th><th>出る答え</th></tr>
+  <tr><td>年収<strong>190万円</strong>・お子さん1人（7歳）</td><td><span class="yes">全部支給</span> 月48,050円</td></tr>
+  <tr><td>年収<strong>191万円</strong>（1万円だけ増やす）</td><td><span class="no">一部支給</span> 月47,860円<br><span class="hint">年1万円多く働いた結果、手当が年2,280円減ります。「あと少し」が損になる場所です</span></td></tr>
+</table>
+<p class="hint">190万円がちょうど境目になるのは、給与所得控除の最低保障額が65万円で、そこから一律10万円と社会保険料相当額8万円が引かれると、扶養1人の全部支給限度額107万円にぴったり届くためです。</p>
+
+<h3>C. 児童手当の「第3子」の数え方</h3>
+<table class="ex">
+  <tr><th>お子さんの年齢</th><th>出る答え</th></tr>
+  <tr><td>8歳・5歳・2歳</td><td>月50,000円（10,000＋10,000＋<strong>30,000</strong>）<br><span class="hint">2歳のお子さんが3人目にあたるので30,000円になります</span></td></tr>
+  <tr><td><strong>20歳</strong>・10歳・5歳</td><td>月40,000円（10,000＋<strong>30,000</strong>）<br><span class="hint">20歳の子は手当をもらえませんが、人数には数えます。だから5歳の子が3人目になります。ここを見落とすと月2万円損します</span></td></tr>
+  <tr><td><strong>23歳</strong>・10歳・5歳</td><td>月20,000円（10,000＋10,000）<br><span class="hint">23歳は数にも入らないので、5歳の子は2人目のままです</span></td></tr>
+</table>
+
+<h3>D. 機械には判定できないこと（限界）</h3>
+<table class="ex">
+  <tr><th>限界</th><td><strong>機械が見ているのは、あなたが入力した数字だけです。</strong>源泉徴収票も、住民票も、通帳も見ていません。入力が違えば答えも違います</td></tr>
+  <tr><th>限界</th><td><strong>自治体独自の制度は判定できません。</strong>データに入っていないためです。「窓口で確認したいもの」に回しています</td></tr>
+  <tr><th>限界</th><td><strong>一部支給の金額は概算です。</strong>計算式そのものはこども家庭庁の公式の例と1円まで合うことを確かめていますが、実際の判定に使われる所得には、障害者控除、医療費控除、同居のご家族の所得など、このツールが聞いていない要素が入ります</td></tr>
+  <tr><th>限界</th><td><strong>受け取り始めて5年たったあとの、半分に減らされる仕組みは計算に入れていません。</strong>届出をすれば減らされないため、減る前提で出すとかえって誤解を招くと考えました。制度カードの注意書きに書いてあります</td></tr>
+  <tr><th>限界</th><td><strong>お子さんの年齢は「いま何歳か」だけで見ています。</strong>実際の制度は「18歳になった年度の3月31日まで」のように年度で区切られるので、誕生月によっては1年ずれます</td></tr>
+  <tr><th>限界</th><td><strong>グラフは年収が変わらない前提です。</strong>昇給も、転職も、働く時間を増やすことも入っていません。「いまのまま何もしなかったら」の線だと思ってください</td></tr>
+  <tr><th>限界</th><td><strong>親御さんからの援助が終わる年齢（初期値75歳）は、私たちが置いた仮定です。</strong>制度上の数字ではありません。グラフの下のつまみで変えられます</td></tr>
+</table>
+
+<!-- ============================================ -->
+<h2 id="data-flow">6. あなたの情報がどこに行くか</h2>
+
+<h3>まず、安心してほしいこと</h3>
+<p><strong>このツールに入力した内容は、どこにも送られません。</strong></p>
+<ul>
+  <li>計算はすべて、あなたの端末のブラウザの中だけで行われます</li>
+  <li>私たちAIかけこみ寺のところにも、一切届きません。私たちには、誰がこのツールを使ったかも、何を入力したかも分かりません</li>
+  <li>ブラウザの保存領域（localStorage・Cookie）にも保存していません。画面を閉じれば入力内容は残らずに消えます</li>
+  <li>外部のサービスから読み込んでいるプログラムもありません（アクセス解析も、グラフの外部ライブラリも使っていません）</li>
+</ul>
+
+<h3>ただし、AIに相談するときだけは別です</h3>
+<p>画面の最後で作られる「AIに相談するための文章」を、あなたがコピーしてAIサービスに貼りつけたときには、その内容は<strong>あなたが使っているAIの事業者</strong>に届きます。私たちには届きません。</p>
+
+<pre class="prompt">【情報の流れの見取り図】
+
+  あなたの入力
+      │
+      ├─→ このツールの中で計算 ────→ 画面に表示
+      │   （端末の外に出ません）
+      │
+      └─→ 「AIに相談する文章」を作る
+              │
+              │  ← ここまでは端末の中だけ
+              │
+              ▼  あなたが自分でコピーして貼りつけたときだけ
+          お使いのAIサービス（ChatGPT / Claude / Gemini など）
+              │
+              └─→ そのAI事業者の規約に従って扱われます
+                  （AIかけこみ寺には届きません）</pre>
+
+<p>そのため、文章には<strong>お名前・住所の番地・勤め先・学校名を入れていません</strong>。地域も市区町村までにとどめています。貼りつける前に、次の4つを確かめてください。</p>
+<ul>
+  <li><strong>履歴が残らないモード</strong>（一時チャット等）で使う</li>
+  <li>入力内容を<strong>学習に使わない設定</strong>ができるサービス・プランを選ぶ</li>
+  <li>文章に個人を特定できる情報を<strong>足さない</strong></li>
+  <li>AIの答えは<strong>必ず官公庁のページか窓口で裏を取る</strong>。AIはもっともらしく間違います</li>
+</ul>
+
+<!-- ============================================ -->
+<h2 id="erase">7. 閲覧履歴の消し方・DVの当事者の方へ</h2>
+
+<div class="pit red">
+  <h4>🔴 いますぐ画面を消したいとき</h4>
+  <p>画面の<strong>右上の「すぐ閉じる」ボタン</strong>を押してください。キーボードの <strong>Esc キー</strong>でも同じです。すぐに天気予報のページに切り替わります。「戻る」を押しても、このツールには戻りません。</p>
+</div>
+
+<h3>閲覧履歴を消す</h3>
+<p>「すぐ閉じる」を押しても、それまでに開いたページの履歴は端末に残ります。次のように消してください。</p>
+<table class="ex">
+  <tr><th>iPhone（Safari）</th><td>設定 → アプリ → Safari → 「履歴とWebサイトデータを消去」</td></tr>
+  <tr><th>Android（Chrome）</th><td>Chrome を開く → 右上の3つの点 → 「閲覧履歴データを削除」</td></tr>
+  <tr><th>パソコン（Chrome / Edge）</th><td>Ctrl + Shift + Delete（Mac は Command + Shift + Delete）</td></tr>
+</table>
+<p><strong>次からは、最初から履歴が残らないモードで開くのがいちばん確実です。</strong>Safari なら「プライベートブラウズ」、Chrome なら「シークレット モード」、Edge なら「InPrivate ウィンドウ」です。</p>
+<p class="hint">端末そのものを相手に管理されている場合は、履歴を消しても記録が残ることがあります。その場合は、図書館や職場のパソコン、信頼できる方の端末から見てください。</p>
+
+<h3>相談できるところ</h3>
+<table class="ex">
+  <tr><th>DV相談ナビ<br>#8008</th><td>電話をかけると、いる場所から最寄りの配偶者暴力相談支援センターにつながります（<a href="https://www.gender.go.jp/policy/no_violence/dv_navi/index.html" target="_blank" rel="noopener">内閣府男女共同参画局</a>）</td></tr>
+  <tr><th>DV相談＋<br>0120-279-889</th><td><strong>24時間365日</strong>、無料。チャット相談は12時から22時（10か国語対応）。メールフォームは24時間受付（<a href="https://soudanplus.jp/" target="_blank" rel="noopener">公式サイト</a>）</td></tr>
+  <tr><th>警察相談専用電話<br>#9110</th><td>事件になる前の相談窓口。いる場所の都道府県警察につながります</td></tr>
+  <tr><th>よりそいホットライン<br>0120-279-338</th><td>24時間・無料。音声ガイダンスの3番が「DV・性暴力など女性の相談」、6番が「10代20代の女性の相談」（<a href="https://www.since2011.net/yorisoi/" target="_blank" rel="noopener">公式サイト</a>）</td></tr>
+  <tr><th>住民票の閲覧制限</th><td>お住まいの市区町村の窓口へ。相手があなたの住所を役所で調べられなくなります。<strong>引っ越して住民票を移す前に相談してください</strong>（<a href="https://www.soumu.go.jp/main_sosiki/jichi_gyousei/daityo/dv_shien.html" target="_blank" rel="noopener">総務省の説明</a>）</td></tr>
+  <tr><th>保護命令</th><td>地方裁判所へ書面で申し立てます。2024年4月から、精神的な暴力も対象になり、接近禁止命令の期間が1年に延びました</td></tr>
+</table>
+
+<!-- ============================================ -->
+<h2 id="ai">8. 自分用に変えたい（AIに頼む）</h2>
+<p>このツールはMITライセンスで公開しているので、自由に変えて使えます。ソースを直接書きかえる必要はありません。<strong>お使いのAI（Claude Code など、パソコンのファイルを触れるもの）に、下の文章をそのまま渡してください。</strong></p>
+
+<div class="notice">
+  <h4>渡す前に、ひとつだけ確認してください</h4>
+  <p style="margin:.3rem 0">AIに作業を頼むと、フォルダの中身がそのAI事業者に渡ります（私たちAIかけこみ寺には渡りません）。<strong>フォルダの中に、社外秘の資料や、ご自身・利用者の方の個人情報が入っていないか確認してから</strong>渡してください。<code>my/</code> や <code>private/</code> という名前のフォルダを作れば、公開の対象からは外れます。</p>
+</div>
+
+<h3>手順1　この文章をAIにコピペする</h3>
+<button type="button" class="ghost" id="copy-prompt">この文章をコピーする</button>
+<span class="copy-msg" id="copy-msg"></span>
+<pre class="prompt" id="prompt-text">これから、日本の「ひとり親ライフチョイス・シミュレータ」というWebツールを、私の用途に合わせて改造してもらいます。
+
+# 作業を始める前に、私に確認してほしいこと
+- このフォルダの中に、社外秘の資料や個人情報が入っていないか（入っていたら、作業前に教えてください）
+
+# ソースの取得
+まだ手元にない場合は、次のコマンドで取得してください。
+    git clone https://github.com/ai-kakekomi/single-parent-simulator.git
+    cd single-parent-simulator
+すでにある場合は、次で最新にしてください。
+    git pull
+
+# このツールの構成（先に読んでください）
+- README.md ... 全体の説明。まずこれを読む
+- data/programs.json ... 制度データ17件。金額・所得制限限度額・出典URL・最終確認日はすべてここにある
+- data/pitfalls.json ... 注意喚起のデータ11件
+- data/samples.json ... 架空の例6件。画面の「例で試す」と自動テストが同じ数字を共用している
+- js/engine.js ... 計算のやり方だけを持つ。金額は書かれていない
+- js/chart.js ... グラフを自前のSVGで描く。外部ライブラリは使わない
+- js/prompts.js ... AIに相談する文章の組み立て
+- js/app.js ... 画面のうごき
+- index.html / manual.html / css/style.css
+- test/run.js ... 自動チェック
+
+# 守ってほしい決まり
+1. 外部のサーバーと通信するコードを足さないこと。CDNからライブラリを読み込むのも禁止。完全にローカルで動くことがこのツールの前提です
+2. localStorage・sessionStorage・Cookieに何かを保存するコードを足さないこと
+3. 画面に出す文章に、専門用語や技術用語（JSON、リポジトリ、API等）を使わないこと。中学生が読んで分かる日本語にすること
+4. 制度の金額や条件を変えるときは、必ず data/programs.json を直すこと。js/engine.js に金額を直接書かないこと
+5. 制度データを足す・直すときは、source に「条文名」「官公庁（go.jp）の一次資料URL」「最終確認日」を必ずセットで入れること。裏が取れない数字は入れず、judgment_type を "check" にすること
+6. 作業のあと、必ず `node test/run.js` を実行して、全部のチェックが通ることを確かめること。落ちたら直すこと
+7. 数字を変えたときは data/samples.json の expect も合わせて直すこと（画面とテストで期待値がずれないようにするため）
+
+# 私がやってほしいこと
+（ここに、やりたいことを日本語で書いてください）
+</pre>
+
+<h3>手順2　やりたいことを日本語で頼む</h3>
+<p>文章のいちばん下に、やりたいことを書き足してください。たとえばこんな頼み方ができます。</p>
+<ul>
+  <li>「わたしの自治体（○○市）の独自制度を3件、data/programs.json に足してください。出典は○○市の公式ページで、judgment_type は check にしてください」</li>
+  <li>「制度カードの文字を大きくして、高齢の方でも読めるようにしてください」</li>
+  <li>「グラフに、児童扶養手当だけを取り出した線をもう1本足してください」</li>
+  <li>「例のボタンを、うちの相談窓口によく来る方の状況に合わせて作りかえてください」</li>
+  <li>「AIに相談する文章に、6本目として『こどもの心のケアの相談』を足してください」</li>
+</ul>
+
+<h3>手順3　画面で確かめる／元に戻す</h3>
+<p>作業が終わったら、ローカルサーバーを立てて画面を開き、実際に動かして確かめてください（立て方は README.md に書いてあります）。<br>
+やり直したいときは、AIに「さっきの変更を取り消してください」と言えば戻せます。</p>
+
+<h3>ライセンスと、改造版の公開について</h3>
+<p>コードはMITライセンスです。改造して公開することも自由です。ただし、AIかけこみ寺の公式版と混同されないよう、<strong>名前を変えて</strong>公開してください。</p>
+
+<!-- ============================================ -->
+<h2 id="help">9. 困ったときの相談先</h2>
+<table class="ex">
+  <tr><th>制度のこと</th><td>お住まいの市区町村の、ひとり親支援・こども家庭の担当窓口。このツールの画面を見せながら聞くのがいちばん早いです</td></tr>
+  <tr><th>離婚・養育費のこと</th><td>法テラス サポートダイヤル 0570-078374（平日9時〜21時、土曜9時〜17時）。収入が一定以下なら無料で相談できます<br>養育費・親子交流相談支援センター 0120-965-419</td></tr>
+  <tr><th>お金が足りない</th><td>お住まいの地域の自立相談支援機関（<a href="https://minna-tunagaru.jp/ichiran/" target="_blank" rel="noopener">全国の一覧</a>）。生活保護の相談は福祉事務所へ</td></tr>
+  <tr><th>だまされたかもしれない</th><td>消費者ホットライン 188 ／ 警察相談専用電話 #9110 ／ 金融サービス利用者相談室 0570-016811</td></tr>
+  <tr><th>ツールの不具合</th><td>AIかけこみ寺 info@ai-kakekomi.com</td></tr>
+</table>
+
+<!-- ============================================ -->
+<h2 id="disclaimer">10. 免責事項</h2>
+<p class="disclaimer">
+このツールが出す金額は、すべて<strong>概算</strong>です。正確な額は、お住まいの市区町村の窓口で確認してください。<br>
+本ツールは<strong>無保証</strong>です。制作者・提供者は、本ツールの利用によって生じたいかなる損害についても責任を負いません。<br>
+制度の内容は年度ごとに変わります。各制度カードの「最終確認」の日付より前の情報にもとづいています。<br>
+本ツールは法律・税務・投資の助言を行うものではありません。個別の判断は、それぞれの専門家および官公庁の窓口にご相談ください。<br>
+制作: 非営利団体 AIかけこみ寺（NPO法人設立認証申請中）／ソフトウェアの利用条件: MIT License
+</p>
+
+<p class="nav"><a href="index.html">ツールの画面にもどる</a></p>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+  function 退避() { window.location.replace('https://weather.yahoo.co.jp/weather/'); }
+  document.getElementById('esc').addEventListener('click', 退避);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { 退避(); } });
+
+  document.getElementById('copy-prompt').addEventListener('click', function () {
+    var t = document.getElementById('prompt-text').textContent;
+    var msg = document.getElementById('copy-msg');
+    function done(ok) {
+      msg.textContent = ok ? 'コピーしました' : 'コピーできませんでした。文章を選んでコピーしてください。';
+      setTimeout(function () { msg.textContent = ''; }, 3000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t).then(function () { done(true); }, function () { done(false); });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = t; document.body.appendChild(ta); ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta); done(ok);
+    }
+  });
+}());
+</script>
+</body>
+</html>

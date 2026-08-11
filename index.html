@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="index,follow">
+<title>ひとり親ライフチョイス・シミュレータ｜AIかけこみ寺</title>
+<meta name="description" content="ひとり親の方・離婚を考えている方が、使える制度と、これからのお金の見通しを5分で確かめられる無料ツールです。入力した内容はどこにも送信されません。">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="escape-bar">
+  <span class="brand">ひとり親ライフチョイス・シミュレータ</span>
+  <button type="button" class="escape-btn">すぐ閉じる</button>
+</div>
+
+<div class="wrap">
+
+  <h1>ひとり親ライフチョイス・シミュレータ</h1>
+  <p class="lead">
+    使える制度の取りこぼしと、これからのお金の見通しを、5分で確かめるための道具です。<br>
+    非営利団体 AIかけこみ寺（NPO法人設立認証申請中）が作り、無料で公開しています。
+  </p>
+
+  <div class="notice">
+    <h4>入力した内容は、どこにも送られません</h4>
+    <p style="margin:.3rem 0">
+      この画面の計算は、すべてあなたの端末の中だけで行われます。入力した数字がインターネットに送られることはなく、
+      端末に保存されることもありません。画面を閉じれば、入力した内容は残らずに消えます。
+    </p>
+    <p style="margin:.3rem 0">
+      右上の<strong>「すぐ閉じる」</strong>を押すと、この画面はすぐに天気予報のページに変わります（キーボードの Esc キーでも同じです）。
+      いま見ていたページとして履歴にも残りにくくしてあります。
+      履歴そのものを消す方法は <a href="manual.html#erase">使い方マニュアル</a> に書いてあります。
+    </p>
+  </div>
+
+  <p class="nav"><a href="manual.html">使い方マニュアルを読む</a><a href="#stage3">まず注意してほしいことを読む</a></p>
+
+  <div id="loading"><p class="hint">読み込んでいます…</p></div>
+
+  <div id="form-area" style="display:none">
+
+    <h2>1. あなたのことを教えてください</h2>
+    <p class="lead">分かるところだけで大丈夫です。あとから何度でも変えられます。</p>
+
+    <div class="panel tight">
+      <p style="margin:0 0 .4rem"><strong>まず動きを見たい方へ</strong></p>
+      <p class="hint" style="margin:0 0 .5rem">下のボタンを押すと、架空の例が入ります。実在の方ではありません。自分の数字に入れ替えてお使いください。</p>
+      <div id="sample-buttons" class="inline-choice"></div>
+      <p class="hint" id="sample-note"></p>
+    </div>
+
+    <div class="panel">
+      <fieldset>
+        <legend>いまの状況</legend>
+        <div class="inline-choice">
+          <label><input type="radio" name="status" value="single" checked>すでにひとり親</label>
+          <label><input type="radio" name="status" value="married">離婚を考えている</label>
+        </div>
+      </fieldset>
+
+      <div class="row">
+        <div>
+          <label for="my-age">あなたの年齢</label>
+          <input type="number" id="my-age" min="15" max="90" inputmode="numeric" placeholder="例 35">
+        </div>
+        <div>
+          <label for="my-income">あなたの年収（万円）</label>
+          <input type="number" id="my-income" min="0" max="3000" inputmode="numeric" placeholder="例 200">
+          <p class="hint"><span class="term" tabindex="0" data-tip="源泉徴収票の「支払金額」の欄の数字です。税金や社会保険料が引かれる前の金額のことで、手取りではありません。">額面</span>で入れてください（手取りではありません）</p>
+        </div>
+      </div>
+
+      <div data-only="married">
+        <label for="spouse-income">配偶者の年収（万円・額面）</label>
+        <input type="number" id="spouse-income" min="0" max="5000" inputmode="numeric" placeholder="例 450">
+      </div>
+
+      <label for="child-count">お子さんの人数</label>
+      <select id="child-count">
+        <option value="1">1人</option><option value="2">2人</option><option value="3">3人</option>
+        <option value="4">4人</option><option value="5">5人</option>
+      </select>
+      <div id="children-box" style="margin-top:.6rem"></div>
+
+      <label for="area">お住まいの地域</label>
+      <input type="text" id="area" placeholder="例 愛知県名古屋市" autocomplete="off">
+      <p class="hint">市区町村までで大丈夫です。番地は入れないでください。この欄は判定には使わず、あとで作る「AIに相談する文章」に入るだけです。</p>
+
+      <fieldset style="margin-top:1rem">
+        <legend>住まい</legend>
+        <div class="inline-choice">
+          <label><input type="radio" name="housing-type" value="賃貸" checked>賃貸</label>
+          <label><input type="radio" name="housing-type" value="持ち家">持ち家</label>
+          <label><input type="radio" name="housing-type" value="公営住宅">公営住宅</label>
+          <label><input type="radio" name="housing-type" value="実家・同居">実家・同居</label>
+        </div>
+        <div class="row">
+          <div>
+            <label for="housing-now">いまの住居費（月・円）</label>
+            <input type="number" id="housing-now" min="0" max="500000" inputmode="numeric" placeholder="例 65000">
+          </div>
+          <div data-only="married">
+            <label for="housing-after">離婚したあとの住居費の見込み（月・円）</label>
+            <input type="number" id="housing-after" min="0" max="500000" inputmode="numeric" placeholder="例 60000">
+            <p class="hint">こちらで勝手に見積もることはしません。あなたが考えている金額を入れてください。公営住宅なら、民間の賃貸より月に数万円安くなることがあります。</p>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>養育費</legend>
+        <div class="inline-choice">
+          <label><input type="radio" name="cs-state" value="公正証書で取り決めている">公正証書で取り決め</label>
+          <label><input type="radio" name="cs-state" value="調停・審判で取り決めている">調停・審判で取り決め</label>
+          <label><input type="radio" name="cs-state" value="口約束だけ">口約束だけ</label>
+          <label><input type="radio" name="cs-state" value="取り決めをしていない" checked>取り決めていない</label>
+          <label><input type="radio" name="cs-state" value="これから取り決める">これから決める</label>
+          <label><input type="radio" name="cs-state" value="受け取っていない">受け取っていない</label>
+        </div>
+        <label for="cs-monthly">受け取っている（受け取る予定の）金額（月・円）</label>
+        <input type="number" id="cs-monthly" min="0" max="500000" inputmode="numeric" placeholder="例 40000">
+        <p class="hint">受け取った養育費は、その8割が児童扶養手当の判定に使われる所得に足されます。</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>親（お子さんの祖父母）からの援助</legend>
+        <div class="row">
+          <div>
+            <label for="parent-support">援助の額（月・円）</label>
+            <input type="number" id="parent-support" min="0" max="500000" inputmode="numeric" placeholder="なければ空欄">
+          </div>
+          <div>
+            <label for="parent-age">その親御さんの年齢</label>
+            <input type="number" id="parent-age" min="40" max="110" inputmode="numeric" placeholder="例 68">
+          </div>
+        </div>
+      </fieldset>
+
+      <button type="button" class="primary" id="calc">この内容で見てみる</button>
+    </div>
+
+    <!-- ============ Stage 1 ============ -->
+    <section class="stage" id="stage1">
+      <h2>2. 使えるかもしれない制度</h2>
+      <p class="lead" id="stage1-summary"></p>
+      <div class="notice">
+        ここに出しているのは、<strong>全国どこでも共通の制度だけ</strong>です。
+        お住まいの市区町村だけの制度（医療費の助成、水道料金の減免、交通機関の割引など）は入っていません。
+        それは下の「AIに相談する文章」の4番で調べられます。
+      </div>
+      <div id="stage1-body"></div>
+    </section>
+
+    <!-- ============ Stage 2 ============ -->
+    <section class="stage" id="stage2">
+      <h2>3. 続けた場合と、離婚した場合のくらべ方</h2>
+      <p class="lead">
+        いちばん下のお子さんが22歳になるまで、ひと月あたりに使えるお金がどう変わるかを並べています。
+      </p>
+
+      <div class="notice">
+        <h4>このグラフが置いている仮定</h4>
+        <ul>
+          <li>年収は今のまま変わらないものとしています（昇給や転職は入れていません）</li>
+          <li>変わるのは、お子さんの年齢で変わる手当と、親御さんからの援助が終わることだけです</li>
+          <li>物価の上昇、制度の改正は入れていません</li>
+          <li>手取りの額は、社会保険料と税のおおまかな計算による<strong>めやす</strong>です。実際の給与明細とはずれます</li>
+        </ul>
+        <h4>このグラフに入っていない、大事なもの</h4>
+        <p style="margin:.3rem 0">
+          <strong>財産分与・年金分割・慰謝料は、このツールでは一切あつかっていません。</strong>
+          これらは離婚の条件によって大きく変わり、金額の差は数百万円になることもあります。
+          お金の話をするなら、必ず法律の専門家に相談してください。費用が心配な方は
+          <a href="https://www.houterasu.or.jp/" target="_blank" rel="noopener">法テラス</a>
+          （サポートダイヤル 0570-078374。収入が一定以下なら無料で相談でき、弁護士費用の立替えも使えます）へ。
+        </p>
+      </div>
+
+      <div class="panel tight">
+        <label for="parent-end-age">親御さんからの援助が終わると考える年齢</label>
+        <div class="slider-row">
+          <input type="range" id="parent-end-age" min="65" max="90" value="75" step="1">
+          <output id="parent-end-age-out">75歳</output>
+        </div>
+        <p class="hint">これは制度で決まった数字ではなく、私たちが置いた仮定です。動かして確かめてください。</p>
+      </div>
+
+      <div id="stage2-body"></div>
+    </section>
+
+    <!-- ============ Stage 3 ============ -->
+    <section class="stage" id="stage3">
+      <h2>4. 気をつけてほしいこと</h2>
+      <p class="lead">
+        ここには2種類のことが書いてあります。<strong>事実</strong>（官公庁の資料に書いてあること。出典をつけています）と、
+        <strong>私たちの立場の表明</strong>（私たちがそう考えている、というだけのこと。灰色の枠で分けています）です。
+        区別して読んでください。
+      </p>
+      <div id="stage3-body"></div>
+    </section>
+
+    <!-- ============ Stage 4 ============ -->
+    <section class="stage" id="stage4">
+      <h2>5. AIに相談するための文章</h2>
+      <p class="lead">
+        このツールは「こうしなさい」とは言いません。かわりに「こう聞けばいい」という文章を作ります。
+        コピーして、お使いのAI（ChatGPT、Claude、Gemini など）に貼りつけてください。
+      </p>
+
+      <div class="notice">
+        <h4>AIに貼りつける前に、4つだけ</h4>
+        <ul>
+          <li><strong>履歴が残らないモード</strong>（一時チャット等）で使ってください</li>
+          <li>入力した内容を<strong>学習に使わない設定</strong>ができるサービスを選んでください</li>
+          <li><strong>お名前・住所の番地・勤め先・学校名は入れない</strong>でください。下の文章にはもともと入れていません</li>
+          <li>AIの答えは、もっともらしく間違うことがあります。<strong>必ず官公庁のページか窓口で確かめて</strong>ください</li>
+        </ul>
+      </div>
+
+      <div id="stage4-body"></div>
+    </section>
+
+  </div>
+
+  <p class="disclaimer">
+    このツールが出す金額は、すべて<strong>概算</strong>です。正確な額は、お住まいの市区町村の窓口で確認してください。<br>
+    制度の内容は年度ごとに変わります。各制度カードの「最終確認」の日付より前の情報にもとづいています。<br>
+    本ツールは無保証です。制作者・提供者は、本ツールの利用によって生じたいかなる損害についても責任を負いません。<br>
+    制作: 非営利団体 AIかけこみ寺（NPO法人設立認証申請中）／ソフトウェアの利用条件: MIT License<br>
+    <a href="manual.html">使い方マニュアル</a>
+  </p>
+
+</div>
+
+<script src="js/engine.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/prompts.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
