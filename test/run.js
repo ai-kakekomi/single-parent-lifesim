@@ -1360,8 +1360,8 @@ var 落とし穴id = {};
 
 var 文章 = Prompts.全部作る(見本.samples[0].input, SPS.制度判定(
   Object.assign({}, 見本.samples[0].input, { eligibleChildCount: 2 }), データ));
-eq(文章.length, 5, '作られる文章は5本');
-['career', 'invest', 'insurance', 'programs', 'move'].forEach(function (id) {
+eq(文章.length, 6, '作られる文章は6本');
+['career', 'invest', 'insurance', 'programs', 'scholarship', 'move'].forEach(function (id) {
   ok(文章.some(function (p) { return p.id === id; }), '「' + id + '」の文章がある');
 });
 文章.forEach(function (p) {
@@ -1374,6 +1374,14 @@ var 投資文 = 文章.filter(function (p) { return p.id === 'invest'; })[0].tex
 ok(投資文.indexOf('特定の金融商品をすすめないでください') > 0, 'お金の文章は、商品をすすめさせない書き方になっている');
 var 保険文 = 文章.filter(function (p) { return p.id === 'insurance'; })[0].text;
 ok(保険文.indexOf('保険を販売しない立場') > 0, '保険の文章は、販売しない立場に立たせる書き方になっている');
+
+/* 給付型奨学金を探す文章 */
+var 奨学文 = 文章.filter(function (p) { return p.id === 'scholarship'; })[0].text;
+ok(奨学文.indexOf('返済不要の給付型奨学金だけ') > 0, '返さなくていいものだけを探す指示が入っている');
+ok(奨学文.indexOf('貸与型（あとで返すもの）は挙げないでください') > 0, '貸与型を挙げさせない指示が入っている');
+ok(奨学文.indexOf('URLを必ず添えてください') > 0, '出典URLを必ず出させる指示が入っている');
+ok(奨学文.indexOf('評定平均') > 0, '成績の条件を聞く指示が入っている');
+ok(奨学文.indexOf('個人が特定される情報はわざと入れていません') > 0, '個人情報を入れない前提が入っている');
 
 /* ------------------------------------------------------------ */
 見出し('13. グラフの絵');
@@ -1785,6 +1793,64 @@ ok(!/打ち切りの注記[\s\S]{0,2600}details class="explain" open/.test(app�
 var 短いラベル = Chart.資産を描く(赤字);
 ok(短いラベル.indexOf('借りられません') > 0, 'グラフの中の借入上限のラベルは残っている');
 ok(短いラベル.indexOf('hatch') === -1, '網かけはもう描かない（横軸を短くする方式にした）');
+
+/* ------------------------------------------------------------ */
+見出し('13-4. 貸与型奨学金の返済');
+
+var L = データ.student_loan;
+ok(!!L, '貸与型奨学金のデータがある');
+ok(L.source.url.indexOf('jasso.go.jp') > 0, '出典は日本学生支援機構');
+ok(L.academic_source.url.indexOf('jasso.go.jp') > 0, '学力基準の出典も機構');
+ok(/^\d{4}-\d{2}-\d{2}$/.test(L.source.last_verified), '最終確認日がある');
+
+/* 機構が公表している返還例と、1円まで合うこと（無利子） */
+L.verified_examples.forEach(function (x) {
+  var r = SPS.奨学金の返済(x.total, L);
+  eq(r.times, x.times, '機構の返還例と回数が一致（' + x.note + '）');
+  eq(r.monthlyMin, x.monthly, '機構の返還例と月額が一致（' + x.note + '）');
+  eq(r.years * 12, r.times, '返還回数は年数の12倍');
+});
+ok(L.verified_examples.length >= 7, '照合に使う返還例が7件以上ある');
+
+/* 利子つきは、機構の返還例に近い値になること（据置期間があるので、ぴったりにはならない） */
+var ベンチ = L.interest_benchmark;
+ベンチ.rates.forEach(function (b) {
+  var 仮 = JSON.parse(JSON.stringify(L));
+  仮.interest_max = b.rate;
+  var r = SPS.奨学金の返済(ベンチ.total, 仮);
+  eq(r.times, ベンチ.times, '利子つきでも回数は同じ（年' + (b.rate * 100) + '%）');
+  var ずれ = Math.abs(r.monthlyMax - b.monthly) / b.monthly;
+  ok(ずれ < 0.01, '利子つきの月額が、機構の公表値の1%以内（年' + (b.rate * 100) + '%）',
+    r.monthlyMax + ' / ' + b.monthly);
+});
+ok(L.interest_approx_note.indexOf('少し高くなります') > 0, 'およその計算であることが書いてある');
+
+/* 学力のレバー */
+var レバー = SPS.奨学金の返済(54000 * 48, L);
+ok(レバー.monthlyMin < レバー.monthlyMax, '無利子のほうが、毎月の返済は少ない');
+ok(レバー.interestCostMax > 0, '無利子と上限利率で、返す総額に差が出る');
+eq(レバー.interestCostMax, レバー.totalPaidMax - レバー.totalPaidMin, '差額は返す総額の引き算そのもの');
+ok(L.academic_note.indexOf('3.5以上') > 0, '評定平均3.5という基準がデータに書いてある');
+ok(L.academic_note.indexOf('住民税非課税') > 0 || L.academic_note.indexOf('貸与額算定基準額が0円') > 0,
+  '所得が低い場合に基準が緩むことも書いてある');
+
+/* 借りる額が大きいほど、返す期間は長くなる（上限20年） */
+ok(SPS.奨学金の返済(5000000, L).years <= 20, '返す期間は20年をこえない');
+eq(SPS.奨学金の返済(10000000, L).years, 20, '大きく借りても20年で止まる');
+ok(SPS.奨学金の返済(1000000, L).years < SPS.奨学金の返済(3000000, L).years,
+  '借りる額が大きいほど、返す期間は長い');
+ok(SPS.奨学金の返済(0, L) === null, '借りる必要がなければ、何も返さない');
+ok(SPS.奨学金の返済(1000000, null) === null, 'データがなければ計算しない');
+
+/* 貸与型は、カーブにも家計の表にも入れない */
+var 貸与c = SPS.資産カーブ(Object.assign({}, 入力F,
+  { children: [18], myIncome: 1500000, livingCost: 95000, plans: [{ university: 'private_away' }] }), データ);
+ok(貸与c.universityShortfall >= 0, '大学のときに足りなくなる額を計算している');
+var 支出キー = 貸与c.points[0].breakdown.all.expense.map(function (r) { return r.key; });
+ok(支出キー.indexOf('loan') === -1 && 支出キー.indexOf('studentLoan') === -1,
+  '家計の表に、貸与型のお金は入っていない');
+var 収入キー = 貸与c.points[0].breakdown.all.income.map(function (r) { return r.key; });
+ok(収入キー.indexOf('loan') === -1, '借りたお金を、収入として数えていない');
 
 /* ------------------------------------------------------------ */
 見出し('14. 画面と処理のつながり');

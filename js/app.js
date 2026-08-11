@@ -615,6 +615,7 @@
       '<details class="explain"><summary>生活防衛資金って？（くわしく）</summary>' + 防衛資金の説明() + '</details>' +
       赤字の警告(c) +
       学費の説明(c) +
+      奨学金の見取り図(c) +
       前提のボックス(c);
 
     /* つまみを動かしているあいだ、画面ぜんぶを作り直すと、
@@ -987,10 +988,12 @@
     h.push('<ul>');
     h.push('<li><strong>収入は、いまのまま変わらない前提です。</strong>昇給も、転職も、働く時間をふやすことも入れていません。' +
       '（資格を取るルートだけは別で、そこだけ収入が変わります）</li>');
-    h.push('<li><strong>生活費は、いまと同じ金額がずっと続く前提です。</strong>' +
-      '実際には、お子さんが中学生・高校生になると食費などが増えます。' +
-      '<span class="warn-inline">その分、後半の線は甘め（実際より良く）に出ます。</span>' +
-      'お子さんが大きくなったときの姿を見たいときは、生活費の欄を多めに入れて試してください。</li>');
+    h.push('<li><strong>生活費は、お子さんの成長にあわせて食費の部分がふえます。</strong>' +
+      '中学生は、保育園児のおよそ2倍の量を食べます' +
+      '（<a href="' + esc((データ.living_cost_growth || {}).source_energy ? データ.living_cost_growth.source_energy.url : '#') +
+      '" target="_blank" rel="noopener">厚生労働省「日本人の食事摂取基準」</a>より）。' +
+      'ふえるのは食費の部分だけで、それ以外の費目は一定です。' +
+      '<span class="warn-inline">食費以外の値上がりは入れていないので、後半の線は少し甘めに出ます。</span></li>');
     h.push('<li><strong>学校にかかるお金は、全国の平均値です。</strong>まん中の人の金額ではありません。' +
       'しかも、この金額には<strong>塾・習いごとの費用が入っています</strong>。' +
       '公立の小学校では、年366,599円のうち256,489円（7割）が塾・習いごとです。' +
@@ -1128,7 +1131,8 @@
          別のところから持ってくると、行の金額と合わなくなる（実際に合わなくなっていた）。 */
       var 追記 = '';
       if (r.key === 'living' && r.increase > 0) {
-        追記 = '<span class="why">いまより ' + SPS.円(r.increase) + ' 多い（お子さんの成長ぶん）</span>';
+        追記 = '<span class="why">はじめの ' + SPS.円(r.baseline) +
+          ' ＋ お子さんの成長で増える食費ぶん ' + SPS.円(r.increase) + '</span>';
       }
       if (r.key === 'childcare') {
         if (r.discount > 0) {
@@ -1302,6 +1306,93 @@
 
   /* ---------- 足りないぶんを、どうやって埋めるか ----------
      「崩れます」で終わらせず、そのぶんをどこから持ってくるかの一覧を出す。 */
+  /* ============================================================
+   * 奨学金の見取り図
+   *   「詰まない（給付は計算済み）」「学力でどれだけ得か」
+   *   「借りたら子にどう響くか」を1か所で見られるようにする。
+   * ============================================================ */
+  function 奨学金の見取り図(c) {
+    var L = データ.student_loan;
+    if (!L) { return ''; }
+    var 修学 = データ.programs_by_id.koutou_kyoiku_shugaku_shien;
+    var 給付金 = データ.programs_by_id.koukou_shugaku_shienkin;
+
+    var h = ['<div class="panel scholarship-map">'];
+    h.push('<h3 style="margin-top:0">奨学金の見取り図</h3>');
+    h.push('<p class="hint">お金の助けには「返さなくていいもの」と「あとで返すもの」があります。' +
+      '<strong>返さなくていいものから使い切る</strong>のが順番です。</p>');
+
+    /* 2×2の表 */
+    h.push('<table class="map-table"><thead><tr><th></th>' +
+      '<th><span class="badge grant">返さなくていい</span></th>' +
+      '<th><span class="badge loan">あとで返す</span></th></tr></thead><tbody>');
+    h.push('<tr><th>高校</th>' +
+      '<td><strong>就学支援金</strong><br><span class="why">授業料にあてられます。所得の制限はありません</span>' +
+      '<br><strong>高校生等奨学給付金</strong><br><span class="why">所得で決まります。このツールで計算ずみ</span></td>' +
+      '<td><span class="why">高校生向けの貸与（都道府県の奨学のための貸付金など）もありますが、' +
+      'まず上の2つを使い切ってからです</span></td></tr>');
+    h.push('<tr><th>大学など</th>' +
+      '<td><strong>修学支援新制度</strong><br><span class="why">授業料・入学金の減免＋給付型奨学金。' +
+      '所得で決まります。このツールで計算ずみ</span>' +
+      '<br><strong>大学独自・民間の給付型</strong><br><span class="why">数千種類あるのでこのツールには入れられません。' +
+      '<a href="#stage4">AIに探してもらう文章</a>を用意しました</span></td>' +
+      '<td><strong>貸与型奨学金（第一種・第二種）</strong><br><span class="why">お子さん名義の借金です。' +
+      '社会人になってから返します。下に返済のめやすを出します</span></td></tr>');
+    h.push('</tbody></table>');
+
+    /* 学力のレバー */
+    var 例 = SPS.奨学金の返済(54000 * 48, L);
+    h.push('<div class="lever">');
+    h.push('<p class="lever-head">評定平均3.5は、利子を消します</p>');
+    h.push('<p>無利子の第一種を借りるには、高校の評定平均値が5段階で<strong>3.5以上</strong>であることが基準です。' +
+      '同じ額を借りても、無利子かどうかで返す総額が変わります。</p>');
+    if (例) {
+      h.push('<p class="lever-example">例: <strong>' + SPS.円(例.total) + '</strong> を借りた場合（私立・自宅から通う上限額を4年）<br>' +
+        '　無利子（第一種）… 月 <strong>' + SPS.円(例.monthlyMin) + '</strong> × ' + 例.years + '年 ＝ 返す総額 ' + SPS.円(例.totalPaidMin) + '<br>' +
+        '　利子つき（第二種・上限の年3%）… 月 <strong>' + SPS.円(例.monthlyMax) + '</strong> × ' + 例.years + '年 ＝ 返す総額 ' + SPS.円(例.totalPaidMax) + '<br>' +
+        '　<strong class="lever-diff">その差、' + SPS.円(例.interestCostMax) + '</strong></p>');
+    }
+    h.push('<p class="hint">' + esc(L.academic_note) + '</p>');
+    h.push('</div>');
+
+    /* 足りないぶんを貸与型で埋めた場合 */
+    if (c.universityShortfall > 0) {
+      var 返 = SPS.奨学金の返済(c.universityShortfall, L);
+      if (返) {
+        var 卒業時の年齢 = 22;
+        h.push('<div class="loan-sim">');
+        h.push('<p class="loan-sim-head">足りないぶんを、貸与型で埋めた場合</p>');
+        h.push('<p>大学に通う時期に足りなくなるのは、いまの計算で <strong>' + SPS.円(返.total) + '</strong> です。' +
+          'これを貸与型奨学金（お子さん名義の借金）で埋めると、こうなります。</p>');
+        h.push('<table class="balance"><tbody>' +
+          '<tr class="sec"><th>借り方</th><th class="num">毎月の返済</th><th class="num">返す総額</th></tr>' +
+          '<tr><td>第一種（無利子）<span class="why">評定平均3.5以上があれば、こちら</span></td>' +
+          '<td class="num">' + SPS.円(返.monthlyMin) + '</td><td class="num">' + SPS.円(返.totalPaidMin) + '</td></tr>' +
+          '<tr><td>第二種（利子つき・年' + (返.interestRecent * 100).toFixed(2) + '%のとき）</td>' +
+          '<td class="num">' + SPS.円(返.monthlyMid) + '</td><td class="num">' + SPS.円(返.totalPaidMid) + '</td></tr>' +
+          '<tr><td>第二種（利子つき・上限の年3%）</td>' +
+          '<td class="num">' + SPS.円(返.monthlyMax) + '</td><td class="num">' + SPS.円(返.totalPaidMax) + '</td></tr>' +
+          '</tbody></table>');
+        h.push('<p>返す期間は <strong>' + 返.years + '年（' + 返.times + '回）</strong>。' +
+          '返し始めるのは卒業した年の秋からなので、お子さんが' + 卒業時の年齢 + '歳で卒業すると、' +
+          '<strong>' + (卒業時の年齢 + 返.years) + '歳ごろまで</strong>返し続けることになります。</p>');
+        h.push('<p class="loan-order">' + esc(L.order_note) + '</p>');
+        h.push('<p class="hint">' + esc(L.interest_approx_note) + '</p>');
+        h.push('<p class="hint">この金額は、上のグラフには入れていません。借りたお金は収入ではないからです。</p>');
+        h.push('</div>');
+      }
+    }
+
+    h.push('<p class="src">根拠: ' + esc(L.source.law) + '／' +
+      '<a href="' + esc(L.source.url) + '" target="_blank" rel="noopener">日本学生支援機構のページを開く</a>' +
+      '（最終確認 ' + 日付表示(L.source.last_verified) + '）<br>' +
+      '学力基準: <a href="' + esc(L.academic_source.url) + '" target="_blank" rel="noopener">' +
+      esc(L.academic_source.publisher) + '「進学前（予約採用）の第一種奨学金の学力基準」</a>' +
+      '（最終確認 ' + 日付表示(L.academic_source.last_verified) + '）</p>');
+    h.push('</div>');
+    return h.join('');
+  }
+
   function 赤字の警告(c) {
     if (!c.goesNegative && !c.universityDeficit) { return ''; }
     var 入力 = 最新入力, 判定 = 最新判定;

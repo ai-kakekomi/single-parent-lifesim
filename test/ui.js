@@ -390,14 +390,35 @@ server.listen(0, '127.0.0.1', function () {
         ok(d.querySelector('#stage2b-body table.balance .why') !== null,
           '0円の項目や増えた項目に、理由が書いてある');
 
+        /* 奨学金の見取り図 */
+        var 見取り図 = d.querySelector('#stage2b-body .scholarship-map');
+        ok(見取り図 !== null, '奨学金の見取り図が出ている');
+        ok(見取り図.querySelector('table.map-table') !== null, '高校／大学 × 返す／返さない の表がある');
+        eq(見取り図.querySelectorAll('table.map-table .badge.grant').length, 1, '「返さなくていい」の列がある');
+        eq(見取り図.querySelectorAll('table.map-table .badge.loan').length, 1, '「あとで返す」の列がある');
+        ok(見取り図.textContent.indexOf('修学支援新制度') > 0, '大学の給付型が載っている');
+        ok(見取り図.textContent.indexOf('このツールで計算ずみ') > 0, '計算ずみのものが分かる');
+        ok(見取り図.querySelector('a[href="#stage4"]') !== null, '給付型を探す文章への導線がある');
+        /* 学力のレバー */
+        ok(見取り図.querySelector('.lever') !== null, '学力のレバーの説明がある');
+        ok(見取り図.textContent.indexOf('評定平均3.5は、利子を消します') > 0,
+          '学力の金銭的な価値が1行で書いてある');
+        ok(見取り図.textContent.indexOf('3.5以上') > 0, '評定平均3.5という基準が出ている');
+        ok(見取り図.querySelector('.lever-diff') !== null, '無利子と有利子の差額が目立つ形で出ている');
+        ok(見取り図.querySelector('a[href*="jasso.go.jp"]') !== null, '機構の出典リンクがある');
+
         /* このグラフの前提（常設） */
         var 前提 = d.querySelector('#stage2b-body .assumption-box');
         ok(前提 !== null, '「このグラフの前提」がグラフの下に常に出ている');
         var 前提文 = 前提.textContent;
         ok(前提文.indexOf('収入は、いまのまま変わらない前提です') > 0, '収入が一定であることが書いてある');
-        ok(前提文.indexOf('生活費は、いまと同じ金額がずっと続く前提です') > 0, '生活費の扱いが書いてある');
-        ok(前提文.indexOf('後半の線は甘め') > 0,
-          'お子さんの成長で食費がふえるぶん、後半が甘く出ることを正直に書いてある');
+        ok(前提文.indexOf('生活費は、お子さんの成長にあわせて食費の部分がふえます') > 0,
+          '生活費が成長にあわせてふえることが書いてある');
+        ok(前提文.indexOf('中学生は、保育園児のおよそ2倍') > 0,
+          '根拠が1行で書いてある（倍率という言い方はしない）');
+        ok(前提文.indexOf('後半の線は少し甘め') > 0,
+          '食費以外の値上がりを入れていないことを、正直に書いてある');
+        ok(前提文.indexOf('倍率') === -1, '「倍率」という言い方を画面で使っていない');
         ok(前提文.indexOf('全国の平均値です') > 0, '学費が平均値であることが書いてある');
         ok(前提文.indexOf('毎年その年のお子さんの年齢で計算し直しています') > 0,
           '手当が毎年計算し直されることが書いてある');
@@ -564,7 +585,7 @@ server.listen(0, '127.0.0.1', function () {
         ok(d.getElementById('stage3-body').textContent.indexOf('私たちAIかけこみ寺は') > 0,
           '立場表明が「私たちAIかけこみ寺は」で始まっている');
 
-        eq(d.querySelectorAll('#stage4-body textarea').length, 5, 'AIに相談する文章が5本できる');
+        eq(d.querySelectorAll('#stage4-body textarea').length, 6, 'AIに相談する文章が6本できる');
         var 文 = d.querySelector('#stage4-body textarea').value;
         ok(文.indexOf('東京都板橋区') > 0, '入力した地域が文章に入る');
         ok(文.indexOf('板橋区1-2-3') === -1, '番地のような情報は入らない');
@@ -768,7 +789,7 @@ server.listen(0, '127.0.0.1', function () {
         eq(d.querySelectorAll('#stage1-body .prog').length, 18, 'ファイル直開きでも制度カードが18枚出る');
         eq(d.querySelectorAll('#stage2-body svg path').length, 2, 'ファイル直開きでもグラフが描ける');
         ok(d.querySelectorAll('#stage3-body .pit').length > 0, 'ファイル直開きでも注意書きが出る');
-        eq(d.querySelectorAll('#stage4-body textarea').length, 5, 'ファイル直開きでもAIに相談する文章が5本できる');
+        eq(d.querySelectorAll('#stage4-body textarea').length, 6, 'ファイル直開きでもAIに相談する文章が6本できる');
         ok(エラー.length === 0, 'ファイル直開きでもエラーが出ない', エラー.join(' / '));
         w.close();
       });

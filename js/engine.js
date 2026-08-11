@@ -720,6 +720,65 @@
     return { total: 額, gross: 内.gross, discount: 内.discount, detail: 内.detail || [] };
   }
 
+  /* ------------------------------------------------------------
+   * 貸与型奨学金（あとで返す奨学金）を借りた場合の、返し方
+   *
+   *   グラフには乗せません。借りたお金は収入ではないからです。
+   *   ここで出すのは「お子さんが社会人になってから背負う額」だけ。
+   *
+   *   日本学生支援機構の定額返還方式:
+   *     返還年数 ＝ 貸与総額 ÷ 割賦金の基礎額（小数点以下切り捨て、上限20年）
+   *     返還回数 ＝ 返還年数 × 12
+   *     毎月の返還額 ＝ 貸与総額 ÷ 返還回数
+   *   この計算が、機構が公表している返還例7件すべてと1円まで一致することを
+   *   テストで確かめてあります。
+   * ---------------------------------------------------------- */
+  function 奨学金の返済(貸与総額, 表) {
+    if (!表 || !表.basis_table || !(貸与総額 > 0)) { return null; }
+    var 総額 = Math.round(貸与総額);
+    var 基礎額 = null;
+    for (var i = 0; i < 表.basis_table.length; i++) {
+      var r = 表.basis_table[i];
+      if (r.max === null || 総額 <= r.max) {
+        基礎額 = (r.basis_ratio != null) ? Math.round(総額 * r.basis_ratio) : r.basis;
+        break;
+      }
+    }
+    if (!基礎額) { return null; }
+    var 年数 = Math.floor(総額 / 基礎額);
+    if (年数 < 1) { 年数 = 1; }
+    if (年数 > (表.max_years || 20)) { 年数 = 表.max_years || 20; }
+    var 回数 = 年数 * 12;
+    var 無利子月額 = Math.floor(総額 / 回数);
+
+    /* 利子がつく場合（第二種）。元利均等でおよその額を出す。
+       卒業してから返し始めるまでの6か月ぶんの利子も元本に乗るので、
+       そのぶんも見込んでおく（機構の返還例に近づけるため）。 */
+    function 利子つき月額(年利) {
+      if (!(年利 > 0)) { return 無利子月額; }
+      var 月利 = 年利 / 12;
+      var 据置 = 6;   // 貸与が終わってから返し始めるまでの月数ぶんの利子
+      var 元本 = 総額 * Math.pow(1 + 月利, 据置);
+      return Math.round(元本 * 月利 / (1 - Math.pow(1 + 月利, -回数)));
+    }
+    var 上限利率 = (表.interest_max != null) ? 表.interest_max : 0.03;
+    var 実勢利率 = (表.interest_recent != null) ? 表.interest_recent : 上限利率;
+    var 有利子月額 = 利子つき月額(上限利率);
+    var 実勢月額 = 利子つき月額(実勢利率);
+
+    return {
+      total: 総額, years: 年数, times: 回数,
+      monthlyMin: 無利子月額, monthlyMid: 実勢月額, monthlyMax: 有利子月額,
+      basis: 基礎額,
+      interestMax: 上限利率, interestRecent: 実勢利率,
+      totalPaidMin: 無利子月額 * 回数,
+      totalPaidMid: 実勢月額 * 回数,
+      totalPaidMax: 有利子月額 * 回数,
+      /* 無利子と、上限の利率とで、返す総額がいくら違うか（学力のレバーの価値） */
+      interestCostMax: 有利子月額 * 回数 - 無利子月額 * 回数
+    };
+  }
+
   /** その年、児童扶養手当の対象になる年齢のお子さんがいるか */
   /** 0歳から2歳のお子さんがいるか */
   function 対象の未就学児(年齢たち, 表) {
@@ -981,6 +1040,21 @@
       if (points[q].monthlyAll < 0) { 足りない月額 = -points[q].monthlyAll; break; }
     }
 
+    /* 大学に通う時期に、いくら足りなくなるか（いちばん深いところ）。
+       貸与型で埋めるとしたら、この額を借りることになる。 */
+    var 大学の不足額 = 0;
+    if (月ごと.length) {
+      sim.years.forEach(function (y2, yi) {
+        var 大学生がいる = (y2.childAges || []).some(function (a) { return a >= 18 && a <= 21; });
+        if (!大学生がいる) { return; }
+        for (var mm = yi * 12; mm < Math.min((yi + 1) * 12, 月ごと.length); mm++) {
+          if (月ごと[mm].all < 0) {
+            大学の不足額 = Math.max(大学の不足額, -月ごと[mm].all);
+          }
+        }
+      });
+    }
+
     var 十年 = 月ごと[Math.min(119, 月ごと.length - 1)];
     var 最後 = 月ごと[月ごと.length - 1];
 
@@ -1028,6 +1102,7 @@
       shortfallMonthly: 足りない月額,
       goesNegative: 赤字になる月 !== null,
       universityDeficit: 大学で赤字,
+      universityShortfall: 大学の不足額,
       monthlyBalance: points.length ? points[0].monthlyAll : 0,
       monthlyBalanceNow: points.length ? points[0].monthlyNow : 0,
       gaps: 伸びしろ,
@@ -1354,6 +1429,7 @@
     等価所得: 等価所得,
     シミュレーション: シミュレーション,
     資産カーブ: 資産カーブ,
+    奨学金の返済: 奨学金の返済,
     必要エネルギー: 必要エネルギー,
     生活費の倍率: 生活費の倍率,
     資格ルート: 資格ルート,

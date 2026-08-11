@@ -522,3 +522,19 @@ table.balance .child-mark { color: var(--accent); margin-right: .3rem; }
 table.balance .num.subtotal { font-weight: 700; }
 details.explain > .explain-body { padding: .2rem .2rem 0; }
 .red-zone-note { line-height: 1.8; }
+
+/* ---- 奨学金の見取り図 ---- */
+.scholarship-map h3 { border: 0; }
+table.map-table { width: 100%; border-collapse: collapse; font-size: .86rem; margin: .6rem 0; }
+table.map-table th, table.map-table td { border: 1px solid var(--line); padding: .5rem .6rem; text-align: left; vertical-align: top; }
+table.map-table thead th { background: #eef2f6; text-align: center; }
+table.map-table tbody th { background: #f6f8fa; white-space: nowrap; width: 5rem; }
+.lever { background: var(--ok-soft); border-left: 4px solid var(--ok); border-radius: 0 8px 8px 0; padding: .7rem .85rem; margin: .8rem 0; }
+.lever-head { margin: 0 0 .3rem; font-weight: 700; font-size: 1rem; color: var(--ok); }
+.lever p { font-size: .88rem; line-height: 1.75; margin: .3rem 0; }
+.lever-example { background: rgba(255,255,255,.75); border-radius: 6px; padding: .5rem .7rem; }
+.lever-diff { color: var(--danger); font-size: 1.02rem; }
+.loan-sim { background: var(--warn-soft); border: 1px solid #e0b860; border-radius: var(--radius); padding: .8rem .9rem; margin: .8rem 0; }
+.loan-sim-head { margin: 0 0 .3rem; font-weight: 700; font-size: 1rem; color: var(--warn); }
+.loan-sim p { font-size: .88rem; line-height: 1.75; margin: .35rem 0; }
+.loan-order { background: rgba(255,255,255,.8); border-radius: 6px; padding: .5rem .7rem; font-weight: 700; }
