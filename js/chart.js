@@ -278,7 +278,7 @@
     return (最大差 / 幅) < 0.02;   /* 縦の目盛りはばの2%未満しか離れていなければ、1本にする */
   }
 
-  function 資産を描く(curve, 縦長) {
+  function 資産を描く(curve, 縦長, カーソル年) {
     if (!curve || !curve.points.length) { return '<p class="hint">毎月の生活費を入れると、ここにグラフが出ます。</p>'; }
     var pts = curve.points;
 
@@ -511,6 +511,16 @@
       var x = 右寄せ ? Math.min(基点 - 4, 左 + 幅) : 基点 + 7;
       注記追加(L.名, x, L.y, (右寄せ ? 'end' : 'start'), L.col, 12, 30);
     });
+
+    /* --- いま見ている年のカーソル線 --- */
+    /* 線を途中で打ち切っていても、横軸は最後の年まであるので、
+       カーソルはどの年にも置ける */
+    if (カーソル年 != null && カーソル年 >= 0 && カーソル年 < pts.length) {
+      var kx = X(カーソル年);
+      s.push('<line x1="' + kx.toFixed(1) + '" y1="' + 上 + '" x2="' + kx.toFixed(1) + '" y2="' + (上 + 高) +
+        '" stroke="#33414f" stroke-width="1.5" opacity="0.45"/>');
+      s.push('<circle cx="' + kx.toFixed(1) + '" cy="' + (上 + 高) + '" r="3.5" fill="#33414f" opacity="0.7"/>');
+    }
 
     /* --- 大事な地点の印 ---
        ・貯金が0円を割るところ（底をつく）

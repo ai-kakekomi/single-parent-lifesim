@@ -1547,6 +1547,22 @@ ok(/<path d="M[\d.]+ [\d.]+ L[\d.]+ [\d.]+ L[\d.]+ [\d.]+" fill="none" stroke="#
   '印のラベルから、印まで引き出し線が引かれている');
 ok(重なり(左svg).length === 0, '印のラベルを右へ引き出しても、文字がかぶらない', 重なり(左svg).join(' / '));
 
+/* いま見ている年のカーソル線 */
+var カーソルなし = Chart.資産を描く(赤字);
+ok(カーソルなし.indexOf('stroke="#33414f"') === -1, '年を指定しなければ、カーソル線は出ない');
+[0, 3, 10].forEach(function (年) {
+  if (年 >= 赤字.points.length) { return; }
+  var svgK = Chart.資産を描く(赤字, false, 年);
+  var m = /<line x1="([\d.]+)"[^>]*stroke="#33414f"/.exec(svgK);
+  ok(m !== null, '年' + 年 + 'を指定すると、カーソル線が出る（線を打ち切っている先でも出る）');
+  if (m && 年 > 0) {
+    var m0 = /<line x1="([\d.]+)"[^>]*stroke="#33414f"/.exec(Chart.資産を描く(赤字, false, 0));
+    ok(Number(m[1]) > Number(m0[1]), '年が進むほど、カーソル線は右に動く',
+      m0[1] + ' → ' + m[1]);
+  }
+});
+ok(重なり(Chart.資産を描く(赤字, false, 2)).length === 0, 'カーソル線を出しても、文字がかぶらない');
+
 /* ------------------------------------------------------------ */
 見出し('13-3. スマートフォンでの縦長のグラフ');
 
@@ -1625,7 +1641,7 @@ app.replace(/\$\('([a-z0-9-]+)'\)/g, function (_, id) { 使っているid.push(i
     /* 画面のうごきの中で作られる欄は、index.html には書かれていない */
     return id.indexOf('child-age-') !== 0 && id.indexOf('pr-') !== 0 &&
       id.indexOf('msg-') !== 0 && id.indexOf('copy-todo') !== 0 && id.indexOf('copy-rule') !== 0 &&
-      id !== 'go-training' && id !== 'balance-year';
+      id !== 'go-training' && id.indexOf('balance-') !== 0 && id !== 'curve-chart';
   })
   .forEach(function (id) {
     ok(html.indexOf('id="' + id + '"') > 0, '画面に「' + id + '」の欄がある');

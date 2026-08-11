@@ -258,22 +258,44 @@ server.listen(0, '127.0.0.1', function () {
         /* 家計のうちわけ表 */
         var 表 = d.querySelector('#stage2b-body .balance-block');
         ok(表 !== null, '家計のうちわけ表が出ている');
+        /* グラフの直下（警告カードや道筋ブロックより上）にあること */
+        var 絵 = d.getElementById('curve-chart');
+        ok(絵 !== null, 'グラフに入れものがある');
+        ok(絵.compareDocumentPosition(表) & 4, '家計の表は、グラフより下にある');
+        var カード0 = d.querySelector('#stage2b-body .alert-card');
+        if (カード0) {
+          ok(表.compareDocumentPosition(カード0) & 4, '家計の表は、警告カードより上にある');
+        }
+        var 道 = d.querySelector('#stage2b-body .path-block');
+        ok(道 !== null && (表.compareDocumentPosition(道) & 4), '家計の表は、道筋ブロックより上にある');
         var 年欄 = d.getElementById('balance-year');
-        ok(年欄 !== null, '年を選ぶ欄がある');
-        ok(年欄.options.length > 5, '年の選択肢がならんでいる', 年欄.options.length + '年ぶん');
+        ok(年欄 !== null, '年を選ぶつまみがある');
+        eq(年欄.type, 'range', '年の選び方が、左右に動かすつまみになっている');
+        eq(年欄.min, '0', 'つまみの左はしは0');
+        ok(Number(年欄.max) > 5, 'つまみの右はしまで年がならんでいる', 年欄.max);
+        ok(d.getElementById('balance-year-out') !== null, 'いま選んでいる年が数字で出ている');
+        ok(d.getElementById('balance-year-out').textContent.indexOf('歳') > 0,
+          'その数字が「◯歳」の形', d.getElementById('balance-year-out').textContent);
         ok(表.querySelector('table.balance') !== null, '表そのものが出ている');
         ok(表.textContent.indexOf('入ってくるお金') > 0, '収入の欄がある');
         ok(表.textContent.indexOf('出ていくお金') > 0, '支出の欄がある');
         ok(表.textContent.indexOf('ひと月の残り') > 0, '差引の行がある');
         ok(表.textContent.indexOf('保育料') > 0, '保育料の行がある');
         ok(表.querySelectorAll('button[data-scenario]').length >= 2, 'シナリオを切りかえるボタンがある');
-        /* 年を変えると中身が変わる */
+        /* つまみを動かすと中身が変わる（動かしている最中の input でも変わること） */
         var 前の表 = 表.querySelector('table.balance').textContent;
-        /* 選択肢の数におさまる年を選ぶ */
-        年欄.value = String(Math.min(5, 年欄.options.length - 1));
-        年欄.dispatchEvent(new w.Event('change', { bubbles: true }));
+        年欄.value = String(Math.min(5, Number(年欄.max)));
+        年欄.dispatchEvent(new w.Event('input', { bubbles: true }));
         var 後の表 = d.querySelector('#stage2b-body table.balance').textContent;
-        ok(後の表 !== 前の表, '年を変えると、表の中身が変わる');
+        ok(後の表 !== 前の表, 'つまみを動かすと、表の中身がその場で変わる');
+        ok(d.getElementById('balance-year-out').textContent.indexOf('歳') > 0,
+          '選んでいる年の表示も変わる', d.getElementById('balance-year-out').textContent);
+        /* つまみ自体は消えない（消えると指でのドラッグが途切れる） */
+        ok(d.getElementById('balance-year') === 年欄,
+          'つまみを動かしても、つまみ自体は作り直されない（ドラッグが途切れない）');
+        /* グラフに、いま見ている年のカーソル線が出る */
+        ok(d.querySelector('#curve-chart svg line[stroke="#33414f"]') !== null,
+          'グラフに、いま見ている年のたて線が出る');
         ok(d.querySelector('#stage2b-body .balance-events') !== null,
           'その年に変わることが出ている');
         /* シナリオを切りかえると変わる */

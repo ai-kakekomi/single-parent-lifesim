@@ -582,27 +582,45 @@
         'にまた下回ります。</strong>生活費が上がって、必要な額のほうが先に伸びるからです。';
     }
 
+    /* グラフのすぐ下に家計の表を置く。
+       グラフを見ながら指で年をなぞって、そのまま内訳を読めるようにするため。 */
     $('stage2b-body').innerHTML =
-      伸びしろ + 頭 +
+      伸びしろ +
       SPSChart.資産の凡例(!!(c.training && c.training.afterIncome > 0), SPSChart.一本にまとめるか(c)) +
       線の本数の注記(c) +
-      '<div class="chart-box">' + SPSChart.資産を描く(c, 狭い画面()) + '</div>' +
-      打ち切りの注記(c) + 資格ルートの説明(c) +
+      '<div class="chart-box" id="curve-chart">' + SPSChart.資産を描く(c, 狭い画面(), 選んだ年) + '</div>' +
+      打ち切りの注記(c) +
+      うちわけ表を描く(c) +
+      頭 + 資格ルートの説明(c) +
       道筋を描く(道筋(入力, データ, c, 最新判定)) +
       '<p class="band-line">' + 到達 + '</p>' +
       '<details class="explain"><summary>生活防衛資金って？（くわしく）</summary>' + 防衛資金の説明() + '</details>' +
       赤字の警告(c) +
       学費の説明(c) +
-      うちわけ表を描く(c) +
       前提のボックス(c);
+
+    /* つまみを動かしているあいだ、画面ぜんぶを作り直すと、
+       指でつかんでいるつまみ自体が消えてドラッグが途切れる。
+       だから、表とグラフの中身だけを入れかえる。 */
+    function 見ている年を反映(c2) {
+      var 並び2 = 選んだ並び(c2);
+      var 出 = $('balance-year-out');
+      if (出) { 出.textContent = 並び2[選んだ年].youngestAge + '歳'; }
+      var 体 = $('balance-body');
+      if (体) { 体.innerHTML = 表の中身(c2); }
+      var 絵 = $('curve-chart');
+      if (絵) { 絵.innerHTML = SPSChart.資産を描く(c2, 狭い画面(), 選んだ年); }
+    }
 
     var 年欄 = $('balance-year');
     if (年欄) {
+      年欄.addEventListener('input', function () {
+        選んだ年 = parseInt(this.value, 10) || 0;
+        見ている年を反映(c);
+      });
       年欄.addEventListener('change', function () {
         選んだ年 = parseInt(this.value, 10) || 0;
-        資産を描く();
-        var 先 = $('balance-year');
-        if (先 && 先.focus) { try { 先.focus(); } catch (e) { /* 気にしない */ } }
+        見ている年を反映(c);
       });
     }
     document.querySelectorAll('button[data-scenario]').forEach(function (b2) {
@@ -1000,12 +1018,50 @@
   var 選んだ年 = 0;
   var 選んだ線 = 'all';   // 'all' 全部使う ／ 'now' いまのまま ／ 'training' 資格ルート
 
-  function うちわけ表を描く(c) {
+  /** いま選んでいる年の点の並び（シナリオごと） */
+  function 選んだ並び(c) {
     var 資格 = c.training;
     if (選んだ線 === 'training' && !(資格 && 資格.afterIncome > 0)) { 選んだ線 = 'all'; }
-    var 並び = (選んだ線 === 'training') ? 資格.points : c.points;
+    return (選んだ線 === 'training') ? 資格.points : c.points;
+  }
+
+  function うちわけ表を描く(c) {
+    var 並び = 選んだ並び(c);
     if (選んだ年 >= 並び.length) { 選んだ年 = 並び.length - 1; }
     if (選んだ年 < 0) { 選んだ年 = 0; }
+    var 資格 = c.training;
+
+    var h = ['<div class="balance-block">'];
+    h.push('<h3>その年の家計を見る</h3>');
+    h.push('<p class="hint">つまみを左右に動かすと、その年に何にお金が出ていくのかが分かります。' +
+      'グラフのたて線が、いま見ている年です。</p>');
+
+    /* 年を選ぶつまみ */
+    h.push('<div class="balance-controls">');
+    h.push('<label for="balance-year">いちばん下のお子さんが</label>');
+    h.push('<output id="balance-year-out" class="balance-age">' + 並び[選んだ年].youngestAge + '歳</output>');
+    h.push('<input type="range" id="balance-year" min="0" max="' + (並び.length - 1) +
+      '" step="1" value="' + 選んだ年 + '" aria-label="見たい年を選ぶ">');
+    h.push('</div>');
+
+    h.push('<div class="balance-scenario">');
+    [['now', 'いまのまま'], ['all', '全部使う']].concat(
+      (資格 && 資格.afterIncome > 0) ? [['training', '資格を取る']] : []
+    ).forEach(function (o) {
+      h.push('<button type="button" class="' + (選んだ線 === o[0] ? 'primary' : 'ghost') +
+        '" data-scenario="' + o[0] + '" style="width:auto;margin:0;padding:.35rem .7rem;font-size:.82rem">' +
+        o[1] + '</button>');
+    });
+    h.push('</div>');
+
+    h.push('<div id="balance-body">' + 表の中身(c) + '</div>');
+    h.push('</div>');
+    return h.join('');
+  }
+
+  /** つまみを動かしたときに入れかえる部分だけ */
+  function 表の中身(c) {
+    var 並び = 選んだ並び(c);
     var pt = 並び[選んだ年];
     if (!pt) { return ''; }
     var b = (選んだ線 === 'training') ? pt.breakdown : pt.breakdown[選んだ線];
@@ -1016,34 +1072,13 @@
     b.expense.forEach(function (r) { 支出計 += r.amount; });
     var 差引 = 収入計 - 支出計;
 
-    var h = ['<div class="balance-block">'];
-    h.push('<h3>その年の家計を見る</h3>');
-    h.push('<p class="hint">グラフが下がる年を選ぶと、何にお金が出ていくのかが分かります。</p>');
-
-    /* 年と線の選び方 */
-    h.push('<div class="balance-controls">');
-    h.push('<label for="balance-year">いちばん下のお子さんが</label>');
-    h.push('<select id="balance-year">' + 並び.map(function (p2, i) {
-      return '<option value="' + i + '"' + (i === 選んだ年 ? ' selected' : '') + '>' + p2.youngestAge + '歳のとき</option>';
-    }).join('') + '</select>');
-    h.push('<span class="balance-scenario">');
-    [['now', 'いまのまま'], ['all', '全部使う']].concat(
-      (資格 && 資格.afterIncome > 0) ? [['training', '資格を取る']] : []
-    ).forEach(function (o) {
-      h.push('<button type="button" class="' + (選んだ線 === o[0] ? 'primary' : 'ghost') +
-        '" data-scenario="' + o[0] + '" style="width:auto;margin:0;padding:.35rem .7rem;font-size:.82rem">' +
-        o[1] + '</button>');
-    });
-    h.push('</span></div>');
-
-    /* この年に変わったこと */
+    var h = [];
     var できごと = その年のできごと(c, 並び, 選んだ年);
     if (できごと.length) {
       h.push('<div class="balance-events"><p class="balance-events-head">この年に変わること</p><ul>' +
         できごと.map(function (e) { return '<li>' + e + '</li>'; }).join('') + '</ul></div>');
     }
 
-    /* 表 */
     h.push('<table class="balance"><tbody>');
     h.push('<tr class="sec"><th colspan="2">入ってくるお金（ひと月）</th></tr>');
     b.income.forEach(function (r) {
@@ -1083,7 +1118,6 @@
       h.push('<p class="hint balance-minus">この年は、ひと月に ' + SPS.円(-差引) +
         ' ずつ貯金が減っていきます。</p>');
     }
-    h.push('</div>');
     return h.join('');
   }
 
