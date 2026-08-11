@@ -233,17 +233,9 @@
       <div id="stage2b-body"></div>
     </section>
 
-    <!-- ============ Stage 1 ============ -->
-    <section class="stage" id="stage1">
-      <h2 data-label="使えるかもしれない制度"></h2>
-      <p class="lead" id="stage1-summary"></p>
-      <div class="notice">
-        ここに出しているのは、<strong>全国どこでも共通の制度だけ</strong>です。
-        お住まいの市区町村だけの制度（医療費の助成、水道料金の減免、交通機関の割引など）は入っていません。
-        それは下の「AIに相談する文章」の4番で調べられます。
-      </div>
-      <div id="stage1-body"></div>
-    </section>
+
+
+
 
     <!-- ============ Stage 2 ============ -->
     <section class="stage" id="stage2">
@@ -283,10 +275,59 @@
 
       <div id="stage2-body"></div>
     </section>
+    <!-- ============ 身の安全（ステップの外。いつでも見られる） ============ -->
+    <section class="safety" id="safety">
+      <h3>身の安全のことは、お金より先です</h3>
+      <p>
+        暴力がある、生活費を渡してもらえない、居場所を知られたくない。
+        そういうときは、下の順番を待たずに、ここから先に動いてください。
+      </p>
+      <div id="safety-body"></div>
+      <p class="safety-escape">
+        この画面は、いつでも右上の「すぐ閉じる」で消せます（キーボードの Esc キーでも同じです）。
+        <button type="button" class="escape-btn">すぐ閉じる</button>
+      </p>
+    </section>
 
+    <!-- ============ つぎにやること（一本道） ============ -->
+    <div id="guide">
+      <h2 data-label="つぎにやること"></h2>
+      <p class="lead">
+        ここから先は、<strong>4つのステップを順番にたどるだけ</strong>です。
+        最後にAIへの相談文章を持ち帰るところまで来れば、今日はそれで十分です。
+      </p>
+      <div class="guide-bar">
+        <div class="dots" id="step-dots" role="list"></div>
+        <label class="all-toggle"><input type="checkbox" id="show-all"><span>ぜんぶ一度に見る</span></label>
+      </div>
+      <p class="hint" id="all-note">
+        「ぜんぶ一度に見る」を入れると、4つのステップを全部ひらいた状態になります。
+        支援している方や、2回目以降の方はこちらが早いかもしれません。この切りかえもどこにも保存されません。
+      </p>
+
+    <!-- ============ Stage 1 ============ -->
+    <section class="stage step" id="stage1" data-step="1">
+      <h3 class="step-title">① まだ使えるお金をさがす<span class="step-time">3分ほど</span></h3>
+      <p class="lead" id="stage1-summary"></p>
+      <div class="notice">
+        ここに出しているのは、<strong>全国どこでも共通の制度だけ</strong>です。
+        お住まいの市区町村だけの制度（医療費の助成、水道料金の減免、交通機関の割引など）は入っていません。
+        それは下の「AIに相談する文章」の4番で調べられます。
+      </div>
+      <div id="stage1-body"></div>
+    </section>
+    <!-- ============ ステップ2 まずやること ============ -->
+    <section class="stage step" id="stage3a" data-step="2">
+      <h3 class="step-title">② まずやることリスト<span class="step-time">2分ほど</span></h3>
+      <p class="lead">
+        ここまでの内容から、あなたが今日から動けることだけを並べました。<br>
+        <strong>全部やらなくて大丈夫です。1つ進めば、それで前に進みます。</strong>
+      </p>
+      <div id="stage3a-body"></div>
+    </section>
     <!-- ============ Stage 3 ============ -->
-    <section class="stage" id="stage3">
-      <h2 data-label="気をつけてほしいこと"></h2>
+    <section class="stage step" id="stage3" data-step="3">
+      <h3 class="step-title">③ 気をつけてほしいこと<span class="step-time">3分ほど</span></h3>
       <p class="lead">
         まず、やることだけを並べます。長い説明は折りたたんであります。見出しだけ読んで、気になるものだけ開いてください。<br>
         中身は2種類です。<strong>事実</strong>（官公庁の資料に書いてあること。出典つき）と、
@@ -294,10 +335,9 @@
       </p>
       <div id="stage3-body"></div>
     </section>
-
     <!-- ============ Stage 4 ============ -->
-    <section class="stage" id="stage4">
-      <h2 data-label="AIに相談するための文章"></h2>
+    <section class="stage step" id="stage4" data-step="4">
+      <h3 class="step-title">④ AIに相談する文章を持って帰る<span class="step-time">5分ほど</span></h3>
       <p class="lead">
         このツールは「こうしなさい」とは言いません。かわりに「こう聞けばいい」という文章を作ります。
         コピーして、お使いのAI（ChatGPT、Claude、Gemini など）に貼りつけてください。
@@ -315,7 +355,18 @@
 
       <div id="stage4-body"></div>
     </section>
+      <!-- ============ おつかれさま ============ -->
+      <section class="finish" id="finish">
+        <h3>おつかれさまでした</h3>
+        <div id="finish-body"></div>
+      </section>
+    </div>
 
+    <div class="step-bar" id="step-bar">
+      <button type="button" class="ghost" id="step-prev">もどる</button>
+      <span class="step-count" id="step-count"></span>
+      <button type="button" class="primary" id="step-next">つぎへ</button>
+    </div>
   </div>
 
   <p class="disclaimer">

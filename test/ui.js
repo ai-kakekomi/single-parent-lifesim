@@ -35,6 +35,142 @@ var 型 = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charse
 
 /* ============================================================
  * 受け入れ条件:
+ *   バランス表のあとは「つぎにやること」の一本道になっていること。
+ *   ①まだ使えるお金 → ②まずやること → ③気をつけてほしいこと
+ *   → ④AIに相談する文章（ここが終点）。
+ *   いま見ているステップ以外は畳まれ、進みぐあいが見え、
+ *   「ぜんぶ一度に見る」で従来どおり全部ひらけること。
+ *   身の安全と「すぐ閉じる」は、ステップの外にいつでもあること。
+ * ============================================================ */
+function ステップのチェック() {
+  return JSDOM.fromFile(path.join(ROOT, 'index.html'), {
+    runScripts: 'dangerously', resources: 'usable', pretendToBeVisual: true
+  }).then(function (dom) {
+    var w = dom.window, d = w.document;
+    w.Element.prototype.scrollIntoView = function () {};
+    function 畳んでいるか(id) { return d.getElementById(id).classList.contains('folded'); }
+    function 進み() { return d.getElementById('step-count').textContent; }
+
+    return 待つ(2200).then(function () {
+      d.querySelectorAll('#sample-buttons button')[0].click();
+      return 待つ(250);
+    }).then(function () {
+      /* 並び順 */
+      var 並び = ['stage1', 'stage3a', 'stage3', 'stage4'];
+      並び.forEach(function (id, i) {
+        if (i === 0) { return; }
+        ok(d.getElementById(並び[i - 1]).compareDocumentPosition(d.getElementById(id)) & 4,
+          'ステップ' + (i + 1) + '（' + id + '）は、ひとつ前のステップより後ろにある');
+      });
+      ok(d.getElementById('stage2b').compareDocumentPosition(d.getElementById('guide')) & 4,
+        '一本道は、貯金のグラフと家計の表より後ろにある');
+      ok(d.getElementById('guide').classList.contains('shown'), '計算すると、一本道の案内が出る');
+
+      /* はじめは1つめのステップだけ開いている */
+      eq(進み(), '1 / 4', 'はじめは 1 / 4 と出る');
+      eq(畳んでいるか('stage1'), false, 'はじめは①だけ開いている');
+      eq(畳んでいるか('stage3a'), true, '②は畳まれている');
+      eq(畳んでいるか('stage3'), true, '③は畳まれている');
+      eq(畳んでいるか('stage4'), true, '④は畳まれている');
+      ok(d.getElementById('step-bar').classList.contains('shown'), '下に「つぎへ」の帯が出ている');
+      eq(d.getElementById('step-prev').disabled, true, '1つめでは「もどる」は押せない');
+      eq(d.querySelectorAll('#step-dots .dot').length, 4, '進みぐあいの点が4つ出る');
+      eq(d.querySelector('#step-dots .dot.now').textContent.indexOf('1'), 0,
+        'いまいるステップの点に印が付く');
+      ok(!d.getElementById('finish').classList.contains('shown'),
+        '最後まで行く前は、まとめは出さない');
+
+      /* 各ステップに、かかる時間のめやすが書いてある */
+      eq(d.querySelectorAll('.step .step-title .step-time').length, 4,
+        '4つのステップぜんぶに、かかる時間のめやすが書いてある');
+
+      /* つぎへ、で順番に進む */
+      d.getElementById('step-next').click();
+      eq(進み(), '2 / 4', '「つぎへ」で 2 / 4 になる');
+      eq(畳んでいるか('stage3a'), false, '②が開く');
+      eq(畳んでいるか('stage1'), true, '①は畳まれる');
+      ok(d.querySelector('#stage3a-body .checklist li') !== null, '②にまずやることリストが入っている');
+      eq(d.querySelectorAll('#step-dots .dot.done').length, 1, '通りすぎたステップの点が済みになる');
+
+      d.getElementById('step-next').click();
+      eq(進み(), '3 / 4', '「つぎへ」で 3 / 4 になる');
+      ok(d.querySelector('#stage3-body .pit.red') !== null, '③に赤い注意書きが入っている');
+      ok(d.querySelector('#stage3-body .danger-list li') !== null, '③に落とし穴チェックが入っている');
+
+      d.getElementById('step-next').click();
+      eq(進み(), '4 / 4', '「つぎへ」で 4 / 4 になる');
+      eq(畳んでいるか('stage4'), false, '④が開く');
+      eq(d.querySelectorAll('#stage4-body textarea').length, 6,
+        '終点で、AIに相談する文章6本にたどり着ける');
+      eq(d.getElementById('step-next').textContent, 'おわりにする',
+        '最後のステップでは、ボタンの文字が変わる');
+
+      /* おつかれさまのまとめ */
+      ok(d.getElementById('finish').classList.contains('shown'), '最後まで来ると、まとめが出る');
+      var まとめ = d.getElementById('finish-body').textContent;
+      ok(まとめ.indexOf('今日の持ち帰り') >= 0, 'まとめに「今日の持ち帰り」が出る');
+      ok(まとめ.indexOf('AIに相談する文章') >= 0, 'まとめにAIに相談する文章のことが書いてある');
+      ok(まとめ.indexOf('最初の一歩') >= 0, 'まとめに「最初の一歩」が書いてある');
+      var 一歩め = d.querySelector('#stage3a-body .checklist li span').textContent;
+      ok(まとめ.indexOf(一歩め) >= 0,
+        '「最初の一歩」は、まずやることリストの1つめと同じ', 一歩め);
+
+      /* もどる */
+      d.getElementById('step-prev').click();
+      eq(進み(), '3 / 4', '「もどる」で1つ前にもどる');
+      ok(!d.getElementById('finish').classList.contains('shown'), 'もどると、まとめは引っこむ');
+
+      /* 点を押して、直接④へ行ける */
+      d.querySelectorAll('#step-dots .dot')[3].click();
+      eq(進み(), '4 / 4', '進みぐあいの点を押すと、そのステップへ行ける');
+      eq(畳んでいるか('stage4'), false, '押した先のステップが開く');
+
+      /* ぜんぶ一度に見る */
+      var 全部 = d.getElementById('show-all');
+      全部.checked = true;
+      全部.dispatchEvent(new w.Event('change', { bubbles: true }));
+      ['stage1', 'stage3a', 'stage3', 'stage4'].forEach(function (id) {
+        eq(畳んでいるか(id), false, '「ぜんぶ一度に見る」で ' + id + ' が開く');
+      });
+      ok(!d.getElementById('step-bar').classList.contains('shown'),
+        'ぜんぶ見るときは、「つぎへ」の帯は出さない');
+      ok(d.getElementById('finish').classList.contains('shown'),
+        'ぜんぶ見るときは、まとめも出す');
+      全部.checked = false;
+      全部.dispatchEvent(new w.Event('change', { bubbles: true }));
+      eq(畳んでいるか('stage3a'), true, '切りかえを戻すと、また一本道にもどる');
+
+      /* 身の安全と「すぐ閉じる」は、ステップの外にいつでもある */
+      var 安全 = d.getElementById('safety');
+      ok(安全.classList.contains('shown'), '身の安全の欄が出ている');
+      eq(安全.closest('.step'), null, '身の安全の欄は、ステップの中に閉じこめられていない');
+      eq(安全.closest('#guide'), null, '身の安全の欄は、一本道の外にある');
+      ok(安全.textContent.indexOf('#8008') > 0, '相談先の番号が書いてある');
+      ok(安全.textContent.indexOf('住民票') > 0, '住民票のことが書いてある');
+      ok(d.querySelectorAll('.escape-btn').length >= 2,
+        '「すぐ閉じる」は、上と身の安全の欄の両方にある');
+      d.querySelectorAll('.escape-btn').forEach(function (b) {
+        eq(b.closest('.step'), null, '「すぐ閉じる」は、ステップの中に閉じこめられていない');
+      });
+
+      /* 計算し直したら、また1つめから */
+      d.getElementById('calc').click();
+      return 待つ(200);
+    }).then(function () {
+      eq(進み(), '1 / 4', '計算し直すと、一本道は1つめにもどる');
+      /* ページの中のリンクで飛んでも、そのステップが開く */
+      var link = d.querySelector('.nav a[href="#stage3"]');
+      ok(link !== null, '「まず注意してほしいことを読む」のリンクがある');
+      link.click();
+      eq(畳んでいるか('stage3'), false, 'リンクで飛んだ先のステップが開く');
+      eq(進み(), '3 / 4', 'リンクで飛ぶと、進みぐあいもそこに合う');
+      w.close();
+    });
+  });
+}
+
+/* ============================================================
+ * 受け入れ条件:
  *   画面に出た文章の中に、HTMLのタグが「文字として」出てこないこと。
  *   （<strong> などをうっかりエスケープすると、記号がそのまま見えてしまう）
  *   同時に、利用者が自分で打ちこんだ文字は、
@@ -250,8 +386,8 @@ server.listen(0, '127.0.0.1', function () {
         ok(d.getElementById('stage2b').classList.contains('shown'), '貯金のたまり方の欄が出る');
         ok(d.getElementById('stage2b').compareDocumentPosition(d.getElementById('stage1')) & 4,
           '貯金のグラフが、制度の一覧より前に出ている');
-        ok(d.getElementById('stage1').compareDocumentPosition(d.getElementById('stage2')) & 4,
-          '制度の一覧が、離婚の比較グラフより前に出ている');
+        ok(d.getElementById('stage2').compareDocumentPosition(d.getElementById('stage1')) & 4,
+          '離婚の比較グラフは前半に置き、制度の一覧（ステップ①）はそのあとに出る');
 
 
         /* 記入例では画面を動かさない。ユーザーは自分のペースで下りていく */
@@ -625,14 +761,14 @@ server.listen(0, '127.0.0.1', function () {
         }());
 
         /* まずやること（チェックリスト） */
-        var todo = d.querySelectorAll('#stage3-body .checklist:not(.danger-list) li');
+        var todo = d.querySelectorAll('#stage3a-body .checklist li');
         ok(todo.length >= 5 && todo.length <= 7, 'まずやることが5〜7個に絞られている', todo.length + '個');
-        eq(d.querySelectorAll('#stage3-body .checklist:not(.danger-list) input[type="checkbox"]').length, todo.length,
+        eq(d.querySelectorAll('#stage3a-body .checklist input[type="checkbox"]').length, todo.length,
           'どの項目にもチェックの四角が付いている');
         ok(d.getElementById('copy-todo') !== null, 'リストをコピーするボタンがある');
-        ok(d.querySelector('#stage3-body .checklist:not(.danger-list) a.jump[href^="#prog-"]') !== null,
+        ok(d.querySelector('#stage3a-body .checklist a.jump[href^="#prog-"]') !== null,
           '該当する制度カードへのリンクが付いている');
-        var 飛び先 = d.querySelector('#stage3-body .checklist:not(.danger-list) a.jump').getAttribute('href').slice(1);
+        var 飛び先 = d.querySelector('#stage3a-body .checklist a.jump').getAttribute('href').slice(1);
         ok(d.getElementById(飛び先) !== null, 'リンク先の制度カードが実在する', 飛び先);
 
         /* 長い解説は、はじめは全部閉じている（ここは何も押す前に確かめる） */
@@ -852,9 +988,9 @@ server.listen(0, '127.0.0.1', function () {
           eq(d.getElementById('stage2-body').innerHTML, '',
             '出さないときは、中身も作らない');
           var 単親番号 = 番号();
-          ok(単親番号[単親番号.length - 1].indexOf('5.') === 0,
-            'ひとり親のときは、章の番号が5までになる', 単親番号.join(' / '));
-          ok(単親番号.some(function (t) { return t.indexOf('4. 気をつけてほしいこと') === 0; }),
+          ok(単親番号[単親番号.length - 1].indexOf('3. つぎにやること') === 0,
+            'ひとり親のときは、章の番号が3までになる', 単親番号.join(' / '));
+          ok(単親番号.some(function (t) { return t.indexOf('2. 貯金シミュレーション') === 0; }),
             '番号が飛ばずに、つめて振り直される');
 
           単親にする(false);
@@ -863,10 +999,10 @@ server.listen(0, '127.0.0.1', function () {
           ok(d.querySelectorAll('#stage2-body svg path').length >= 2,
             'そのときはグラフも描かれる');
           var 婚姻番号 = 番号();
-          ok(婚姻番号[婚姻番号.length - 1].indexOf('6.') === 0,
-            '離婚を考えているときは、章の番号が6まである', 婚姻番号.join(' / '));
-          ok(婚姻番号.some(function (t) { return t.indexOf('4. 続けた場合と、離婚した場合') === 0; }),
-            'くらべ方の章に4番がふられる');
+          ok(婚姻番号[婚姻番号.length - 1].indexOf('4. つぎにやること') === 0,
+            '離婚を考えているときは、章の番号が4まである', 婚姻番号.join(' / '));
+          ok(婚姻番号.some(function (t) { return t.indexOf('3. 続けた場合と、離婚した場合') === 0; }),
+            'くらべ方の章に3番がふられる');
 
           /* もとに戻す */
           単親にする(true);
@@ -922,7 +1058,7 @@ server.listen(0, '127.0.0.1', function () {
         w.close();
       });
     });
-  }).then(道筋のチェック).then(タグ漏れのチェック).then(function () {
+  }).then(道筋のチェック).then(タグ漏れのチェック).then(ステップのチェック).then(function () {
     server.close();
     console.log('\n============================================');
     console.log('  画面のチェック: 成功 ' + 成功 + ' 件 ／ 失敗 ' + 失敗 + ' 件');
