@@ -336,9 +336,10 @@
     /* グラフの中に置く文字は、いったんためておいて、最後に重ならないよう並べてから描く。
        大事なものから順に入れる。 */
     var 注記 = [];
-    function 注記追加(text, x, y, anchor, fill, size, 優先, クラス) {
+    function 注記追加(text, x, y, anchor, fill, size, 優先, クラス, 引き出し) {
       注記.push({ text: text, x: x, y: y, anchor: anchor || 'start', fill: fill,
-        size: size || 10, pri: (優先 == null ? 50 : 優先), cls: クラス || null });
+        size: size || 10, pri: (優先 == null ? 50 : 優先), cls: クラス || null,
+        leader: 引き出し || null });
     }
     var 一本 = 一本にまとめるか(curve);
     s.push('<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H +
@@ -377,11 +378,27 @@
     });
 
     /* --- 借りられる上限（貸金業法の総量規制）の線 --- */
+    /* --- 0円より下は2段階に分ける ---
+           0円から借入上限まで: 借金でしのいでいる領域（うすい赤）
+           借入上限より下: 法律上も借りられない領域（濃い赤） */
+    var zy = Y(0);
+    var 床y = (curve.borrowFloor != null) ? Y(curve.borrowFloor) : (上 + 高);
+    if (zy < 上 + 高) {
+      var 借金の下 = Math.min(床y, 上 + 高);
+      if (借金の下 > zy) {
+        s.push('<rect x="' + 左 + '" y="' + zy.toFixed(1) + '" width="' + 幅 + '" height="' +
+          (借金の下 - zy).toFixed(1) + '" fill="' + 色.floor + '" opacity="0.07"/>');
+        if (借金の下 - zy > 22) {
+          注記追加((縦長 ? '借金になる' : 'ここから下は借金になります'),
+            左 + 幅 - 4, zy + 14, 'end', 色.floor, 10, 46);
+        }
+      }
+    }
     if (curve.borrowFloor != null && curve.borrowFloor >= 下限 && curve.borrowFloor <= 上限) {
       var fy = Y(curve.borrowFloor);
-      /* 床から下は「そもそも存在しない金額」なので、面で塗ってしまう */
+      /* 床から下は「そもそも存在しない金額」なので、濃く塗ってしまう */
       s.push('<rect x="' + 左 + '" y="' + fy.toFixed(1) + '" width="' + 幅 + '" height="' +
-        Math.max(0, (上 + 高) - fy).toFixed(1) + '" fill="' + 色.floor + '" opacity="0.13"/>');
+        Math.max(0, (上 + 高) - fy).toFixed(1) + '" fill="' + 色.floor + '" opacity="0.20"/>');
       /* 塗りの上のふちとして、細い実線。データの線と紛れないよう点線にはしない */
       s.push('<line x1="' + 左 + '" y1="' + fy.toFixed(1) + '" x2="' + (左 + 幅) + '" y2="' + fy.toFixed(1) +
         '" stroke="' + 色.floor + '" stroke-width="1.5"/>');
@@ -503,13 +520,16 @@
     var 印を出す = !(tr && tr.afterIncome > 0 && !tr.goesNegative);
     var 印の段 = 0;
     if (印を出す) {
-      印(curve.negativeFromMonth, '底をつく');
-      印(curve.hitsBorrowFloorAtMonth, '借りられる上限');
+      /* 印は「いまのまま」の線に打つ。
+         いま何もしなかったらいつ危なくなるか、を指すものだから。
+         （制度を全部使った線に打つと、何の話なのかが伝わらない） */
+      印(一本 ? curve.negativeFromMonth : curve.negativeFromMonthNow, '底をつく');
+      印(一本 ? curve.hitsBorrowFloorAtMonth : curve.hitsBorrowFloorAtMonthNow, '借りられる上限');
     }
     /** 月の位置に印を打つ（年の折れ線だと、底をつく場所が最大1年ずれて見えるため） */
     function 印(月番号, 名) {
       if (月番号 == null || 月番号 < 0 || !月列.length || 月番号 >= 描く月数) { return; }
-      var mx = Xm(月番号), my = Y(床(月列[月番号].all));
+      var mx = Xm(月番号), my = Y(床(一本 ? 月列[月番号].all : 月列[月番号].now));
       /* 印はひし形。データの線や点と形で区別できるようにする */
       s.push('<path d="M ' + mx.toFixed(1) + ' ' + (my - 6.5).toFixed(1) +
         ' L ' + (mx + 6.5).toFixed(1) + ' ' + my.toFixed(1) +
@@ -517,14 +537,22 @@
         ' L ' + (mx - 6.5).toFixed(1) + ' ' + my.toFixed(1) + ' Z" fill="' + 色.floor +
         '" stroke="#fff" stroke-width="1.5"/>');
       /* 文字は上のあいたところに置き、細い線で印までつなぐ。
-         線のはしの名前（線の右はし）とぶつからないようにするため。 */
+         印が左のほうに寄っているときは、文字を右へずらして引き出す
+         （左はしに文字がかたまると読めなくなるため）。 */
       var ty = 上 + 26 + 印の段 * 14;
       印の段++;
-      s.push('<line x1="' + mx.toFixed(1) + '" y1="' + (ty + 4).toFixed(1) + '" x2="' + mx.toFixed(1) +
-        '" y2="' + (my - 7).toFixed(1) + '" stroke="' + 色.floor + '" stroke-width="1" opacity="0.5"/>');
       var 幅目安 = 名.length * 10;
-      var tx = Math.min(Math.max(mx, 左 + 幅目安 / 2 + 2), 左 + 幅 - 幅目安 / 2 - 2);
-      注記追加(名, tx, ty, 'middle', 色.floor, 10, 10);
+      var 左寄り = (mx < 左 + 幅 / 3);
+      var tx, 寄せ;
+      if (左寄り) {
+        寄せ = 'start';
+        tx = Math.min(mx + 26, 左 + 幅 - 幅目安 - 2);
+        if (tx < mx + 10) { tx = Math.max(左 + 2, 左 + 幅 - 幅目安 - 2); }
+      } else {
+        寄せ = 'middle';
+        tx = Math.min(Math.max(mx, 左 + 幅目安 / 2 + 2), 左 + 幅 - 幅目安 / 2 - 2);
+      }
+      注記追加(名, tx, ty, 寄せ, 色.floor, 10, 10, null, { mx: mx, my: my, 左寄り: 左寄り });
     }
 
     if (curve.startSavings > 0) {
@@ -554,6 +582,14 @@
     /* ためておいた注記を、大事なものから順に、重ならないよう並べて描く */
     注記.sort(function (a, b) { return a.pri - b.pri; });
     注記を並べる(注記, 上 + 11, 上 + 高 - 4).forEach(function (a) {
+      if (a.leader) {
+        /* 文字の位置が決まってから、印まで線を引く */
+        var lx = a.leader.左寄り ? (a.x - 5) : a.x;
+        s.push('<path d="M' + lx.toFixed(1) + ' ' + (a.y - 3).toFixed(1) +
+          ' L' + a.leader.mx.toFixed(1) + ' ' + (a.y - 3).toFixed(1) +
+          ' L' + a.leader.mx.toFixed(1) + ' ' + (a.leader.my - 7).toFixed(1) +
+          '" fill="none" stroke="' + 色.floor + '" stroke-width="1" opacity="0.5"/>');
+      }
       s.push('<text x="' + a.x.toFixed(1) + '" y="' + a.y.toFixed(1) + '" font-size="' + a.size +
         '" font-weight="700" fill="' + a.fill + '"' +
         (a.anchor !== 'start' ? ' text-anchor="' + a.anchor + '"' : '') +
@@ -573,7 +609,8 @@
       h.push('<span><span class="swatch" style="background:' + 色.withoutProg + ';opacity:.8"></span>いまのまま（細い破線）</span>');
     }
     h.push('<span><span class="swatch" style="background:' + 色.bandLine + '"></span>生活防衛資金（生活費の半年分）</span>');
-    h.push('<span><span class="swatch" style="background:' + 色.floor + ';opacity:.35"></span>借りられない領域</span>');
+    h.push('<span><span class="swatch" style="background:' + 色.floor + ';opacity:.22"></span>ここから下は借金になる</span>');
+    h.push('<span><span class="swatch" style="background:' + 色.floor + ';opacity:.55"></span>借りることもできない</span>');
     if (資格あり) {
       h.push('<span><span class="swatch" style="background:' + 色.training + '"></span>資格を取るルート（太い実線）</span>');
     }

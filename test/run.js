@@ -391,8 +391,17 @@ eq(黒字.borrowFloor, -Math.floor(3200000 / 3), '黒字でも床の値そのも
 var 床svg = Chart.資産を描く(赤字);
 ok(床svg.indexOf('法律上、これ以上は借りられません（年収の3分の1）') > 0, '床のラベルがグラフに出る');
 ok(/stroke="#a32020" stroke-width="1.5"/.test(床svg), '床は、細い実線で引かれている（データの線と紛れないよう点線にしない）');
-ok(/<rect x="\d+" y="[\d.]+" width="[\d.]+" height="[\d.]+" fill="#a32020" opacity="0.13"/.test(床svg),
-  '床から下が、赤く塗られている（存在しない領域だと一目で分かるように）');
+ok(/fill="#a32020" opacity="0.20"/.test(床svg),
+  '床から下が、濃い赤で塗られている（法律上も借りられない領域）');
+ok(/fill="#a32020" opacity="0.07"/.test(床svg),
+  '0円から床までが、うすい赤で塗られている（借金でしのぐ領域）');
+var うすい = /<rect x="\d+" y="([\d.]+)" width="[\d.]+" height="[\d.]+" fill="#a32020" opacity="0.07"/.exec(床svg);
+var 濃い = /<rect x="\d+" y="([\d.]+)" width="[\d.]+" height="[\d.]+" fill="#a32020" opacity="0.20"/.exec(床svg);
+ok(うすい && 濃い && Number(うすい[1]) < Number(濃い[1]),
+  'うすい赤のほうが上（0円のすぐ下）、濃い赤のほうが下にある',
+  うすい && 濃い ? うすい[1] + ' / ' + 濃い[1] : '');
+ok(床svg.indexOf('ここから下は借金になります') > 0 || 床svg.indexOf('借金になる') > 0,
+  'うすい赤のほうに「借金になる」と書いてある');
 var 床ラベル = /<text x="([\d.]+)" y="([\d.]+)"[^>]*>法律上、これ以上/.exec(床svg);
 ok(床ラベル !== null, '床のラベルが引ける');
 var 床線 = /<line x1="\d+" y1="([\d.]+)"[^>]*stroke="#a32020"/.exec(床svg);
@@ -1049,7 +1058,8 @@ ok(/<path d="M[^"]+" fill="none" stroke="#1c7a4a" stroke-width="1.5"/.test(資�
   '生活防衛資金は、線1本で描かれている');
 ok(Chart.資産を描く(null).indexOf('<svg') === -1, 'データがないときは絵を描かない');
 ok(Chart.資産の凡例().indexOf('生活防衛資金（生活費の半年分）') > 0, '凡例に生活防衛資金の説明がある');
-ok(Chart.資産の凡例().indexOf('借りられない領域') > 0, '凡例に赤い領域の説明がある');
+ok(Chart.資産の凡例().indexOf('ここから下は借金になる') > 0, '凡例に、うすい赤（借金の領域）の説明がある');
+ok(Chart.資産の凡例().indexOf('借りることもできない') > 0, '凡例に、濃い赤（借りられない領域）の説明がある');
 ok(Chart.資産の凡例(false, true).indexOf('いまの見通し') > 0, '線が1本のときは、凡例も1本ぶんになる');
 ok(Chart.資産の凡例(false, true).indexOf('いまのまま') === -1, '1本のときに2本ぶんの説明を出さない');
 ok(Chart.資産の凡例(false, false).indexOf('太い実線') > 0, '2本のときは、太さの違いも説明する');
@@ -1211,6 +1221,41 @@ eq(印の位置(消えたsvg).length, 0, '資格ルートで底つきが消え�
 ok(消えたsvg.indexOf('底をつく') === -1, '「底をつく」の文字も消える');
 var 消える前 = SPS.資産カーブ(Object.assign({}, 消える入力, { training: { enabled: false } }), データ);
 ok(印の位置(Chart.資産を描く(消える前)).length >= 1, '資格ルートを出す前は、印が出ている');
+
+/* 印は「いまのまま」の線に打つ */
+var 印c = SPS.資産カーブ(Object.assign({}, 入力F,
+  { myIncome: 1500000, livingCost: 95000, currentSavings: 80000, usedPrograms: [] }), データ);
+ok(印c.negativeFromMonthNow !== null, '「いまのまま」の線が底をつく月が計算されている');
+ok(印c.negativeFromMonthNow <= 印c.negativeFromMonth || 印c.negativeFromMonth === null,
+  '「いまのまま」のほうが、制度を全部使った場合より先に底をつく',
+  印c.negativeFromMonthNow + ' / ' + 印c.negativeFromMonth);
+ok(印c.monthly[印c.negativeFromMonthNow].now < 0, 'その月の「いまのまま」の値は、たしかにマイナス');
+ok(印c.monthly[印c.negativeFromMonthNow - 1].now >= 0, 'そのひとつ前の月は、まだマイナスではない');
+if (印c.hitsBorrowFloorAtMonthNow !== null) {
+  ok(印c.monthly[印c.hitsBorrowFloorAtMonthNow].now <= 印c.borrowFloor,
+    '床に当たる月の「いまのまま」の値は、床以下');
+}
+/* 印の位置が、いまのままの線の上にあること */
+var 印svg2 = Chart.資産を描く(印c);
+var ひし形 = /<path d="M ([\d.]+) ([\d.]+) L/.exec(印svg2);
+ok(ひし形 !== null, 'ひし形の印が描かれている');
+ok(!Chart.一本にまとめるか(印c), 'この例は線が2本ある（印をどちらに打つかが問題になる）');
+
+/* 印のラベルが左にかたまらないこと */
+var 左寄りc = SPS.資産カーブ(Object.assign({}, 入力F,
+  { myIncome: 1200000, livingCost: 150000, currentSavings: 0, usedPrograms: [] }), データ);
+var 左svg = Chart.資産を描く(左寄りc);
+var 印文字 = [];
+左svg.replace(/<text x="([\d.]+)" y="([\d.]+)"[^>]*>(底をつく|借りられる上限)</g,
+  function (_, x, y, 名) { 印文字.push({ x: Number(x), y: Number(y), 名: 名 }); return _; });
+ok(印文字.length >= 1, '印のラベルが出ている', String(印文字.length));
+印文字.forEach(function (t4) {
+  ok(t4.x >= 0 && t4.x <= 1200, '印のラベルが、グラフの外にはみ出していない', String(t4.x));
+});
+/* 引き出し線が引かれていること */
+ok(/<path d="M[\d.]+ [\d.]+ L[\d.]+ [\d.]+ L[\d.]+ [\d.]+" fill="none" stroke="#a32020" stroke-width="1" opacity="0.5"/.test(左svg),
+  '印のラベルから、印まで引き出し線が引かれている');
+ok(重なり(左svg).length === 0, '印のラベルを右へ引き出しても、文字がかぶらない', 重なり(左svg).join(' / '));
 
 /* ------------------------------------------------------------ */
 見出し('13-3. スマートフォンでの縦長のグラフ');

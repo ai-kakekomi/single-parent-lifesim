@@ -528,6 +528,9 @@
     var 貯金いま = 起点, 貯金全部 = 起点;
     var 到達月 = null, 到達月いま = null, 赤字になる月 = null;
     var 床に当たる月 = null, 目標を割り直す月 = null;
+    /* 「いまのまま」の線でいつ危なくなるか。警告の印は、こちらの線に打つ。
+       （制度を全部使った線に打つと、「いま何が起きるのか」が伝わらないため） */
+    var 赤字になる月いま = null, 床に当たる月いま = null;
     /* 借りられる上限（貸金業法の総量規制。年収の3分の1）。
        ここより下は、そもそも実在しない金額なので、線も目盛りもそこで止める。
        年収150万円の人に「マイナス500万円」の目盛りを見せても、
@@ -615,6 +618,8 @@
             && いま番号 > 到達月) { 目標を割り直す月 = いま番号; }
         if (赤字になる月 === null && 貯金全部 < 0) { 赤字になる月 = いま番号; }
         if (床 != null && 床に当たる月 === null && 貯金全部 <= 床) { 床に当たる月 = いま番号; }
+        if (赤字になる月いま === null && 貯金いま < 0) { 赤字になる月いま = いま番号; }
+        if (床 != null && 床に当たる月いま === null && 貯金いま <= 床) { 床に当たる月いま = いま番号; }
       }
 
       /* 大学に通う年で赤字になっていないか */
@@ -679,6 +684,10 @@
       monthly: 月ごと,
       reachMonths: 到達月,
       reachMonthsNow: 到達月いま,
+      negativeFromMonthNow: 赤字になる月いま,
+      goesNegativeNow: 赤字になる月いま !== null,
+      hitsBorrowFloorAtMonthNow: 床に当たる月いま,
+      hitsBorrowFloorNow: 床に当たる月いま !== null,
       fallsBelowSafetyAgainAtMonth: 目標を割り直す月,
       fallsBelowSafetyAgain: 目標を割り直す月 !== null,
       hitsBorrowFloorAtMonth: 床に当たる月,

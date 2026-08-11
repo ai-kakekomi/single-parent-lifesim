@@ -436,6 +436,16 @@ server.listen(0, '127.0.0.1', function () {
             'このままの前提では成り立たない領域を、描いていないと明記している');
           ok(d.querySelector('#stage2b-body svg [fill="url(#hatch)"]') !== null,
             'グラフに網かけが出ている');
+          /* 2段の言い分け（いまのまま／制度を全部使った場合） */
+          var 頭2 = カード.querySelector('.alert-head').textContent;
+          var 体2 = カード.querySelector('.alert-body').textContent;
+          ok(頭2.indexOf('いまのままだと') >= 0 || 頭2.indexOf('毎月あと') >= 0,
+            'カードの見出しが「いまのまま」か「毎月の不足」から始まる', 頭2);
+          if (頭2.indexOf('いまのままだと') >= 0) {
+            ok(体2.indexOf('使える制度を全部使え') >= 0 || 体2.indexOf('使える制度を全部使うと') >= 0,
+              '制度を全部使った場合との違いが、2段目で語られる', 体2.slice(0, 100));
+          }
+
           /* 印と、カードの文言が同じ年を指していること */
           var svg文 = d.querySelector('#stage2b-body svg').textContent;
           var 頭文 = カード.querySelector('.alert-head').textContent;

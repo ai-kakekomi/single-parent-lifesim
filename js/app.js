@@ -821,7 +821,8 @@
 
   function 不足の警告カード(c) {
     var t = c.training;
-    var 不足あり = (c.monthlyBalance < 0) || (c.goesNegative && c.shortfallMonthly);
+    var 不足あり = (c.monthlyBalance < 0) || c.goesNegativeNow ||
+      (c.goesNegative && c.shortfallMonthly);
     if (!不足あり) {
       var 入口 = (t && t.afterIncome > 0) ? ''
         : '<p class="quiet-cta"><button type="button" class="ghost" id="go-training">' +
@@ -829,13 +830,29 @@
       return '<p><strong>使える制度を全部使うと、ひと月に約' + SPS.円(c.monthlyBalance) + ' 残る計算です。</strong></p>' + 入口;
     }
 
+    /* 「いまのまま」と「制度を全部使った場合」を、2段で言い分ける。
+       グラフの印は「いまのまま」の線に打っているので、まずそちらを主語にする。 */
+    var いま底 = 月を年齢で(c, c.negativeFromMonthNow);
+    var 全部底 = 月を年齢で(c, c.negativeFromMonth);
     var 見出し, 説明;
+
     if (c.monthlyBalance < 0) {
       見出し = 'いま、毎月あと ' + SPS.円(-c.monthlyBalance) + ' 足りない状態です';
-      説明 = '使える制度を全部使ったとしても、です。ただし、ここからできることがあります。';
+      説明 = '<strong>使える制度を全部使ったとしても、足りません。</strong>' +
+        (全部底 ? 'このままだと、いちばん下のお子さんが' + 全部底 + 'に貯金が底をつきます。' : '') +
+        'ただし、ここからできることがあります。';
+    } else if (c.goesNegativeNow && !c.goesNegative) {
+      見出し = 'いまのままだと、いちばん下のお子さんが' + いま底 + 'に貯金が底をつきます';
+      説明 = '<strong>でも、使える制度を全部使えば、底をつきません。</strong>' +
+        'グラフのひし形の印が、いまのままの線が0円を割るところです。' +
+        'まだ申請していない制度を出すだけで、この危機はなくなります。';
+    } else if (c.goesNegativeNow && c.goesNegative) {
+      見出し = 'いまのままだと、いちばん下のお子さんが' + いま底 + 'に貯金が底をつきます';
+      説明 = '使える制度を全部使うと' +
+        (全部底 ? '、' + 全部底 + 'まで延びます' : '、底をつかなくなります') +
+        '。それでも足りない分は、下の手で埋めていきます。';
     } else {
-      見出し = 'いちばん下のお子さんが' + (月を年齢で(c, c.negativeFromMonth) || '') +
-        '、貯金が底をつく計算です';
+      見出し = 'いちばん下のお子さんが' + (全部底 || '') + '、貯金が底をつく計算です';
       説明 = 'いまは足りています。その時期に、毎月あと ' + SPS.円(c.shortfallMonthly) +
         ' 足りなくなる見込みです。いまのうちに手を打てば、変えられます。';
     }
@@ -847,8 +864,9 @@
     /* 資格ルートを出したあとの結果を、このカードに反映する */
     if (t && t.afterIncome > 0) {
       var 文;
-      if (!t.goesNegative && (c.goesNegative || c.monthlyBalance < 0)) {
+      if (!t.goesNegative && (c.goesNegativeNow || c.goesNegative || c.monthlyBalance < 0)) {
         文 = '<strong>資格を取るルートなら、貯金が底をつきません。</strong>' +
+          (いま底 ? 'いまのままだと' + いま底 + 'に底をつくところが、そうならなくなります。' : '') +
           (t.crossesOver
             ? (t.crossoverOffset === 0
               ? '通いはじめて1年で、いまのままの線を追い越します。'
