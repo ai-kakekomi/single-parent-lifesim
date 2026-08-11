@@ -185,6 +185,39 @@
       "last_verified": "2026-08-11"
     }
   },
+  "childcare": {
+    "note": "0歳から2歳のお子さんの保育料です。3歳から5歳は無償化されているので0円。0歳から2歳も、住民税が非課税の世帯は0円です。",
+    "applies_from_age": 0,
+    "applies_to_age": 2,
+    "note_municipality": "ここに出しているのは、国が定めた上限額です。実際の保育料は、この範囲内で市区町村が決めるので、これより安いことが多いです。",
+    "note_single_parent": "ひとり親世帯には、国基準でも軽い額が定められています（年収330万円・360万円の区分で月9,000円）。このツールはひとり親家庭を想定しているので、その額を使っています。",
+    "note_hours": "「保育標準時間」（フルタイム勤務向け）の額です。短い時間の区分だと、もう少し安くなります。",
+    "tiers": [
+      { "label": "生活保護世帯・住民税非課税世帯（年収の目安 約260万円まで）", "income_max": 2600000, "amount": 0, "single_parent_amount": 0 },
+      { "label": "所得割課税額48,600円未満（年収の目安 約330万円まで）", "income_max": 3300000, "amount": 19500, "single_parent_amount": 9000 },
+      { "label": "所得割課税額57,700円未満（年収の目安 約360万円まで）", "income_max": 3600000, "amount": 30000, "single_parent_amount": 9000 },
+      { "label": "所得割課税額97,000円未満（年収の目安 約470万円まで）", "income_max": 4700000, "amount": 30000, "single_parent_amount": 30000 },
+      { "label": "所得割課税額169,000円未満（年収の目安 約640万円まで）", "income_max": 6400000, "amount": 44500, "single_parent_amount": 44500 },
+      { "label": "所得割課税額301,000円未満（年収の目安 約930万円まで）", "income_max": 9300000, "amount": 61000, "single_parent_amount": 61000 },
+      { "label": "所得割課税額397,000円未満（年収の目安 1,130万円まで）", "income_max": 11300000, "amount": 80000, "single_parent_amount": 80000 },
+      { "label": "所得割課税額397,000円以上", "income_max": null, "amount": 104000, "single_parent_amount": 104000 }
+    ],
+    "multi_child": {
+      "note": "小学校に上がる前のお子さんが同時に保育を利用している場合、上の子から数えて2人目は半額、3人目からは0円です。",
+      "second_child_ratio": 0.5,
+      "third_child_ratio": 0,
+      "single_parent_low_income_note": "年収360万円未満程度のひとり親世帯は、2人目から0円になり、年齢の制限もなくなります。",
+      "single_parent_low_income_max": 3600000
+    },
+    "source": {
+      "law": "子ども・子育て支援法にもとづく利用者負担額。こども家庭庁「幼児教育・保育の無償化 利用者負担」（令和7年10月時点）の「国が定める利用者負担の上限額基準」（3号認定・保育標準時間）",
+      "quote": "新制度における利用者負担については、世帯の所得の状況その他の事情を勘案して定めることとされており、新制度施行前の利用者負担の水準を基に国が定める水準を限度として、実施主体である市町村が定めることとなる。",
+      "url": "https://www.cfa.go.jp/policies/kokoseido/mushouka/gaiyou/",
+      "url_detail": "https://www.cfa.go.jp/assets/contents/node/basic_page/field_ref_resources/e4b817c9-5282-4ccc-b0d5-ce15d7b5018c/0cd8a3fc/20251029_policies_hoiku_169.pdf",
+      "publisher": "こども家庭庁",
+      "last_verified": "2026-08-11"
+    }
+  },
   "living_cost_growth": {
     "note": "お子さんが大きくなると食べる量がふえるので、そのぶん生活費もふえます。年齢ごとの必要なエネルギー量の比で、食費の部分だけを増やしています。",
     "food_share": 0.3132,

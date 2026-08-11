@@ -582,6 +582,68 @@
     return p;
   }
 
+  /* ------------------------------------------------------------
+   * 0歳から2歳の保育料（ひと月）
+   *
+   *   3歳から5歳は無償化されているので0円。
+   *   0歳から2歳も、住民税が非課税の世帯は0円です。
+   *   ここで使うのは「国が定めた上限額」。実際の保育料は、
+   *   この範囲内で市区町村が決めるので、これより安いことが多いです。
+   * ---------------------------------------------------------- */
+  function 保育料(子の年齢たち, 年収, ひとり親か, 表) {
+    if (!表 || !表.tiers) { return 0; }
+    var 対象 = (子の年齢たち || []).filter(function (a) {
+      return a >= 表.applies_from_age && a <= 表.applies_to_age;
+    });
+    if (!対象.length) { return 0; }
+
+    var 段 = null;
+    for (var i = 0; i < 表.tiers.length; i++) {
+      var t = 表.tiers[i];
+      if (t.income_max === null || 年収 <= t.income_max) { 段 = t; break; }
+    }
+    if (!段) { return 0; }
+    var 基本 = ひとり親か ? 段.single_parent_amount : 段.amount;
+    if (基本 <= 0) { return 0; }
+
+    /* 小学校に上がる前のお子さんを、上から数えて2人目・3人目を軽くする。
+       年収360万円未満のひとり親世帯は、2人目から0円。 */
+    var 未就学 = (子の年齢たち || []).filter(function (a) { return a <= 5; })
+      .slice().sort(function (a, b) { return b - a; });
+    var m = 表.multi_child || {};
+    var 低所得ひとり親 = (ひとり親か && m.single_parent_low_income_max &&
+      年収 <= m.single_parent_low_income_max);
+
+    var 合計 = 0;
+    対象.forEach(function (age) {
+      /* 未就学の子のなかで、上から何番目か */
+      var 順位 = 未就学.indexOf(age) + 1;
+      var 割合 = 1;
+      if (低所得ひとり親) {
+        割合 = (順位 >= 2) ? 0 : 1;
+      } else if (順位 >= 3) {
+        割合 = (m.third_child_ratio != null) ? m.third_child_ratio : 0;
+      } else if (順位 === 2) {
+        割合 = (m.second_child_ratio != null) ? m.second_child_ratio : 0.5;
+      }
+      合計 += Math.round(基本 * 割合);
+    });
+    return 合計;
+  }
+
+  /** その年、児童扶養手当の対象になる年齢のお子さんがいるか */
+  /** 0歳から2歳のお子さんがいるか */
+  function 対象の未就学児(年齢たち, 表) {
+    if (!表) { return false; }
+    return (年齢たち || []).some(function (a) {
+      return a >= 表.applies_from_age && a <= 表.applies_to_age;
+    });
+  }
+
+  function 対象の子がいるか(年齢たち, 児扶表) {
+    return (年齢たち || []).some(function (a) { return a <= 児扶表.pay_upto_age; });
+  }
+
   function 資産カーブ(入力, データ) {
     var sim = シミュレーション(入力, データ);
     if (!sim.years.length) { return null; }
@@ -591,6 +653,8 @@
     var 成長表 = データ.living_cost_growth;
     var いまの子の年齢 = sim.years.length ? sim.years[0].childAges : [];
     var 子の人数 = (入力.children || []).length;
+    var 児扶表 = データ.programs_by_id.jido_fuyo_teate.eligibility;
+    var 児手表 = データ.programs_by_id.jido_teate.eligibility;
     var 非課税か = (給与所得(入力.myIncome) <= ((データ.training || {}).resident_tax_free_limit || 1350000));
     var プラン一覧 = 入力.plans || [];
     var 使用中 = {};
@@ -667,9 +731,52 @@
         + (使用中.jido_teate ? d.jidoTeate : 0)
         + ((使用中.hitorioya_kojo && 控除が使える) ? 控除の効果 : 0);
 
-      var 土台 = d.total - d.jidoFuyoTeate - d.jidoTeate - (控除が使える ? 控除の効果 : 0) - 今年の生活費;
+      /* 0歳から2歳の保育料（国が定めた上限額のめやす） */
+      var 今年の保育料 = 保育料(y.childAges, 入力.myIncome, !!入力.isSingleParent, データ.childcare);
+      var 土台 = d.total - d.jidoFuyoTeate - d.jidoTeate - (控除が使える ? 控除の効果 : 0)
+        - 今年の生活費 - 今年の保育料;
       var 月収支全部 = 土台 + 全部の給付 - 学費月全部;
       var 月収支いま = 土台 + いまの給付 - 学費月いま;
+
+      /* 家計のうちわけ。「なぜこの年に落ちるのか」を、あとから確かめられるようにする。
+         手取りには、ひとり親控除のぶんがすでに入っているので、いったん外に出しておく。 */
+      var 手取りのみ = d.takehome - (控除が使える ? 控除の効果 : 0);
+      function うちわけ(全部か) {
+        var 児扶 = 全部か ? d.jidoFuyoTeate : (使用中.jido_fuyo_teate ? d.jidoFuyoTeate : 0);
+        var 児手 = 全部か ? d.jidoTeate : (使用中.jido_teate ? d.jidoTeate : 0);
+        var 控除 = (控除が使える && (全部か || 使用中.hitorioya_kojo)) ? 控除の効果 : 0;
+        var 学費 = 全部か ? 学費月全部 : 学費月いま;
+        var 収入 = [
+          { key: 'takehome', name: '手取り（給料から税と社会保険料を引いたもの）', amount: 手取りのみ },
+          { key: 'jidoFuyoTeate', name: '児童扶養手当', amount: 児扶,
+            reason: (児扶 === 0 ? (d.jidoFuyoTeateStatus === 'none'
+              ? '所得が限度額をこえているため対象外'
+              : (対象の子がいるか(y.childAges, 児扶表) ? 'まだ申請していない' : '対象の年齢のお子さんがいない')) : null) },
+          { key: 'jidoTeate', name: '児童手当', amount: 児手,
+            reason: (児手 === 0 ? (児童手当(y.childAges, 児手表).monthly > 0
+              ? 'まだ申請していない' : '高校生年代までのお子さんがいない') : null) },
+          { key: 'kojo', name: 'ひとり親控除で税が軽くなるぶん', amount: 控除,
+            reason: (控除 === 0 ? (控除が使える ? 'まだ申告していない' : '所得が500万円をこえているため対象外') : null) },
+          { key: 'childSupport', name: '養育費', amount: d.childSupport,
+            reason: (d.childSupport === 0 ? '受け取っていない（取り決めをすると変わります）' : null) },
+          { key: 'parentSupport', name: '親からの援助', amount: d.parentSupport,
+            reason: (d.parentSupport === 0 ? 'なし、または終わったあと' : null) }
+        ];
+        var 支出 = [
+          { key: 'living', name: '生活費（食費・光熱費など）', amount: 今年の生活費 },
+          { key: 'housing', name: '住居費', amount: d.housing },
+          { key: 'tuition', name: '学校にかかるお金（支援を引いたあと）', amount: 学費 },
+          { key: 'childcare', name: '保育料（0歳から2歳）', amount: 今年の保育料,
+            reason: (今年の保育料 === 0 ? (対象の未就学児(y.childAges, データ.childcare)
+              ? '住民税が非課税の世帯なので0円、または2人目以降で0円'
+              : '3歳から5歳は無償化されているため0円') : null) }
+        ];
+        var 収入計 = 0, 支出計 = 0;
+        収入.forEach(function (r) { 収入計 += r.amount; });
+        支出.forEach(function (r) { 支出計 += r.amount; });
+        return { income: 収入, expense: 支出, incomeTotal: 収入計, expenseTotal: 支出計,
+          balance: 収入計 - 支出計 };
+      }
 
       /* 生活防衛資金は「その年の生活費の半年分」。
          お子さんが大きくなると生活費が上がるので、この目標も上がっていく。 */
@@ -693,9 +800,11 @@
         tuitionNow: 学.net,
         tuitionCheapest: 安.net,
         livingCost: 今年の生活費,
+        childcare: 今年の保育料,
         safetyTarget: 今年の目標,
         monthlyNow: 月収支いま,
         monthlyAll: 月収支全部,
+        breakdown: { all: うちわけ(true), now: うちわけ(false) },
         now: 貯金いま,
         all: 貯金全部
       });
@@ -920,8 +1029,9 @@
       /* お子さんが大きくなったぶん、生活費（の食費部分）がふえる。
          こちらの線も、本体のカーブと同じ扱いにそろえる。 */
       var 今年の生活費 = Math.round(生活費 * 生活費の倍率(いまの子の年齢, y.childAges, 成長表));
+      var 今年の保育料 = 保育料(y.childAges, 年収, true, データ.childcare);
       var 月収支 = 手取り月 + 児扶.monthly + 児手 + 給付 + 養育費月 + 親支援
-        - 住居 - 今年の生活費 - Math.round(学 / 12);
+        - 住居 - 今年の生活費 - Math.round(学 / 12) - 今年の保育料;
 
       /* こちらも、貯めるより先に点を置く。
          いちばん左の点は「いまの貯金」で、3本の線がそこから分かれる形にする。 */
@@ -929,7 +1039,28 @@
         offset: i, youngestAge: y.youngestAge,
         training: 訓練中, income: 年収, grant: 給付,
         livingCost: 今年の生活費,
-        monthly: 月収支, all: 貯金
+        monthly: 月収支, all: 貯金,
+        breakdown: {
+          income: [
+            { key: 'takehome', name: '手取り（' + (訓練中 ? '学校に通いながら働くぶん' : '資格を取ったあと') + '）',
+              amount: 手取り月 },
+            { key: 'grant', name: '高等職業訓練促進給付金', amount: 給付,
+              reason: (給付 === 0 ? '学校に通い終わったあとなので、もう出ません' : null) },
+            { key: 'jidoFuyoTeate', name: '児童扶養手当', amount: 児扶.monthly,
+              reason: (児扶.monthly === 0 ? '所得が限度額をこえているため対象外' : null) },
+            { key: 'jidoTeate', name: '児童手当', amount: 児手,
+              reason: (児手 === 0 ? '高校生年代までのお子さんがいない' : null) },
+            { key: 'childSupport', name: '養育費', amount: 養育費月, reason: (養育費月 === 0 ? '受け取っていない' : null) },
+            { key: 'parentSupport', name: '親からの援助', amount: 親支援,
+              reason: (親支援 === 0 ? 'なし、または終わったあと' : null) }
+          ],
+          expense: [
+            { key: 'living', name: '生活費（食費・光熱費など）', amount: 今年の生活費 },
+            { key: 'housing', name: '住居費', amount: 住居 },
+            { key: 'tuition', name: '学校にかかるお金（支援を引いたあと）', amount: Math.round(学 / 12) },
+            { key: 'childcare', name: '保育料（0歳から2歳）', amount: 今年の保育料 }
+          ]
+        }
       });
       if (谷の底 === null || 貯金 < 谷の底) { 谷の底 = 貯金; }
       if (赤字になる年 === null && 貯金 < 0) { 赤字になる年 = i; }
@@ -1106,6 +1237,7 @@
     資格ルート: 資格ルート,
     学費: 学費,
     その年の学費: その年の学費,
+    保育料: 保育料,
     学費の支援: 学費の支援,
     大学の支援割合: 大学の支援割合,
     いちばん安いプラン: いちばん安いプラン,

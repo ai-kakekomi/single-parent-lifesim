@@ -255,6 +255,36 @@ server.listen(0, '127.0.0.1', function () {
         入れる('cost-food', 40000);
         eq(d.getElementById('living-cost').value, '100000', '入れ直すと合計も変わる');
 
+        /* 家計のうちわけ表 */
+        var 表 = d.querySelector('#stage2b-body .balance-block');
+        ok(表 !== null, '家計のうちわけ表が出ている');
+        var 年欄 = d.getElementById('balance-year');
+        ok(年欄 !== null, '年を選ぶ欄がある');
+        ok(年欄.options.length > 5, '年の選択肢がならんでいる', 年欄.options.length + '年ぶん');
+        ok(表.querySelector('table.balance') !== null, '表そのものが出ている');
+        ok(表.textContent.indexOf('入ってくるお金') > 0, '収入の欄がある');
+        ok(表.textContent.indexOf('出ていくお金') > 0, '支出の欄がある');
+        ok(表.textContent.indexOf('ひと月の残り') > 0, '差引の行がある');
+        ok(表.textContent.indexOf('保育料') > 0, '保育料の行がある');
+        ok(表.querySelectorAll('button[data-scenario]').length >= 2, 'シナリオを切りかえるボタンがある');
+        /* 年を変えると中身が変わる */
+        var 前の表 = 表.querySelector('table.balance').textContent;
+        /* 選択肢の数におさまる年を選ぶ */
+        年欄.value = String(Math.min(5, 年欄.options.length - 1));
+        年欄.dispatchEvent(new w.Event('change', { bubbles: true }));
+        var 後の表 = d.querySelector('#stage2b-body table.balance').textContent;
+        ok(後の表 !== 前の表, '年を変えると、表の中身が変わる');
+        ok(d.querySelector('#stage2b-body .balance-events') !== null,
+          'その年に変わることが出ている');
+        /* シナリオを切りかえると変わる */
+        d.querySelector('#stage2b-body button[data-scenario="now"]').click();
+        var いまの表 = d.querySelector('#stage2b-body table.balance').textContent;
+        ok(いまの表 !== 後の表, 'シナリオを変えると、表の中身が変わる');
+        d.querySelector('#stage2b-body button[data-scenario="all"]').click();
+        /* 0円の項目には理由が出る */
+        ok(d.querySelector('#stage2b-body table.balance .why') !== null,
+          '0円の項目や増えた項目に、理由が書いてある');
+
         /* このグラフの前提（常設） */
         var 前提 = d.querySelector('#stage2b-body .assumption-box');
         ok(前提 !== null, '「このグラフの前提」がグラフの下に常に出ている');

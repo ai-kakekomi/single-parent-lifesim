@@ -702,6 +702,114 @@ ok(下がっていく, '生活防衛資金の線が、右肩上がりに描か�
 ok(目標y値[目標y値.length - 1] < 目標y値[0], '最後は最初より上にある');
 
 /* ------------------------------------------------------------ */
+見出し('8-3-5. 家計のうちわけ表');
+
+/* 表の合計が、カーブの月の収支とぴったり合うこと（全サンプル×全年×2シナリオ） */
+var うちわけ確認 = 0;
+見本.samples.forEach(function (sm) {
+  var 入 = Object.assign({}, sm.input, { divorced_childSupportMonthly: sm.input.childSupportMonthly });
+  var c2 = SPS.資産カーブ(入, データ);
+  c2.points.forEach(function (pt, i) {
+    ['all', 'now'].forEach(function (線) {
+      var b = pt.breakdown[線];
+      var 収 = 0, 支 = 0;
+      b.income.forEach(function (r) { 収 += r.amount; });
+      b.expense.forEach(function (r) { 支 += r.amount; });
+      var 期待 = (線 === 'all') ? pt.monthlyAll : pt.monthlyNow;
+      if (収 - 支 !== 期待) {
+        ok(false, '[' + sm.id + '] ' + pt.youngestAge + '歳・' + 線 + 'のうちわけ表の合計が、カーブの月の収支と合う',
+          (収 - 支) + ' / ' + 期待);
+      }
+      うちわけ確認++;
+    });
+  });
+});
+ok(true, 'うちわけ表の合計が、すべての年・すべての見本でカーブと一致する（' + うちわけ確認 + '通り）');
+
+/* 資格ルートのうちわけも一致すること */
+var 訓う = SPS.資産カーブ(Object.assign({}, 訓入力,
+  { training: { enabled: true, years: 2, afterIncome: 3200000 } }), データ).training;
+訓う.points.forEach(function (pt) {
+  var 収 = 0, 支 = 0;
+  pt.breakdown.income.forEach(function (r) { 収 += r.amount; });
+  pt.breakdown.expense.forEach(function (r) { 支 += r.amount; });
+  eq(収 - 支, pt.monthly, '資格ルートのうちわけも、月の収支と合う（' + pt.youngestAge + '歳）');
+});
+
+/* 0円の項目には、理由が書いてあること */
+var うち0 = 資産F.points[0].breakdown.all;
+うち0.income.forEach(function (r) {
+  if (r.amount === 0) { ok(!!r.reason, '「' + r.name + '」が0円のとき、理由が書いてある'); }
+});
+ok(うち0.income.some(function (r) { return r.key === 'jidoFuyoTeate'; }), '児童扶養手当の行がある');
+ok(うち0.income.some(function (r) { return r.key === 'kojo'; }), 'ひとり親控除の行がある');
+ok(うち0.expense.some(function (r) { return r.key === 'living'; }), '生活費の行がある');
+ok(うち0.expense.some(function (r) { return r.key === 'childcare'; }), '保育料の行がある');
+
+/* 手当が所得で消えているときの理由 */
+var 高収入 = SPS.資産カーブ(Object.assign({}, 入力F, { myIncome: 8000000 }), データ);
+var 児扶行 = 高収入.points[0].breakdown.all.income.filter(function (r) { return r.key === 'jidoFuyoTeate'; })[0];
+eq(児扶行.amount, 0, '所得が高ければ児童扶養手当は0円');
+ok(児扶行.reason.indexOf('所得') >= 0, 'その理由が「所得が限度額をこえている」と書かれる', 児扶行.reason);
+
+/* できごと（発生・消滅）が拾えること */
+var 崖入力 = { isSingleParent: true, myIncome: 1500000, children: [17], housingNow: 60000, housingAfter: 60000,
+  livingCost: 90000, currentSavings: 0, plans: [], usedPrograms: [],
+  divorced_childSupportMonthly: 0, parentSupportMonthly: 0, parentAge: 0 };
+var 崖c = SPS.資産カーブ(崖入力, データ);
+var 児扶が消える年 = null;
+崖c.points.forEach(function (pt, i) {
+  if (i > 0 && 児扶が消える年 === null) {
+    var 前 = 崖c.points[i - 1].breakdown.all.income.filter(function (r) { return r.key === 'jidoFuyoTeate'; })[0];
+    var いま = pt.breakdown.all.income.filter(function (r) { return r.key === 'jidoFuyoTeate'; })[0];
+    if (前.amount > 0 && いま.amount === 0) { 児扶が消える年 = pt.youngestAge; }
+  }
+});
+eq(児扶が消える年, 19, '児童扶養手当がなくなる年（18歳をこえた年）を、うちわけから見つけられる');
+
+/* ------------------------------------------------------------ */
+見出し('8-3-6. 0歳から2歳の保育料');
+
+var 保 = データ.childcare;
+ok(!!保, '保育料のデータがある');
+eq(保.tiers.length, 8, '国の基準は8つの階層');
+ok(保.source.url_detail.indexOf('cfa.go.jp') > 0, '出典はこども家庭庁');
+ok(/^\d{4}-\d{2}-\d{2}$/.test(保.source.last_verified), '最終確認日がある');
+ok(保.note_municipality.indexOf('市区町村が決める') > 0 || 保.note_municipality.indexOf('市区町村') > 0,
+  '実際は市区町村が決めることが書いてある');
+
+eq(SPS.保育料([3, 5], 4500000, true, 保), 0, '3歳から5歳は無償化で0円');
+eq(SPS.保育料([6, 10], 4500000, true, 保), 0, '小学生以上も0円');
+eq(SPS.保育料([0], 2000000, true, 保), 0, '住民税非課税の世帯は0円');
+eq(SPS.保育料([0], 2600000, true, 保), 0, '年収260万円ちょうどまでは0円');
+eq(SPS.保育料([0], 2600001, true, 保), 9000, '260万円を1円こえると、ひとり親は月9,000円');
+eq(SPS.保育料([0], 3300000, true, 保), 9000, '330万円までは9,000円');
+eq(SPS.保育料([0], 3600000, true, 保), 9000, '360万円までも9,000円');
+eq(SPS.保育料([0], 3600001, true, 保), 30000, '360万円をこえると30,000円');
+eq(SPS.保育料([0], 4700000, true, 保), 30000, '470万円までは30,000円');
+eq(SPS.保育料([0], 6400000, true, 保), 44500, '640万円までは44,500円');
+eq(SPS.保育料([0], 20000000, true, 保), 104000, 'いちばん上の階層は104,000円');
+/* ひとり親でない場合は、国基準のふつうの額 */
+eq(SPS.保育料([0], 3000000, false, 保), 19500, 'ひとり親でなければ19,500円');
+eq(SPS.保育料([0], 3500000, false, 保), 30000, 'ひとり親でなければ30,000円');
+/* きょうだいの軽減 */
+eq(SPS.保育料([0, 2], 4500000, true, 保), 30000 + 15000, '2人目は半額');
+eq(SPS.保育料([0, 2], 3000000, true, 保), 9000, '年収360万円未満のひとり親は、2人目から0円');
+eq(SPS.保育料([0, 1, 2], 4500000, true, 保), 30000 + 15000 + 0, '3人目からは0円');
+eq(SPS.保育料([], 4500000, true, 保), 0, 'お子さんがいなければ0円');
+eq(SPS.保育料([0], 4500000, true, null), 0, 'データがなければ0円');
+
+/* 保育料がカーブに乗ること */
+var 保入力 = Object.assign({}, 入力F, { children: [1], myIncome: 4500000, livingCost: 100000 });
+var 保c = SPS.資産カーブ(保入力, データ);
+eq(保c.points[0].childcare, 30000, '0歳から2歳のあいだは保育料がかかる');
+var 三歳の点 = 保c.points.filter(function (pt) { return pt.youngestAge === 3; })[0];
+eq(三歳の点.childcare, 0, '3歳になると保育料は0円になる（無償化）');
+ok(保c.points[0].monthlyAll < SPS.資産カーブ(
+  Object.assign({}, 保入力, { children: [3] }), データ).points[0].monthlyAll,
+  '保育料のぶんだけ、ひと月の残りが少なくなる');
+
+/* ------------------------------------------------------------ */
 見出し('8-4. 学校にかかるお金');
 
 eq(SPS.学費(3, {}, 学費表), 0, '3歳（幼稚園）は0円。無償化されているため');
@@ -1443,7 +1551,7 @@ app.replace(/\$\('([a-z0-9-]+)'\)/g, function (_, id) { 使っているid.push(i
     /* 画面のうごきの中で作られる欄は、index.html には書かれていない */
     return id.indexOf('child-age-') !== 0 && id.indexOf('pr-') !== 0 &&
       id.indexOf('msg-') !== 0 && id.indexOf('copy-todo') !== 0 && id.indexOf('copy-rule') !== 0 &&
-      id !== 'go-training';
+      id !== 'go-training' && id !== 'balance-year';
   })
   .forEach(function (id) {
     ok(html.indexOf('id="' + id + '"') > 0, '画面に「' + id + '」の欄がある');

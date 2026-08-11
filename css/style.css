@@ -462,3 +462,26 @@ ul.cost-ref .cost-ref-b { color: var(--ink-sub); }
   padding: .5rem .7rem; margin: .5rem 0; font-size: .87rem; line-height: 1.75;
 }
 .support-amount { color: var(--ok); }
+
+/* ---- 家計のうちわけ表 ---- */
+.balance-block { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem; margin: 1rem 0; }
+.balance-block h3 { margin: 0 0 .2rem; border: 0; }
+.balance-controls { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin: .6rem 0; }
+.balance-controls select { width: auto; flex: 0 0 auto; }
+.balance-scenario { display: flex; gap: .35rem; flex-wrap: wrap; margin-left: auto; }
+.balance-events { background: var(--warn-soft); border-left: 4px solid #e0b860; border-radius: 0 8px 8px 0; padding: .55rem .75rem; margin: .6rem 0; }
+.balance-events-head { margin: 0 0 .2rem; font-size: .82rem; font-weight: 700; color: var(--warn); }
+.balance-events ul { margin: 0; padding-left: 1.1rem; font-size: .87rem; }
+.balance-events li { margin-bottom: .2rem; line-height: 1.7; }
+table.balance { width: 100%; border-collapse: collapse; font-size: .87rem; margin: .5rem 0; }
+table.balance td, table.balance th { border-bottom: 1px solid var(--line); padding: .4rem .5rem; text-align: left; vertical-align: top; }
+table.balance .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+table.balance tr.sec th { background: #eef2f6; font-size: .82rem; color: var(--ink-sub); }
+table.balance tr.zero td { color: var(--ink-sub); }
+table.balance tr.sum td { font-weight: 700; background: #fafbfc; }
+table.balance tr.total td { font-weight: 700; font-size: 1rem; border-top: 2px solid var(--ink); border-bottom: 0; }
+table.balance tr.total.minus td { color: var(--danger); }
+table.balance tr.total.plus td { color: var(--ok); }
+.why { display: block; font-size: .76rem; color: var(--ink-sub); line-height: 1.6; }
+.balance-minus { color: var(--danger); font-weight: 700; }
+@media (max-width: 599px) { .balance-scenario { margin-left: 0; } }

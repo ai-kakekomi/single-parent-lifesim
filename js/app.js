@@ -593,7 +593,24 @@
       '<details class="explain"><summary>生活防衛資金って？（くわしく）</summary>' + 防衛資金の説明() + '</details>' +
       赤字の警告(c) +
       学費の説明(c) +
+      うちわけ表を描く(c) +
       前提のボックス(c);
+
+    var 年欄 = $('balance-year');
+    if (年欄) {
+      年欄.addEventListener('change', function () {
+        選んだ年 = parseInt(this.value, 10) || 0;
+        資産を描く();
+        var 先 = $('balance-year');
+        if (先 && 先.focus) { try { 先.focus(); } catch (e) { /* 気にしない */ } }
+      });
+    }
+    document.querySelectorAll('button[data-scenario]').forEach(function (b2) {
+      b2.addEventListener('click', function () {
+        選んだ線 = b2.getAttribute('data-scenario');
+        資産を描く();
+      });
+    });
 
     var cta = $('go-training');
     if (cta) { cta.addEventListener('click', 資格ルートを開く); }
@@ -974,6 +991,136 @@
     }
     return '<p class="hint"><strong>制度はすでに使いきっています。線は1本です。</strong>' +
       'このツールが自動で判定できる制度に、取りこぼしは見あたりませんでした。</p>';
+  }
+
+  /* ============================================================
+   * 家計のうちわけ表
+   *   グラフの「なぜこの年に落ちるのか」を、その年の月ごとの収支で確かめる。
+   * ============================================================ */
+  var 選んだ年 = 0;
+  var 選んだ線 = 'all';   // 'all' 全部使う ／ 'now' いまのまま ／ 'training' 資格ルート
+
+  function うちわけ表を描く(c) {
+    var 資格 = c.training;
+    if (選んだ線 === 'training' && !(資格 && 資格.afterIncome > 0)) { 選んだ線 = 'all'; }
+    var 並び = (選んだ線 === 'training') ? 資格.points : c.points;
+    if (選んだ年 >= 並び.length) { 選んだ年 = 並び.length - 1; }
+    if (選んだ年 < 0) { 選んだ年 = 0; }
+    var pt = 並び[選んだ年];
+    if (!pt) { return ''; }
+    var b = (選んだ線 === 'training') ? pt.breakdown : pt.breakdown[選んだ線];
+    if (!b) { return ''; }
+
+    var 収入計 = 0, 支出計 = 0;
+    b.income.forEach(function (r) { 収入計 += r.amount; });
+    b.expense.forEach(function (r) { 支出計 += r.amount; });
+    var 差引 = 収入計 - 支出計;
+
+    var h = ['<div class="balance-block">'];
+    h.push('<h3>その年の家計を見る</h3>');
+    h.push('<p class="hint">グラフが下がる年を選ぶと、何にお金が出ていくのかが分かります。</p>');
+
+    /* 年と線の選び方 */
+    h.push('<div class="balance-controls">');
+    h.push('<label for="balance-year">いちばん下のお子さんが</label>');
+    h.push('<select id="balance-year">' + 並び.map(function (p2, i) {
+      return '<option value="' + i + '"' + (i === 選んだ年 ? ' selected' : '') + '>' + p2.youngestAge + '歳のとき</option>';
+    }).join('') + '</select>');
+    h.push('<span class="balance-scenario">');
+    [['now', 'いまのまま'], ['all', '全部使う']].concat(
+      (資格 && 資格.afterIncome > 0) ? [['training', '資格を取る']] : []
+    ).forEach(function (o) {
+      h.push('<button type="button" class="' + (選んだ線 === o[0] ? 'primary' : 'ghost') +
+        '" data-scenario="' + o[0] + '" style="width:auto;margin:0;padding:.35rem .7rem;font-size:.82rem">' +
+        o[1] + '</button>');
+    });
+    h.push('</span></div>');
+
+    /* この年に変わったこと */
+    var できごと = その年のできごと(c, 並び, 選んだ年);
+    if (できごと.length) {
+      h.push('<div class="balance-events"><p class="balance-events-head">この年に変わること</p><ul>' +
+        できごと.map(function (e) { return '<li>' + e + '</li>'; }).join('') + '</ul></div>');
+    }
+
+    /* 表 */
+    h.push('<table class="balance"><tbody>');
+    h.push('<tr class="sec"><th colspan="2">入ってくるお金（ひと月）</th></tr>');
+    b.income.forEach(function (r) {
+      h.push('<tr' + (r.amount === 0 ? ' class="zero"' : '') + '><td>' + esc(r.name) +
+        (r.amount === 0 && r.reason ? '<span class="why">' + esc(r.reason) + '</span>' : '') +
+        '</td><td class="num">' + SPS.円(r.amount) + '</td></tr>');
+    });
+    h.push('<tr class="sum"><td>入ってくるお金の合計</td><td class="num">' + SPS.円(収入計) + '</td></tr>');
+    h.push('<tr class="sec"><th colspan="2">出ていくお金（ひと月）</th></tr>');
+    b.expense.forEach(function (r) {
+      var 追記 = '';
+      if (r.key === 'living' && c.points[0]) {
+        var 差 = r.amount - c.points[0].breakdown.all.expense[0].amount;
+        if (差 > 0) { 追記 = '<span class="why">いまより ' + SPS.円(差) + ' 多い（お子さんの成長ぶん）</span>'; }
+      }
+      if (r.key === 'childcare' && r.amount > 0 && データ.childcare) {
+        追記 = '<span class="why">' + esc(データ.childcare.note_municipality) + '</span>';
+      }
+      if (r.key === 'tuition' && pt.tuitionSupport > 0) {
+        追記 = '<span class="why">もとの額は ' + SPS.円(Math.round(pt.tuitionGross / 12)) +
+          '。制度が ' + SPS.円(Math.round(pt.tuitionSupport / 12)) + ' 助けてくれた後の額です</span>';
+      }
+      h.push('<tr' + (r.amount === 0 ? ' class="zero"' : '') + '><td>' + esc(r.name) + 追記 +
+        '</td><td class="num">' + SPS.円(r.amount) + '</td></tr>');
+    });
+    h.push('<tr class="sum"><td>出ていくお金の合計</td><td class="num">' + SPS.円(支出計) + '</td></tr>');
+    h.push('<tr class="total ' + (差引 < 0 ? 'minus' : 'plus') + '"><td>ひと月の残り</td><td class="num">' +
+      (差引 < 0 ? '−' + SPS.円(-差引) : SPS.円(差引)) + '</td></tr>');
+    h.push('</tbody></table>');
+    if (差引 < 0) {
+      h.push('<p class="hint balance-minus">この年は、ひと月に ' + SPS.円(-差引) +
+        ' ずつ貯金が減っていきます。</p>');
+    }
+    h.push('</div>');
+    return h.join('');
+  }
+
+  /** その年に、新しく始まったこと・終わったことを見つける */
+  function その年のできごと(c, 並び, i) {
+    var 出 = [];
+    if (i === 0) { return 出; }
+    var 前 = 並び[i - 1], いま = 並び[i];
+    var b1 = (選んだ線 === 'training') ? 前.breakdown : 前.breakdown[選んだ線];
+    var b2 = (選んだ線 === 'training') ? いま.breakdown : いま.breakdown[選んだ線];
+    if (!b1 || !b2) { return 出; }
+
+    b2.income.forEach(function (r, k) {
+      var 前額 = b1.income[k] ? b1.income[k].amount : 0;
+      if (前額 > 0 && r.amount === 0) {
+        出.push('<strong>' + esc(r.name) + 'がなくなります</strong>（月 ' + SPS.円(前額) + ' 減）');
+      } else if (前額 === 0 && r.amount > 0) {
+        出.push('<strong>' + esc(r.name) + 'が始まります</strong>（月 ' + SPS.円(r.amount) + ' 増）');
+      } else if (前額 > 0 && r.amount > 0 && Math.abs(r.amount - 前額) >= 3000) {
+        出.push(esc(r.name) + 'が 月 ' + SPS.円(Math.abs(r.amount - 前額)) +
+          (r.amount < 前額 ? ' 減ります' : ' ふえます'));
+      }
+    });
+    b2.expense.forEach(function (r, k) {
+      var 前額 = b1.expense[k] ? b1.expense[k].amount : 0;
+      if (Math.abs(r.amount - 前額) >= 3000) {
+        出.push(esc(r.name) + 'が 月 ' + SPS.円(Math.abs(r.amount - 前額)) +
+          (r.amount > 前額 ? ' ふえます' : ' 減ります'));
+      }
+    });
+    /* 学校の段階が変わる年は、名前で言う */
+    var 帯 = (データ.tuition || {}).bands || [];
+    (いま.childAges || []).forEach(function (age, k) {
+      帯.forEach(function (b) {
+        if (age === b.from) {
+          var プ = (最新入力.plans || [])[k] || {};
+          var 選 = プ[b.stage] || b.default;
+          var 名 = (b.choices.filter(function (ch) { return ch.value === 選; })[0] || {}).label || b.label;
+          出.push('お子さんが' + esc(b.label) + 'に入ります（' + esc(名) + '）');
+        }
+      });
+    });
+    return 出.slice(0, 4);
   }
 
   function 打ち切りの注記(c) {
