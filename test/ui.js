@@ -48,6 +48,10 @@ server.listen(0, '127.0.0.1', function () {
     var w = dom.window, d = w.document, エラー = [];
     w.addEventListener('error', function (e) { エラー.push(String(e.error || e.message)); });
 
+    /* どこへスクロールしたかを記録できるようにする（jsdom には本物がないので入れる） */
+    var 移動先 = [];
+    w.Element.prototype.scrollIntoView = function () { 移動先.push(this.id); };
+
     return 待つ(2500).then(function () {
       eq(d.getElementById('loading').style.display, 'none', 'データを読み込むと、読み込み中の表示が消える');
       var btns = d.querySelectorAll('#sample-buttons button');
@@ -90,6 +94,8 @@ server.listen(0, '127.0.0.1', function () {
           '貯金のグラフが、制度の一覧より前に出ている');
         ok(d.getElementById('stage1').compareDocumentPosition(d.getElementById('stage2')) & 4,
           '制度の一覧が、離婚の比較グラフより前に出ている');
+        eq(移動先[移動先.length - 1], 'stage2b',
+          '例を押したあと、貯金のグラフの位置まで画面が動く（制度の一覧まで飛ばない）', 移動先.join(' / '));
         eq(d.querySelectorAll('#stage2b-body svg path').length, 2, '貯金のグラフの線が2本');
         ok(d.querySelector('#stage2b-body a[href="#stage1"]') !== null,
           '差の中身（制度の一覧）へ行くリンクがある');
@@ -110,6 +116,18 @@ server.listen(0, '127.0.0.1', function () {
           '3〜6か月分という幅が、私たちの立場の表明として分けて書かれている');
         ok(d.querySelector('#stage2b-body a[href*="fsa.go.jp"]') !== null, '金融庁の出典リンクがある');
         ok(d.querySelector('#stage2b-body a[href*="shiruporuto.jp"]') !== null, '金融広報中央委員会の出典リンクがある');
+
+        /* 生活防衛資金の長い説明は、折りたたみに入っている */
+        var 帯たたみ = d.querySelector('#stage2b-body details.explain');
+        ok(帯たたみ !== null, '生活防衛資金の説明が折りたたみになっている');
+        ok(!帯たたみ.open, 'はじめは閉じている');
+        ok(帯たたみ.querySelector('summary').textContent.indexOf('生活防衛資金って？') >= 0,
+          '閉じた状態の見出しが分かりやすい', 帯たたみ.querySelector('summary').textContent);
+        ok(d.querySelector('#stage2b-body .band-line') !== null, '帯についての1行だけは、いつも見えている');
+        ok(帯たたみ.textContent.indexOf('ここにとどくまで、投資のことは考えなくていいです') > 0,
+          '断言そのものは、折りたたみの中に残っている');
+        ok(帯たたみ.querySelector('a[href*="fsa.go.jp"]') !== null, '出典も折りたたみの中にある');
+        ok(帯たたみ.querySelector('.stance') !== null, '立場表明も折りたたみの中にある');
 
         /* すでに使っている制度は「利用中」と出る */
         eq(d.querySelectorAll('#used-programs input.used-prog').length, 9, 'すでに使っている制度を申告する欄が9つある');
@@ -183,11 +201,37 @@ server.listen(0, '127.0.0.1', function () {
         ok(文.indexOf('東京都板橋区') > 0, '入力した地域が文章に入る');
         ok(文.indexOf('板橋区1-2-3') === -1, '番地のような情報は入らない');
 
+        /* 赤字の見せ方（1番目の例は毎月赤字） */
+        d.querySelectorAll('#sample-buttons button')[0].click();
+        return 待つ(300).then(function () {
+          var 本文 = d.getElementById('stage2b-body').textContent;
+          ok(本文.indexOf('毎月あと') > 0 && 本文.indexOf('足りない状態です') > 0,
+            '赤字のときは、ひと月あたりいくら足りないかを先に出す', 本文.slice(0, 120));
+          ok(d.querySelector('#stage2b-body .deficit-line') !== null, '足りない額が目立つ形で出ている');
+          ok(本文.indexOf('灰色の網かけから先は、線を描いていません') > 0,
+            'このままの前提では成り立たない領域を、描いていないと明記している');
+          ok(d.querySelector('#stage2b-body svg [fill="url(#hatch)"]') !== null,
+            'グラフに網かけが出ている');
+          var 手 = d.querySelectorAll('#stage2b-body ol.gap-list li');
+          ok(手.length >= 4, '足りないぶんを埋める手が4つ以上ならんでいる', 手.length + '個');
+          ok(本文.indexOf('借金では埋められません') > 0, '借金では埋められないと書いてある');
+          ok(本文.indexOf('カードローンやリボ払い') > 0, 'カードローン・リボ払いに触れている');
+          ok(d.querySelector('#stage2b-body ol.gap-list a[href^="#prog-"]') !== null,
+            '埋める手から、制度のカードへリンクしている');
+          ok(手[0].textContent.indexOf('養育費') >= 0,
+            '養育費が未取り決めなら、いちばん上に出す', 手[0].textContent.slice(0, 40));
+          ok(d.getElementById('stage3-body').textContent.indexOf('カードローンやリボ払いで埋めない') > 0,
+            '落とし穴チェックにも、借金で埋めない項目がある');
+        }).then(function () {
+          d.querySelectorAll('#sample-buttons button')[1].click();
+          return 待つ(300);
+        });
+      }).then(function () {
         /* 6番目の例：親の援助が終わる崖 */
         d.querySelectorAll('#sample-buttons button')[5].click();
         return 待つ(300);
       }).then(function () {
-        var 崖 = d.querySelector('#stage2-body ul.hint').textContent;
+        var 崖 = d.querySelector('#stage2-body .cliff-list').textContent;
         ok(崖.indexOf('親からの支援が終わる想定（親75歳）') > 0, '親の援助が終わる崖が画面に出る', 崖);
         ok(崖.indexOf('11歳') > 0, '親が68歳なら、いちばん下の子が11歳のときに援助が終わる', 崖);
 
@@ -196,7 +240,7 @@ server.listen(0, '127.0.0.1', function () {
         sl.value = '80';
         sl.dispatchEvent(new w.Event('input'));
         return 待つ(200).then(function () {
-          var 崖2 = d.querySelector('#stage2-body ul.hint').textContent;
+          var 崖2 = d.querySelector('#stage2-body .cliff-list').textContent;
           ok(崖2.indexOf('16歳') > 0, 'つまみを80歳にすると、崖が5年うしろにずれる', 崖2);
         });
       }).then(function () {

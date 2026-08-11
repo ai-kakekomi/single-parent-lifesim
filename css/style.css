@@ -276,3 +276,44 @@ table.compare caption { padding-bottom: .25rem; }
 .badge.used { background: var(--ok); color: #fff; }
 .prog.used { border-left-color: var(--ok); background: #fbfefc; }
 #used-programs label { text-align: left; font-size: .84rem; flex: 1 1 9rem; }
+
+/* ---- 資産カーブまわり ---- */
+.band-line {
+  background: var(--ok-soft); border-left: 4px solid var(--ok);
+  padding: .55rem .8rem; border-radius: 0 8px 8px 0; margin: .5rem 0; font-size: .92rem;
+}
+.deficit-line { font-size: 1.05rem; line-height: 1.7; }
+.hint.cutoff { background: #f1f4f7; border-radius: 8px; padding: .55rem .7rem; }
+details.explain { margin: .5rem 0 1rem; }
+details.explain > summary {
+  cursor: pointer; font-size: .88rem; font-weight: 700; color: var(--accent-dark);
+  list-style: none; padding: .5rem .7rem; background: #fff;
+  border: 1px solid var(--line); border-radius: 8px;
+}
+details.explain > summary::-webkit-details-marker { display: none; }
+details.explain > summary::before { content: '▶ '; font-size: .75rem; }
+details.explain[open] > summary::before { content: '▼ '; }
+details.explain > summary:hover { background: var(--accent-soft); }
+
+/* ---- 足りないぶんを埋める手 ---- */
+.gap-amount { font-size: 1.02rem; }
+ol.gap-list { padding-left: 1.3rem; margin: .6rem 0; }
+ol.gap-list li { margin-bottom: .7rem; font-size: .89rem; line-height: 1.7; }
+ol.gap-list li.strong { background: rgba(255,255,255,.8); border-radius: 6px; padding: .5rem .6rem; }
+ol.gap-list a { color: var(--accent-dark); }
+
+@media (max-width: 420px) {
+  .chart-box svg { min-width: 460px; }
+  .legend { font-size: .78rem; gap: .6rem; }
+}
+
+/* ---- 崖の一覧（グラフの番号に対応） ---- */
+.cliff-list { background: #fffaf0; border: 1px solid #ecd9ac; border-radius: 8px; padding: .6rem .8rem; margin: .5rem 0; }
+.cliff-head { margin: 0 0 .3rem; font-size: .82rem; font-weight: 700; color: var(--warn); }
+.cliff-list ol { margin: 0; padding-left: 0; list-style: none; counter-reset: cliff; }
+.cliff-list li { counter-increment: cliff; font-size: .87rem; margin-bottom: .25rem; display: flex; gap: .45rem; align-items: baseline; }
+.cliff-list .cliff-no::before {
+  content: counter(cliff); display: inline-flex; align-items: center; justify-content: center;
+  width: 1.15rem; height: 1.15rem; border-radius: 50%; background: var(--warn); color: #fff;
+  font-size: .7rem; font-weight: 700; flex: 0 0 auto;
+}

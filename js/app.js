@@ -272,9 +272,9 @@
     $('stage2-body').innerHTML =
       頭 + 見方の切りかえ() + 見方の説明() + SPSChart.凡例() +
       '<div class="chart-box">' + SPSChart.描く(y, 最新シミュ.cliffs, グラフの見方) + '</div>' +
-      '<p class="hint">たての線は、制度が切りかわって金額が変わるところです。グラフの上を指でなぞる（マウスを乗せる）と、その年の金額が出ます。</p>' +
-      SPSChart.表(y, グラフの見方) +
-      崖の説明(最新シミュ.cliffs) + お金以外の注意();
+      崖の説明(最新シミュ.cliffs) +
+      '<p class="hint">グラフの上を指でなぞる（マウスを乗せる）と、その年の金額が出ます。</p>' +
+      SPSChart.表(y, グラフの見方) + お金以外の注意();
 
     document.querySelectorAll('button[data-view]').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -330,9 +330,17 @@
     最新資産 = SPS.資産カーブ(入力, データ);
     var c = 最新資産;
 
-    var 頭 = (c.monthlyBalance >= 0)
-      ? '<p><strong>使える制度を全部使うと、ひと月に約' + SPS.円(c.monthlyBalance) + ' 残る計算です。</strong></p>'
-      : '<p><strong>使える制度を全部使っても、ひと月に約' + SPS.円(-c.monthlyBalance) + ' 足りません。</strong></p>';
+    var 頭;
+    if (c.monthlyBalance < 0) {
+      頭 = '<p class="deficit-line"><strong>いま、毎月あと ' + SPS.円(-c.monthlyBalance) + ' 足りない状態です。</strong>' +
+        '（使える制度を全部使ったとしても、です）</p>';
+    } else if (c.goesNegative && c.shortfallMonthly) {
+      頭 = '<p class="deficit-line"><strong>いまは足りていますが、いちばん下のお子さんが' +
+        c.points[c.negativeFromOffset].youngestAge + '歳のころに、貯金が底をつく計算です。</strong>' +
+        'その時期は、毎月あと ' + SPS.円(c.shortfallMonthly) + ' 足りません。</p>';
+    } else {
+      頭 = '<p><strong>使える制度を全部使うと、ひと月に約' + SPS.円(c.monthlyBalance) + ' 残る計算です。</strong></p>';
+    }
 
     /* いちばん見せたい数字: まだ使っていない制度でいくら変わるか */
     var 伸びしろ = '';
@@ -356,32 +364,39 @@
 
     var 到達;
     if (c.alreadyAboveSafety) {
-      到達 = '<div class="notice"><h4>生活防衛資金は、すでに貯まっています</h4>' +
-        '<p style="margin:.3rem 0">いまの貯金が、生活費の6か月分（' + SPS.円(c.safetyMax) + '）をこえています。' +
-        '<strong>ここまで来た方は、次の段階を考えはじめてもよい段階です。</strong></p>' +
-        '<p style="margin:.3rem 0">ただし、動かす前に学費の山を見てください。下のグラフで、線が帯より下に落ちる年がないかを確かめてください。' +
-        '落ちるなら、そのお金は置いておくほうが安全です。</p>' +
-        '<p style="margin:.3rem 0"><a href="#stage4">下の「2. お金の守り方の相談」の文章を、AIに聞いてみる</a></p></div>';
+      到達 = '<strong>緑の帯（生活防衛資金）は、すでに貯め終えています。</strong>' +
+        '次の段階を考えはじめてもよい段階です。';
     } else if (c.alreadyReachedSafety) {
-      到達 = '<p>いまの貯金は、生活防衛資金の帯（' + SPS.円(c.safetyMin) + 'から' + SPS.円(c.safetyMax) +
-        '）の中に入っています。<strong>まずは帯の上のほう（' + SPS.円(c.safetyMax) + '）を目指してください。</strong></p>';
+      到達 = 'いまの貯金は、緑の帯（生活防衛資金）の中に入っています。' +
+        'まずは帯の上（' + SPS.円(c.safetyMax) + '）を目指してください。';
     } else if (c.reachMonths !== null) {
-      到達 = '<p>いまのペースだと、生活防衛資金（' + SPS.円(c.safetyMin) + '）にとどくまで <strong>約' +
-        SPS.年月表示(c.reachMonths) + '</strong> です。</p>';
+      到達 = '緑の帯（生活防衛資金 ' + SPS.円(c.safetyMin) + '）にとどくまで、いまのペースで <strong>約' +
+        SPS.年月表示(c.reachMonths) + '</strong> です。';
     } else {
-      到達 = '<p>いまのペースでは、生活防衛資金（' + SPS.円(c.safetyMin) + '）にとどきません。' +
-        '下の制度の一覧と「まずやること」を1つずつ進めて、入る額をふやすことから始めてください。</p>';
+      到達 = '緑の帯（生活防衛資金 ' + SPS.円(c.safetyMin) + '）には、いまのペースではとどきません。';
     }
 
     $('stage2b-body').innerHTML =
-      伸びしろ + 頭 + 到達 + 防衛資金の説明() + SPSChart.資産の凡例() +
+      伸びしろ + 頭 + SPSChart.資産の凡例() +
       '<div class="chart-box">' + SPSChart.資産を描く(c) + '</div>' +
+      打ち切りの注記(c) +
+      '<p class="band-line">' + 到達 + '</p>' +
+      '<details class="explain"><summary>生活防衛資金って？（くわしく）</summary>' + 防衛資金の説明() + '</details>' +
+      赤字の警告(c) +
       学費の説明(c) +
       '<p class="hint">' + (c.startSavings > 0
         ? '「いまの貯金」' + SPS.円(c.startSavings) + ' を出発点にしています。'
         : 'いまの貯金を入れていないので、0円から始まるものとして描いています。') +
-      '年収は変わらないものとして計算しています。</p>' +
-      赤字の警告(c);
+      '年収は変わらないものとして計算しています。</p>';
+  }
+
+  function 打ち切りの注記(c) {
+    if (!c.truncated) { return ''; }
+    return '<p class="hint cutoff">灰色の網かけから先は、線を描いていません。' +
+      '<strong>このままの前提では成り立たない領域だからです。</strong>' +
+      '借金をずっと積み増していくことは実際にはできませんし、' +
+      'その前に、支出・収入・受けられる支援のどれかを変えることになります。' +
+      'ここから先を数字で見せると、かえって嘘になります。</p>';
   }
 
   /* ---------- 学校にかかるお金 ---------- */
@@ -414,31 +429,95 @@
     return h.join('');
   }
 
+  /* ---------- 足りないぶんを、どうやって埋めるか ----------
+     「崩れます」で終わらせず、そのぶんをどこから持ってくるかの一覧を出す。 */
   function 赤字の警告(c) {
-    var h = '';
-    if (c.goesNegative) {
-      h += '<div class="pit red"><h4>🔴 このままだと、貯金がマイナスになります</h4>' +
-        '<p>グラフの線が0円より下に行くところがあります。借金をしないと暮らせない、ということです。</p>' +
-        '<p>できることが3つあります。' +
-        '<a href="#stage1">使えていない制度を申請する</a>／' +
-        '生活費や進路の見込みを見直す／' +
-        'お住まいの地域の自立相談支援機関に相談する（' +
-        '<a href="https://minna-tunagaru.jp/ichiran/" target="_blank" rel="noopener">全国の窓口一覧</a>）。</p>' +
-        '<p>ひとりで抱えないでください。滞納してからより、いまのほうが選べる手が多いです。</p></div>';
+    if (!c.goesNegative && !c.universityDeficit) { return ''; }
+    var 入力 = 最新入力, 判定 = 最新判定;
+    var 不足 = c.shortfallMonthly || (c.monthlyBalance < 0 ? -c.monthlyBalance : 0);
+    var 判定表 = {};
+    判定.results.forEach(function (r) { 判定表[r.program.id] = r.status; });
+    var 使用中 = {};
+    (入力.usedPrograms || []).forEach(function (id) { 使用中[id] = true; });
+
+    var 手 = [];
+    function 足す(見出し, 説明, 制度id, 強調) {
+      手.push({ head: 見出し, body: 説明, prog: 制度id, strong: !!強調 });
     }
+
+    if (入力.childSupportState.indexOf('取り決めている') === -1) {
+      足す('養育費を取り決める・請求する',
+        '口約束や、取り決めなしのままになっています。ここがいちばん大きく動く可能性があります。' +
+        '公正証書にしておけば、あとから給料や預金を差し押さえられます。' +
+        '令和8年4月からは、取り決めがない場合でも一定額を請求できる仕組みが始まっています。',
+        'youikuhi', true);
+    }
+    c.gaps.forEach(function (g) {
+      var p = データ.programs_by_id[g.id];
+      足す('「' + p.name.replace(/（.*$/, '') + '」を申請する',
+        'まだ受け取っていないと答えていただきました。ひと月あたり約' + SPS.円(g.monthly) + 'です。',
+        g.id, g.monthly >= 不足);
+    });
+    if (入力.housingType === '賃貸' && 入力.housingAfter > 0) {
+      足す('住まいの費用を見直す',
+        'いまの住居費は月' + SPS.円(入力.housingAfter) + 'です。公営住宅は収入に応じて家賃が決まるので、' +
+        '民間の賃貸との差が月に数万円になることがあります。募集の時期を調べてみてください。',
+        'koei_jutaku', false);
+    }
+    if (判定表.koutou_shokugyo_kunren) {
+      足す('資格を取って、収入を上げる',
+        '学校に通う間、住民税が非課税の世帯なら月10万円（課税世帯は月70,500円）を受け取れます。' +
+        '最後の1年はさらに月4万円。通いはじめる前に相談することが必要です。',
+        'koutou_shokugyo_kunren', false);
+    }
+    if (入力.children.some(function (a) { return a >= 6 && a <= 15; })) {
+      足す('学校のお金を助けてもらう',
+        '就学援助は、児童扶養手当を受けていることを基準のひとつにしている市町村が約4分の3あります。' +
+        '年度の途中でも受け付けているところがほとんどです。',
+        'shugaku_enjo', false);
+    }
+    if (不足 >= 50000) {
+      足す('生活保護の相談に行く',
+        '足りない額が大きいときの選択肢です。生活保護は権利です。一時的に受けて、立て直してから抜けることもできます。' +
+        '「車があるから」「持ち家だから」と自分で決めず、まず福祉事務所で聞いてください。',
+        'seikatsu_hogo', false);
+    }
+    足す('お住まいの地域の相談窓口に行く',
+      '自立相談支援機関では、家計の立て直しを一緒に考えてくれます。' +
+      '<a href="https://minna-tunagaru.jp/ichiran/" target="_blank" rel="noopener">全国の窓口一覧</a>から探せます。',
+      null, false);
+
+    var h = ['<div class="pit red gap-block">'];
+    h.push('<h4>🔴 足りないぶんを、どこから持ってくるか</h4>');
+    if (不足 > 0) {
+      h.push('<p class="gap-amount">埋めたいのは <strong>ひと月あたり ' + SPS.円(不足) + '</strong> です。</p>');
+    }
+    h.push('<p><strong>借金では埋められません。</strong>カードローンやリボ払いで足りないぶんを埋めると、' +
+      '来月からは返済も足されて、もっと足りなくなります。下の手を1つずつ試してください。</p>');
+    h.push('<ol class="gap-list">');
+    手.forEach(function (o) {
+      h.push('<li' + (o.strong ? ' class="strong"' : '') + '>' +
+        '<strong>' + esc(o.head) + '</strong>' + (o.strong ? ' <span class="badge info">大きく効きます</span>' : '') +
+        '<br>' + o.body +
+        (o.prog ? '<br><a href="#prog-' + esc(o.prog) + '">この制度のくわしい説明を見る</a>' : '') + '</li>');
+    });
+    h.push('</ol>');
+    h.push('<p>全部やらなくて大丈夫です。上から1つずつで十分です。ひとりで抱えないでください。</p>');
+    h.push('</div>');
+
     if (c.universityDeficit) {
       var 修学 = データ.programs_by_id.koutou_kyoiku_shugaku_shien;
-      h += '<div class="pit red"><h4>🔴 大学に通う時期に、お金が足りなくなります</h4>' +
-        '<p>いちばん下のお子さんが' + c.universityDeficit.youngestAge + '歳のころ、貯金が0円を下回る計算です。</p>' +
-        '<p><strong>進学を決める前に、必ず「' + esc(修学.name) + '」を確認してください。</strong>' +
-        '住民税が非課税の世帯なら、私立・自宅外で返さなくてよい奨学金が年91万円、あわせて授業料が年70万円まで免除されます。' +
+      h.push('<div class="pit red"><h4>🔴 進学を決める前に、必ず確認してほしい制度があります</h4>' +
+        '<p>いちばん下のお子さんが' + c.universityDeficit.youngestAge + '歳のころ、大学のお金で貯金が底をつく計算です。</p>' +
+        '<p><strong>' + esc(修学.name) + '</strong> を使うと、住民税が非課税の世帯なら、私立・自宅外で' +
+        '返さなくてよい奨学金が年91万円、あわせて授業料が年70万円まで免除されます。' +
         'ひとり親家庭は満額の対象になることが多い制度です。</p>' +
         '<p><a href="#prog-koutou_kyoiku_shugaku_shien">この制度のくわしい説明を見る</a>／' +
         '<a href="' + esc(修学.source.url) + '" target="_blank" rel="noopener">文部科学省のページを開く</a></p>' +
         '<p class="hint">このグラフの学費には、この制度による減額を入れていません。使えれば、線はこれより上がります。</p>' +
-        '</div>';
+        '</div>');
     }
-    return h;
+    return h.join('');
   }
 
   function 防衛資金の説明() {
@@ -465,9 +544,11 @@
 
   function 崖の説明(cliffs) {
     if (!cliffs.length) { return ''; }
-    return '<h3>金額が変わるところ</h3><ul class="hint">' + cliffs.map(function (c) {
-      return '<li>いちばん下のお子さんが <strong>' + c.youngestAge + '歳</strong> のとき: ' + esc(c.label) + '</li>';
-    }).join('') + '</ul>';
+    return '<div class="cliff-list"><p class="cliff-head">グラフのたて線（金額が変わるところ）</p><ol>' +
+      cliffs.map(function (c) {
+        return '<li><span class="cliff-no">' + '</span>いちばん下のお子さんが <strong>' +
+          c.youngestAge + '歳</strong> のとき: ' + esc(c.label) + '</li>';
+      }).join('') + '</ol></div>';
   }
 
   /* ---------- Stage 3 気をつけたいこと ---------- */
@@ -730,7 +811,9 @@
     落とし穴を描く(最新入力, 最新判定);
     プロンプトを描く(最新入力, 最新判定);
     ['stage1', 'stage2', 'stage2b', 'stage3', 'stage4'].forEach(function (id) { $(id).classList.add('shown'); });
-    if ($('stage1').scrollIntoView) { $('stage1').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    /* いちばん見てほしいのは、貯金のグラフの冒頭のまとめ。そこに目線を合わせる */
+    var 先 = $('stage2b');
+    if (先 && 先.scrollIntoView) { 先.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   }
 
   /* ---------- 起動 ---------- */

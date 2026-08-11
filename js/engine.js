@@ -525,6 +525,24 @@
       });
     });
 
+    /* 赤字のときは、線をどこまで描くか。
+       マイナスに入ってから3年ぶんだけ描き、その先は
+       「このままの前提では成り立たない領域」として網かけにする。
+       現実には借金を積み続けることはできず、その前に人は何かを変えるため、
+       22歳まで直線でのばした金額を出すのは予測として不誠実だから。 */
+    var 赤字の年 = null;
+    for (var k = 0; k < points.length; k++) {
+      if (points[k].all < 0) { 赤字の年 = k; break; }
+    }
+    var 描くところまで = (赤字の年 === null) ? points.length - 1
+      : Math.min(points.length - 1, 赤字の年 + 3);
+
+    /* ひと月あたり、いくら足りないか（累積ではなく、これを主役にする） */
+    var 足りない月額 = null;
+    for (var q = 0; q < points.length; q++) {
+      if (points[q].monthlyAll < 0) { 足りない月額 = -points[q].monthlyAll; break; }
+    }
+
     var 十年 = 月ごと[Math.min(119, 月ごと.length - 1)];
     var 最後 = 月ごと[月ごと.length - 1];
 
@@ -545,6 +563,10 @@
       alreadyAboveSafety: 最初から帯の上,
       reachMonths: 到達月,
       negativeFromMonth: 赤字になる月,
+      negativeFromOffset: 赤字の年,
+      drawUntilOffset: 描くところまで,
+      truncated: 描くところまで < points.length - 1,
+      shortfallMonthly: 足りない月額,
       goesNegative: 赤字になる月 !== null,
       universityDeficit: 大学で赤字,
       monthlyBalance: points.length ? points[0].monthlyAll : 0,

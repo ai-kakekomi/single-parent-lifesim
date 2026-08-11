@@ -32,11 +32,48 @@
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  /** きりのよい目盛り幅を選ぶ */
-  function 目盛り幅(範囲) {
-    var 候補 = [1000, 2000, 5000, 10000, 20000, 25000, 50000, 100000, 200000, 500000];
-    for (var i = 0; i < 候補.length; i++) { if (範囲 / 候補[i] <= 6) { return 候補[i]; } }
-    return 1000000;
+  /* ------------------------------------------------------------
+   * 目盛りの決め方
+   *   1・2・5 に 10 のべき乗をかけた「きりのいい数」から、
+   *   目盛りの本数が5本くらいになるものを選びます。
+   *   お金のグラフなので、いちばん細かくても1万円きざみにします。
+   *   こうすると「12.7万」のような半端な目盛りが出ません。
+   * ---------------------------------------------------------- */
+  var 目盛りの候補 = [10000, 20000, 50000, 100000, 200000, 500000,
+    1000000, 2000000, 5000000, 10000000, 20000000, 50000000];
+
+  function 目盛り幅(範囲, 本数) {
+    var n = 本数 || 5;
+    for (var i = 0; i < 目盛りの候補.length; i++) {
+      if (範囲 / 目盛りの候補[i] <= n) { return 目盛りの候補[i]; }
+    }
+    return 目盛りの候補[目盛りの候補.length - 1];
+  }
+
+  /** 目盛りの値を並べる（きりのいい数だけ。最大5本くらい） */
+  function 目盛り一覧(下限, 上限, 本数) {
+    var 幅 = 目盛り幅(上限 - 下限, 本数);
+    var 出 = [];
+    for (var v = Math.ceil(下限 / 幅) * 幅; v <= 上限; v += 幅) { 出.push(v); }
+    if (下限 < 0 && 上限 > 0 && 出.indexOf(0) === -1) { 出.push(0); 出.sort(function (a, b) { return a - b; }); }
+    return 出;
+  }
+
+  /** 目盛りの文字（万円どまり。端数は出さない） */
+  function 目盛り文字(v) {
+    if (v === 0) { return '0'; }
+    var 万 = v / 10000;
+    if (Math.abs(万) >= 1000) { return (万 / 1000) + '千万'; }
+    return 万 + '万';
+  }
+
+  /** 線のはしの名前が重なるとき、上下に離す */
+  function ラベルの位置(候補) {
+    var 並び = 候補.slice().sort(function (a, b) { return a.y - b.y; });
+    for (var i = 1; i < 並び.length; i++) {
+      if (並び[i].y - 並び[i - 1].y < 14) { 並び[i].y = 並び[i - 1].y + 14; }
+    }
+    return 候補;
   }
 
   /**
@@ -51,8 +88,8 @@
     var 値 = (見方 === 'total') ? 'total' : 'perPerson';
     function V(y, key) { return y[key][値]; }
 
-    var W = Math.max(520, 60 + years.length * 46), H = 320;
-    var 左 = 66, 右 = 78, 上 = 18, 下 = 52;
+    var W = Math.max(500, 70 + years.length * 42), H = 320;
+    var 左 = 62, 右 = 66, 上 = 22, 下 = 54;
     var 幅 = W - 左 - 右, 高 = H - 上 - 下;
 
     var 全値 = [];
@@ -71,23 +108,29 @@
     s.push('<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H +
       '" role="img" aria-label="結婚を続けた場合と離婚した場合の、ひと月あたりのお金の推移">');
 
-    /* --- 横の目盛り線 --- */
-    var 幅目 = 目盛り幅(上限 - 下限);
-    var 開始 = Math.ceil(下限 / 幅目) * 幅目;
-    for (var v = 開始; v <= 上限; v += 幅目) {
+    /* --- 横の目盛り線（きりのいい数だけ。5本くらい） --- */
+    目盛り一覧(下限, 上限, 5).forEach(function (v) {
       var yy = Y(v);
       s.push('<line x1="' + 左 + '" y1="' + yy.toFixed(1) + '" x2="' + (左 + 幅) + '" y2="' + yy.toFixed(1) +
         '" stroke="' + (v === 0 ? 色.axis : 色.grid) + '" stroke-width="1"/>');
-      s.push('<text x="' + (左 - 8) + '" y="' + (yy + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="' + 色.sub + '">' +
-        Math.round(v / 10000) + '万</text>');
-    }
+      s.push('<text x="' + (左 - 8) + '" y="' + (yy + 4).toFixed(1) + '" text-anchor="end" font-size="12" fill="' + 色.sub + '">' +
+        目盛り文字(v) + '</text>');
+    });
 
-    /* --- 制度の崖（たて線） --- */
+    /* --- 制度の崖（たて線）。名前はグラフの外の一覧に出し、線には番号だけ置く。
+           番号どうしが近すぎるときは、下の段にずらしてかぶらないようにする --- */
+    var 置いた = [];
     (cliffs || []).forEach(function (c, idx) {
       var cx = X(c.offset);
-      s.push('<line x1="' + cx.toFixed(1) + '" y1="' + 上 + '" x2="' + cx.toFixed(1) + '" y2="' + (上 + 高) +
+      var 段 = 0;
+      while (置いた.some(function (q) { return q.段 === 段 && Math.abs(q.x - cx) < 20; })) { 段++; }
+      置いた.push({ x: cx, 段: 段 });
+      var cy = 上 + 7 + 段 * 20;
+      s.push('<line x1="' + cx.toFixed(1) + '" y1="' + (cy + 8).toFixed(1) + '" x2="' + cx.toFixed(1) + '" y2="' + (上 + 高) +
         '" stroke="' + 色.cliff + '" stroke-width="1.5" stroke-dasharray="3 3" opacity="0.75"/>');
-      s.push('<text x="' + (cx + 3).toFixed(1) + '" y="' + (上 + 12 + (idx % 3) * 13) + '" font-size="10" fill="' + 色.cliff + '">▼' + esc(c.label) + '</text>');
+      s.push('<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="8" fill="' + 色.cliff + '"/>');
+      s.push('<text x="' + cx.toFixed(1) + '" y="' + (cy + 4).toFixed(1) + '" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">' +
+        (idx + 1) + '</text>');
     });
 
     /* --- 横軸 --- */
@@ -95,10 +138,10 @@
     var 間引き = years.length > 14 ? 2 : 1;
     years.forEach(function (y, i) {
       if (i % 間引き !== 0 && i !== years.length - 1) { return; }
-      s.push('<text x="' + X(i).toFixed(1) + '" y="' + (上 + 高 + 16) + '" text-anchor="middle" font-size="11" fill="' + 色.sub + '">' + y.youngestAge + '</text>');
+      s.push('<text x="' + X(i).toFixed(1) + '" y="' + (上 + 高 + 17) + '" text-anchor="middle" font-size="12" fill="' + 色.sub + '">' + y.youngestAge + '</text>');
     });
-    s.push('<text x="' + (左 + 幅 / 2) + '" y="' + (H - 20) + '" text-anchor="middle" font-size="11" fill="' + 色.sub + '">いちばん下のお子さんの年齢（歳）</text>');
-    s.push('<text x="' + 左 + '" y="' + (上 - 4) + '" font-size="11" fill="' + 色.sub + '">' +
+    s.push('<text x="' + (左 + 幅 / 2) + '" y="' + (H - 18) + '" text-anchor="middle" font-size="12" fill="' + 色.sub + '">いちばん下のお子さんの年齢（歳）</text>');
+    s.push('<text x="' + 左 + '" y="' + (上 - 8) + '" font-size="12" fill="' + 色.sub + '">' +
       (値 === 'total' ? '家ぜんたいで、ひと月に使えるお金' : 'ひとりあたりに直した、ひと月のお金') + '</text>');
 
     /* --- 折れ線 --- */
@@ -114,10 +157,14 @@
     線('married', 色.married, true);
     線('divorced', 色.divorced, false);
 
-    /* --- 線のはしに名前を直接書く（凡例を探さなくても分かるように） --- */
+    /* --- 線のはしに名前を直接書く（重なるときは上下に離す） --- */
     var 末 = years.length - 1;
-    s.push('<text x="' + (X(末) + 6) + '" y="' + (Y(V(years[末], 'married')) + 4).toFixed(1) + '" font-size="11" font-weight="700" fill="' + 色.married + '">続ける</text>');
-    s.push('<text x="' + (X(末) + 6) + '" y="' + (Y(V(years[末], 'divorced')) + 4).toFixed(1) + '" font-size="11" font-weight="700" fill="' + 色.divorced + '">離婚</text>');
+    ラベルの位置([
+      { y: Y(V(years[末], 'married')) + 4, col: 色.married, 名: '続ける' },
+      { y: Y(V(years[末], 'divorced')) + 4, col: 色.divorced, 名: '離婚' }
+    ]).forEach(function (L) {
+      s.push('<text x="' + (X(末) + 7) + '" y="' + L.y.toFixed(1) + '" font-size="12" font-weight="700" fill="' + L.col + '">' + L.名 + '</text>');
+    });
 
     /* --- 指でなぞった位置の金額を出すための当たり判定 --- */
     years.forEach(function (y, i) {
@@ -168,12 +215,13 @@
     if (!curve || !curve.points.length) { return '<p class="hint">毎月の生活費を入れると、ここにグラフが出ます。</p>'; }
     var pts = curve.points;
 
-    var W = Math.max(520, 60 + pts.length * 46), H = 320;
-    var 左 = 74, 右 = 84, 上 = 18, 下 = 52;
+    var 描く数 = (curve.drawUntilOffset != null ? curve.drawUntilOffset : pts.length - 1) + 1;
+    var W = Math.max(500, 70 + pts.length * 42), H = 320;
+    var 左 = 66, 右 = 74, 上 = 22, 下 = 54;
     var 幅 = W - 左 - 右, 高 = H - 上 - 下;
 
     var 全値 = [0, curve.safetyMax, curve.startSavings];
-    pts.forEach(function (p) { 全値.push(p.all, p.now); });
+    pts.slice(0, 描く数).forEach(function (p) { 全値.push(p.all, p.now); });
     var 上限 = Math.max.apply(null, 全値), 下限 = Math.min.apply(null, 全値);
     var 余白 = Math.max((上限 - 下限) * 0.1, 100000);
     上限 += 余白; 下限 -= 余白;
@@ -199,43 +247,61 @@
         '">まずここまで貯める（生活費の3〜6か月分）</text>');
     }
 
-    /* --- 横の目盛り線 --- */
-    var 幅目 = 目盛り幅(上限 - 下限);
-    var 開始 = Math.ceil(下限 / 幅目) * 幅目;
-    for (var v = 開始; v <= 上限; v += 幅目) {
+    /* --- 横の目盛り線（きりのいい数だけ。5本くらい） --- */
+    目盛り一覧(下限, 上限, 5).forEach(function (v) {
       var yy = Y(v);
       s.push('<line x1="' + 左 + '" y1="' + yy.toFixed(1) + '" x2="' + (左 + 幅) + '" y2="' + yy.toFixed(1) +
         '" stroke="' + (v === 0 ? '#8899a6' : 色.grid) + '" stroke-width="' + (v === 0 ? 1.5 : 1) + '"/>');
-      s.push('<text x="' + (左 - 8) + '" y="' + (yy + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="' + 色.sub + '">' +
-        Math.round(v / 10000) + '万</text>');
+      s.push('<text x="' + (左 - 8) + '" y="' + (yy + 4).toFixed(1) + '" text-anchor="end" font-size="12" fill="' + 色.sub + '">' +
+        目盛り文字(v) + '</text>');
+    });
+
+    /* --- このままの前提では成り立たない領域（網かけ） --- */
+    if (curve.truncated) {
+      var 網x = X(描く数 - 1);
+      s.push('<defs><pattern id="hatch" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">' +
+        '<line x1="0" y1="0" x2="0" y2="7" stroke="#b7c2cc" stroke-width="2"/></pattern></defs>');
+      s.push('<rect x="' + 網x.toFixed(1) + '" y="' + 上 + '" width="' + (左 + 幅 - 網x).toFixed(1) + '" height="' + 高 +
+        '" fill="url(#hatch)" opacity="0.35"/>');
+      s.push('<text x="' + (網x + 8).toFixed(1) + '" y="' + (上 + 高 / 2 - 6) + '" font-size="11" font-weight="700" fill="#52616f">この先は</text>');
+      s.push('<text x="' + (網x + 8).toFixed(1) + '" y="' + (上 + 高 / 2 + 9) + '" font-size="11" font-weight="700" fill="#52616f">描いていません</text>');
     }
 
     /* --- 横軸 --- */
     var 間引き = pts.length > 14 ? 2 : 1;
     pts.forEach(function (p, i) {
       if (i % 間引き !== 0 && i !== pts.length - 1) { return; }
-      s.push('<text x="' + X(i).toFixed(1) + '" y="' + (上 + 高 + 16) + '" text-anchor="middle" font-size="11" fill="' + 色.sub + '">' + p.youngestAge + '</text>');
+      s.push('<text x="' + X(i).toFixed(1) + '" y="' + (上 + 高 + 17) + '" text-anchor="middle" font-size="12" fill="' + 色.sub + '">' + p.youngestAge + '</text>');
     });
-    s.push('<text x="' + (左 + 幅 / 2) + '" y="' + (H - 20) + '" text-anchor="middle" font-size="11" fill="' + 色.sub + '">いちばん下のお子さんの年齢（歳）</text>');
-    s.push('<text x="' + 左 + '" y="' + (上 - 4) + '" font-size="11" fill="' + 色.sub + '">たまっていく貯金</text>');
+    s.push('<text x="' + (左 + 幅 / 2) + '" y="' + (H - 18) + '" text-anchor="middle" font-size="12" fill="' + 色.sub + '">いちばん下のお子さんの年齢（歳）</text>');
+    s.push('<text x="' + 左 + '" y="' + (上 - 8) + '" font-size="12" fill="' + 色.sub + '">たまっていく貯金</text>');
 
     /* --- 折れ線 --- */
-    function 線(key, col, dash, 名) {
-      var d = pts.map(function (p, i) { return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p[key]).toFixed(1); }).join(' ');
+    var 末 = 描く数 - 1;
+    function 線(key, col, dash) {
+      var d = pts.slice(0, 描く数).map(function (p, i) { return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p[key]).toFixed(1); }).join(' ');
       s.push('<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"' +
         (dash ? ' stroke-dasharray="6 4"' : '') + '/>');
-      var 末 = pts.length - 1;
-      s.push('<text x="' + (X(末) + 6) + '" y="' + (Y(pts[末][key]) + 4).toFixed(1) + '" font-size="11" font-weight="700" fill="' + col + '">' + 名 + '</text>');
     }
-    線('now', 色.withoutProg, true, 'いまのまま');
-    線('all', 色.withProg, false, '全部使う');
+    線('now', 色.withoutProg, true);
+    線('all', 色.withProg, false);
+    ラベルの位置([
+      { y: Y(pts[末].now) + 4, col: 色.withoutProg, 名: 'いまのまま' },
+      { y: Y(pts[末].all) + 4, col: 色.withProg, 名: '全部使う' }
+    ]).forEach(function (L) {
+      var x = Math.min(X(末) + 7, W - 4);
+      s.push('<text x="' + x.toFixed(1) + '" y="' + L.y.toFixed(1) + '" font-size="12" font-weight="700" fill="' + L.col +
+        '" text-anchor="' + (X(末) > 左 + 幅 * 0.7 ? 'end' : 'start') + '">' + L.名 + '</text>');
+    });
 
     if (curve.startSavings > 0) {
-      s.push('<circle cx="' + 左 + '" cy="' + Y(curve.startSavings).toFixed(1) + '" r="4" fill="#fff" stroke="' + 色.withProg + '" stroke-width="2"/>');
-      s.push('<text x="' + (左 + 7) + '" y="' + (Y(curve.startSavings) - 7).toFixed(1) + '" font-size="10" fill="' + 色.sub + '">いまの貯金</text>');
+      var sy = Y(curve.startSavings);
+      s.push('<circle cx="' + 左 + '" cy="' + sy.toFixed(1) + '" r="4" fill="#fff" stroke="' + 色.withProg + '" stroke-width="2"/>');
+      /* 帯の説明の文とかぶらないよう、下に置く */
+      s.push('<text x="' + (左 + 8) + '" y="' + (sy + 15).toFixed(1) + '" font-size="11" fill="' + 色.sub + '">いまの貯金</text>');
     }
 
-    pts.forEach(function (p, i) {
+    pts.slice(0, 描く数).forEach(function (p, i) {
       var x0 = X(i) - 幅1 / 2, w = 幅1 || 40;
       s.push('<rect class="hit" x="' + Math.max(左, x0).toFixed(1) + '" y="' + 上 + '" width="' + w.toFixed(1) + '" height="' + 高 +
         '" fill="transparent" style="cursor:crosshair"><title>' +

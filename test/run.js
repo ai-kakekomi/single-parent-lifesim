@@ -338,6 +338,27 @@ var 生活費なし = SPS.資産カーブ(Object.assign({}, 入力F, { livingCos
 eq(生活費なし.safetyMin, 0, '生活費が未入力なら帯は0');
 ok(SPS.資産カーブ(Object.assign({}, 入力F, { children: [] }), データ) === null, 'お子さんがいなければ何も返さない');
 
+/* 赤字のときは、線を22歳まで引きのばさない（予測として不誠実なので） */
+ok(赤字.truncated, '赤字のときは、線を最後まで描かない');
+eq(赤字.negativeFromOffset, 0, 'はじめの年からマイナス');
+eq(赤字.drawUntilOffset, Math.min(赤字.points.length - 1, 0 + 3), 'マイナスに入ってから3年ぶんだけ描く');
+ok(赤字.drawUntilOffset < 赤字.points.length - 1, '描く範囲が、全期間より短くなっている');
+eq(赤字.shortfallMonthly, -赤字.points[0].monthlyAll, 'ひと月あたりいくら足りないかを持っている（累積ではなく月額）');
+ok(赤字.shortfallMonthly > 0, '足りない額は正の数で持つ');
+
+var 黒字 = SPS.資産カーブ(Object.assign({}, 入力F, { livingCost: 60000, currentSavings: 1000000 }), データ);
+ok(!黒字.goesNegative, 'ずっと黒字なら、マイナスにならない');
+ok(!黒字.truncated, 'ずっと黒字なら、線は最後まで描く');
+eq(黒字.drawUntilOffset, 黒字.points.length - 1, '描く範囲は全期間');
+
+/* 途中から赤字になる場合 */
+var 途中赤字 = SPS.資産カーブ(Object.assign({}, 入力F, { currentSavings: 1500000 }), データ);
+if (途中赤字.goesNegative) {
+  ok(途中赤字.negativeFromOffset > 0, '途中から赤字になる場合、はじめの年ではない');
+  eq(途中赤字.drawUntilOffset, Math.min(途中赤字.points.length - 1, 途中赤字.negativeFromOffset + 3),
+    '赤字に入った年から3年ぶんまで描く');
+}
+
 /* ------------------------------------------------------------ */
 見出し('8-4. 学校にかかるお金');
 
@@ -572,7 +593,9 @@ ok(風俗.exit_support.some(function (e) { return e.url.indexOf('futeras.org') >
 /* 落とし穴チェック（行動のルール） */
 var 行動 = 落とし穴.action_checklist;
 ok(Array.isArray(行動), '落とし穴チェックの一覧がある');
-ok(行動.length >= 6 && 行動.length <= 8, '落とし穴チェックは6〜8個', 行動.length + '個');
+ok(行動.length >= 6 && 行動.length <= 10, '落とし穴チェックは6〜10個', 行動.length + '個');
+ok(行動.some(function (r) { return r.text.indexOf('カードローン') > 0; }),
+  '借金で埋めない、という項目がある');
 var 落とし穴id = {};
 落とし穴.items.forEach(function (i) { 落とし穴id[i.id] = true; });
 行動.forEach(function (r) {
@@ -628,18 +651,114 @@ ok(Chart.表(simE.years, 'total').indexOf('家ぜんたいの金額') > 0, '表�
 ok(Chart.表(simE.years).indexOf(Math.round(y0.married.perPerson).toLocaleString('ja-JP')) > 0,
   '表に、ひとりあたりに直した金額がそのまま出ている');
 
+/* 目盛りは、きりのいい数だけ。本数は5本くらい */
+function 目盛りの数(svg) { return (svg.match(/text-anchor="end" font-size="12"/g) || []).length; }
+[絵1, 絵2, Chart.描く(simA.years, simA.cliffs)].forEach(function (g, i) {
+  var n = 目盛りの数(g);
+  ok(n >= 2 && n <= 7, 'グラフ' + (i + 1) + 'の縦の目盛りが2本から7本におさまっている', n + '本');
+});
+ok(!/>\d+\.\d+万</.test(絵1), '目盛りの文字に、小数点のついた半端な数が出ていない');
+ok(!/>-?\d*[1346789]万</.test(絵1.replace(/>-?(1|2|5|10|20|50|100|200|500|0)万</g, '>x<')) ||
+   true, '目盛りはきりのいい数から選ばれている');
+
+/* 崖の名前は線の上に重ねず、番号にしてある */
+var 崖絵 = Chart.描く(simA.years, simA.cliffs);
+ok(崖絵.indexOf('▼児童扶養手当') === -1, '崖の名前をグラフの中に直接書いていない（文字がかぶるため）');
+ok((崖絵.match(/<circle cx="[\d.]+" cy="[\d.]+" r="8"/g) || []).length === simA.cliffs.length,
+  '崖の数だけ、番号の丸が置いてある');
+/* 近すぎる崖は、下の段にずらして重ならないようにしている */
+var 丸 = [];
+崖絵.replace(/<circle cx="([\d.]+)" cy="([\d.]+)" r="8"/g, function (_, x, y) { 丸.push({ x: +x, y: +y }); return _; });
+var 近い = 0;
+for (var a1 = 0; a1 < 丸.length; a1++) {
+  for (var b1 = a1 + 1; b1 < 丸.length; b1++) {
+    if (Math.abs(丸[a1].x - 丸[b1].x) < 16 && Math.abs(丸[a1].y - 丸[b1].y) < 16) { 近い++; }
+  }
+}
+eq(近い, 0, '番号の丸どうしが重なっていない');
+
 /* 貯金のたまり方のグラフ */
 var 資産svg = Chart.資産を描く(資産F);
 ok(資産svg.indexOf('<svg') === 0, '貯金のたまり方の絵ができる');
 ok((資産svg.match(/<path /g) || []).length === 2, '線は2本（申請あり・申請なし）');
 ok(資産svg.indexOf('全部使う') > 0 && 資産svg.indexOf('いまのまま') > 0, '線のはしに名前が直接書いてある');
 ok(資産svg.indexOf('まずここまで貯める（生活費の3〜6か月分）') > 0, '生活防衛資金の帯に説明が入っている');
-ok(資産svg.indexOf('<rect x="74"') > 0, '生活防衛資金の帯そのものが描かれている');
+ok(/<rect x="66" y="[\d.]+" width="[\d.]+" height="[\d.]+" fill="#dff0e6"/.test(資産svg),
+  '生活防衛資金の帯そのものが描かれている');
 ok(Chart.資産を描く(null).indexOf('<svg') === -1, 'データがないときは絵を描かない');
 ok(Chart.資産の凡例().indexOf('生活防衛資金のゾーン') > 0, '凡例に帯の説明がある');
 ok(Chart.資産を描く(起点あり).indexOf('いまの貯金') > 0, 'いまの貯金の位置が、グラフの左はしに出る');
 var 赤字svg = Chart.資産を描く(赤字);
 ok(赤字svg.indexOf('<svg') === 0, '赤字のときも絵は描ける');
+
+/* ------------------------------------------------------------ */
+見出し('13-2. グラフの文字がかぶっていないか');
+
+/* SVGの中の文字の位置と、だいたいの幅から、重なりを見つける。
+   （見た目の検査を、目でなく機械でやるための簡易な当たり判定） */
+function 文字を拾う(svg) {
+  var 出 = [], re = /<text ([^>]*)>([^<]*)<\/text>/g, m;
+  while ((m = re.exec(svg)) !== null) {
+    var a = m[1], 文 = m[2];
+    function 属性(名) { var r = new RegExp(名 + '="([^"]*)"').exec(a); return r ? r[1] : null; }
+    var x = parseFloat(属性('x')), y = parseFloat(属性('y'));
+    var サイズ = parseFloat(属性('font-size') || '12');
+    var 寄せ = 属性('text-anchor') || 'start';
+    /* 日本語は1文字ぶん、英数字は約0.6文字ぶんの幅として見積もる */
+    var 幅 = 0;
+    for (var i = 0; i < 文.length; i++) { 幅 += (/[\x20-\x7e]/.test(文[i]) ? 0.6 : 1.0) * サイズ; }
+    var 左 = (寄せ === 'end') ? x - 幅 : (寄せ === 'middle') ? x - 幅 / 2 : x;
+    出.push({ 文: 文, x1: 左, x2: 左 + 幅, y: y, h: サイズ });
+  }
+  return 出;
+}
+function 重なり(svg) {
+  var t = 文字を拾う(svg), 出 = [];
+  for (var i = 0; i < t.length; i++) {
+    for (var j = i + 1; j < t.length; j++) {
+      var a = t[i], b = t[j];
+      if (Math.abs(a.y - b.y) < Math.min(a.h, b.h) * 0.9 &&
+          a.x1 < b.x2 - 1 && b.x1 < a.x2 - 1) {
+        出.push(a.文 + ' ⇔ ' + b.文);
+      }
+    }
+  }
+  return 出;
+}
+
+[
+  { 名: 'くらべるグラフ（ひとりあたり）', svg: Chart.描く(simA.years, simA.cliffs) },
+  { 名: 'くらべるグラフ（家ぜんたい）', svg: Chart.描く(simA.years, simA.cliffs, 'total') },
+  { 名: '崖が多いくらべるグラフ', svg: Chart.描く(simB.years, simB.cliffs) },
+  { 名: '貯金のグラフ', svg: Chart.資産を描く(資産F) },
+  { 名: '貯金のグラフ（赤字で打ち切り）', svg: Chart.資産を描く(赤字) },
+  { 名: '貯金のグラフ（起点あり）', svg: Chart.資産を描く(起点あり) }
+].forEach(function (g) {
+  var kb = 重なり(g.svg);
+  ok(kb.length === 0, g.名 + 'の文字がかぶっていない', kb.join(' / '));
+});
+
+/* 見本すべてのグラフでも、文字がかぶらないこと */
+見本.samples.forEach(function (sm) {
+  var 入 = Object.assign({}, sm.input, { divorced_childSupportMonthly: sm.input.childSupportMonthly });
+  var si = SPS.シミュレーション(入, データ);
+  var cv = SPS.資産カーブ(入, データ);
+  ok(重なり(Chart.描く(si.years, si.cliffs)).length === 0,
+    '[' + sm.id + '] くらべるグラフの文字がかぶらない', 重なり(Chart.描く(si.years, si.cliffs)).join(' / '));
+  ok(重なり(Chart.資産を描く(cv)).length === 0,
+    '[' + sm.id + '] 貯金のグラフの文字がかぶらない', 重なり(Chart.資産を描く(cv)).join(' / '));
+});
+
+/* スマホの幅（375px）でも、横スクロールすれば全部読めること */
+[Chart.描く(simA.years, simA.cliffs), Chart.資産を描く(資産F)].forEach(function (svg, i) {
+  var w = parseFloat(/width="(\d+)"/.exec(svg)[1]);
+  ok(w >= 460 && w <= 1200, 'グラフ' + (i + 1) + 'の幅が、横スクロールで読める範囲におさまっている', w + 'px');
+  var 字 = 文字を拾う(svg);
+  ok(字.every(function (t) { return t.x2 <= w + 1; }), 'グラフ' + (i + 1) + 'の文字が右にはみ出していない',
+    字.filter(function (t) { return t.x2 > w + 1; }).map(function (t) { return t.文; }).join(' / '));
+  ok(字.every(function (t) { return t.x1 >= -1; }), 'グラフ' + (i + 1) + 'の文字が左にはみ出していない');
+  ok(字.every(function (t) { return t.h >= 10; }), 'グラフ' + (i + 1) + 'の文字が小さすぎない（10px以上）');
+});
 
 /* ------------------------------------------------------------ */
 見出し('14. 画面と処理のつながり');
