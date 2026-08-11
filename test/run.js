@@ -885,6 +885,50 @@ function 重なり(svg) {
 });
 
 /* ------------------------------------------------------------ */
+見出し('13-3. スマートフォンでの縦長のグラフ');
+
+var 縦A = Chart.描く(simA.years, simA.cliffs, 'perPerson', true);
+var 縦B = Chart.資産を描く(資産F, true);
+var 横A = Chart.描く(simA.years, simA.cliffs, 'perPerson', false);
+
+function 大きさ(svg) {
+  var m = /width="(\d+)" height="(\d+)"/.exec(svg);
+  return { w: +m[1], h: +m[2] };
+}
+var たてA = 大きさ(縦A), よこA = 大きさ(横A), たてB = 大きさ(縦B);
+eq(たてA.w, 360, 'スマホのときの横幅は360（画面にそのまま収まる大きさ）');
+ok(たてA.h > よこA.h, 'スマホのときは、パソコンのときより縦に長い', たてA.h + ' / ' + よこA.h);
+ok(たてA.h / たてA.w > 1.2, 'スマホのときは、たてがよこの1.2倍より長い',
+  (たてA.h / たてA.w).toFixed(2) + '倍');
+ok(たてA.h / たてA.w < 1.6, 'ただし、たてに長すぎない', (たてA.h / たてA.w).toFixed(2) + '倍');
+ok(よこA.w > たてA.w, 'パソコンのときは、これまでどおり横に広い');
+eq(たてB.w, 360, '貯金のグラフもスマホでは360');
+ok(たてB.h / たてB.w > 1.2, '貯金のグラフもスマホでは縦長');
+
+/* 縦長でも文字がかぶらないこと（サンプル全部で確かめる） */
+見本.samples.forEach(function (sm) {
+  var 入 = Object.assign({}, sm.input, { divorced_childSupportMonthly: sm.input.childSupportMonthly });
+  var si = SPS.シミュレーション(入, データ);
+  var cv = SPS.資産カーブ(入, データ);
+  [['くらべる', Chart.描く(si.years, si.cliffs, 'perPerson', true)],
+   ['くらべる(総額)', Chart.描く(si.years, si.cliffs, 'total', true)],
+   ['貯金', Chart.資産を描く(cv, true)]].forEach(function (g) {
+    ok(重なり(g[1]).length === 0,
+      '[' + sm.id + '] スマホの縦長でも' + g[0] + 'グラフの文字がかぶらない', 重なり(g[1]).join(' / '));
+    var 字 = 文字を拾う(g[1]);
+    ok(字.every(function (x) { return x.x2 <= 361; }),
+      '[' + sm.id + '] スマホの縦長で' + g[0] + 'グラフの文字が右にはみ出さない',
+      字.filter(function (x) { return x.x2 > 361; }).map(function (x) { return x.文; }).join(' / '));
+    ok(字.every(function (x) { return x.x1 >= -1; }),
+      '[' + sm.id + '] スマホの縦長で' + g[0] + 'グラフの文字が左にはみ出さない');
+  });
+});
+
+/* 資格ルートを出した縦長でも、かぶらないこと */
+var 縦訓 = Chart.資産を描く(SPS.資産カーブ(訓入力, データ), true);
+ok(重なり(縦訓).length === 0, 'スマホの縦長で資格ルートを出しても、文字がかぶらない', 重なり(縦訓).join(' / '));
+
+/* ------------------------------------------------------------ */
 見出し('14. 画面と処理のつながり');
 
 var html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');

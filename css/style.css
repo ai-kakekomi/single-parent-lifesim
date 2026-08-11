@@ -172,6 +172,11 @@ button.ghost:hover { background: var(--accent-soft); }
 /* ---- グラフ ---- */
 .chart-box { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: .6rem 0; }
 .chart-box svg { display: block; min-width: 520px; }
+@media (max-width: 599px) {
+  /* スマートフォンでは、横にはみ出させず、縦に伸ばして読ませる */
+  .chart-box { overflow-x: visible; }
+  .chart-box svg { min-width: 0; width: 100%; height: auto; }
+}
 .legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: .82rem; margin: .3rem 0 .6rem; }
 .legend span { display: flex; align-items: center; gap: .35rem; }
 .swatch { width: 1.1rem; height: .22rem; border-radius: 2px; display: inline-block; }
@@ -303,8 +308,7 @@ ol.gap-list li.strong { background: rgba(255,255,255,.8); border-radius: 6px; pa
 ol.gap-list a { color: var(--accent-dark); }
 
 @media (max-width: 420px) {
-  .chart-box svg { min-width: 460px; }
-  .legend { font-size: .78rem; gap: .6rem; }
+  .legend { font-size: .78rem; gap: .5rem; }
 }
 
 /* ---- 崖の一覧（グラフの番号に対応） ---- */
@@ -353,3 +357,34 @@ ul.cost-ref .cost-ref-b { color: var(--ink-sub); }
 #training-box { margin-top: .6rem; }
 .track-record { background: var(--ok-soft); border-left: 4px solid var(--ok); border-radius: 0 6px 6px 0;
   padding: .55rem .75rem; font-size: .86rem; line-height: 1.75; margin: .5rem 0; }
+
+/* ---- このグラフの前提 ---- */
+.assumption-box { background: #f6f8fa; border: 1px solid var(--line); border-radius: var(--radius); padding: .8rem 1rem; margin: 1rem 0; }
+.assumption-box h4 { margin: 0 0 .4rem; font-size: .92rem; color: var(--ink-sub); }
+.assumption-box ul { margin: 0; padding-left: 1.2rem; }
+.assumption-box li { font-size: .85rem; line-height: 1.75; margin-bottom: .35rem; }
+.warn-inline { background: var(--warn-soft); border-radius: 4px; padding: 0 .25rem; font-weight: 700; color: var(--warn); }
+
+/* ---- 記入例が入ったときの、光ってから元にもどる演出 ---- */
+#form-area input[type="number"],
+#form-area input[type="text"],
+#form-area select {
+  transition: background-color 1.6s ease-out;
+}
+#form-area .inline-choice label,
+.checklist label {
+  transition: background-color 1.6s ease-out;
+}
+#form-area .flash,
+#form-area .inline-choice label.flash {
+  background-color: #ffe9a8;
+  transition: background-color 0s;
+}
+.hint.shown-note {
+  background: var(--warn-soft); border-left: 4px solid #e0b860;
+  border-radius: 0 8px 8px 0; padding: .55rem .75rem; font-size: .88rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  #form-area input, #form-area select, #form-area .inline-choice label { transition: none; }
+  #form-area .flash { background-color: transparent; }
+}

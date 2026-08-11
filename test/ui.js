@@ -159,8 +159,31 @@ server.listen(0, '127.0.0.1', function () {
           '貯金のグラフが、制度の一覧より前に出ている');
         ok(d.getElementById('stage1').compareDocumentPosition(d.getElementById('stage2')) & 4,
           '制度の一覧が、離婚の比較グラフより前に出ている');
+        /* 記入例では画面を動かさない。ユーザーは自分のペースで下りていく */
+        eq(移動先.length, 0,
+          '記入例を押しても、画面が勝手にスクロールしない', 移動先.join(' / '));
+        ok(d.getElementById('sample-note').textContent.indexOf('記入例が入りました') >= 0,
+          '「記入例が入りました」のお知らせが出る');
+        ok(d.getElementById('sample-note').classList.contains('shown-note'),
+          'お知らせが目立つ形で出ている');
+        /* 色づけは、次の描画で消えていく（CSSのtransitionで元にもどる）。
+           押した直後に見ないと確かめられないので、ここで押して、すぐ数える。 */
+        d.querySelectorAll('#sample-buttons button')[2].click();
+        var 光った = d.querySelectorAll('#form-area .flash').length;
+        ok(光った > 3, '値が入った欄が、いったん色づく', 光った + '個');
+        ok(d.querySelector('#living-cost').classList.contains('flash') ||
+           d.querySelector('#my-income').classList.contains('flash'),
+          '金額を入れた欄も色づいている');
+        d.querySelectorAll('#sample-buttons button')[1].click();
+        /* 自分で「この内容で見てみる」を押したときは、結果まで送る */
+        d.getElementById('calc').click();
         eq(移動先[移動先.length - 1], 'stage2b',
-          '例を押したあと、貯金のグラフの位置まで画面が動く（制度の一覧まで飛ばない）', 移動先.join(' / '));
+          '「この内容で見てみる」を押したときは、結果まで画面が動く', 移動先.join(' / '));
+        /* 次に何かを入力すると、お知らせは消える */
+        var 欄 = d.getElementById('my-age');
+        欄.value = '40';
+        欄.dispatchEvent(new w.Event('input', { bubbles: true }));
+        eq(d.getElementById('sample-note').textContent, '', '次の操作でお知らせが消える');
         eq(d.querySelectorAll('#stage2b-body svg path').length, 2, '貯金のグラフの線が2本');
         ok(d.querySelector('#stage2b-body a[href="#stage1"]') !== null,
           '差の中身（制度の一覧）へ行くリンクがある');
@@ -210,6 +233,27 @@ server.listen(0, '127.0.0.1', function () {
         /* 入れ直すと、貯金のグラフも追いかけて変わる */
         入れる('cost-food', 40000);
         eq(d.getElementById('living-cost').value, '100000', '入れ直すと合計も変わる');
+
+        /* このグラフの前提（常設） */
+        var 前提 = d.querySelector('#stage2b-body .assumption-box');
+        ok(前提 !== null, '「このグラフの前提」がグラフの下に常に出ている');
+        var 前提文 = 前提.textContent;
+        ok(前提文.indexOf('収入は、いまのまま変わらない前提です') > 0, '収入が一定であることが書いてある');
+        ok(前提文.indexOf('生活費は、いまと同じ金額がずっと続く前提です') > 0, '生活費の扱いが書いてある');
+        ok(前提文.indexOf('後半の線は甘め') > 0,
+          'お子さんの成長で食費がふえるぶん、後半が甘く出ることを正直に書いてある');
+        ok(前提文.indexOf('全国の平均値です') > 0, '学費が平均値であることが書いてある');
+        ok(前提文.indexOf('毎年その年のお子さんの年齢で計算し直しています') > 0,
+          '手当が毎年計算し直されることが書いてある');
+        ok(前提文.indexOf('物価の上昇') > 0, '物価と制度改正を入れていないことが書いてある');
+        ok(前提.querySelector('.warn-inline') !== null, '甘く出るところが目立つ形になっている');
+
+        /* 資格ルート: 働き方の3択 */
+        eq(d.querySelectorAll('input[name="training-work"]').length, 4,
+          '通っているあいだの働き方が4つから選べる（働かない・半分・いまのまま・自分で入れる）');
+        ok(d.querySelector('input[name="training-work"][value="none"]') !== null, '「働かない」が選べる');
+        ok(d.getElementById('training-during-row').style.display === 'none',
+          '「自分で入れる」以外のときは、金額の欄を出さない');
 
         /* 生活防衛資金の長い説明は、折りたたみに入っている */
         var 帯たたみ = d.querySelector('#stage2b-body details.explain');
@@ -348,6 +392,22 @@ server.listen(0, '127.0.0.1', function () {
           return 待つ(300);
         });
       }).then(function () {
+        /* 「働かない」を選ぶと、線がその場で引き直される */
+        d.querySelectorAll('#sample-buttons button')[0].click();
+        var 前の絵 = d.querySelector('#stage2b-body svg').outerHTML;
+        d.querySelector('input[name="training-work"][value="none"]').checked = true;
+        d.querySelector('input[name="training-work"][value="none"]')
+          .dispatchEvent(new w.Event('change', { bubbles: true }));
+        ok(d.querySelector('#stage2b-body svg').outerHTML !== 前の絵,
+          '働き方を変えると、その場でグラフが引き直される');
+        ok(d.getElementById('stage2b-body').textContent.indexOf('働かない</strong>ものとして') > 0 ||
+           d.getElementById('stage2b-body').innerHTML.indexOf('働かない</strong>ものとして') > 0,
+          '「働かない」を選んだことが説明に出る');
+        ok(d.querySelector('input[name="training-work"][value="custom"]') !== null, '自由入力も選べる');
+        d.querySelector('input[name="training-work"][value="half"]').checked = true;
+        d.querySelector('input[name="training-work"][value="half"]')
+          .dispatchEvent(new w.Event('change', { bubbles: true }));
+
         /* 6番目の例：親の援助が終わる崖 */
         d.querySelectorAll('#sample-buttons button')[5].click();
         return 待つ(300);

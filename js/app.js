@@ -10,6 +10,10 @@
   var グラフの見方 = 'perPerson';   // 'perPerson' ひとりあたり ／ 'total' 家ぜんたい
 
   function $(id) { return document.getElementById(id); }
+  /** 画面が狭いか（スマートフォンのとき、グラフを縦長にする） */
+  function 狭い画面() {
+    return (window.innerWidth || document.documentElement.clientWidth || 0) < 600;
+  }
   function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -203,11 +207,19 @@
     var on = $('training-on') && $('training-on').checked;
     var t = データ.training || {};
     var いま = 数('my-income') * 10000;
-    var 中 = 数('training-during') * 10000;
+    var 働き方 = 選択('training-work') || 'half';
+    var 中;
+    switch (働き方) {
+      case 'none': 中 = 0; break;
+      case 'same': 中 = いま; break;
+      case 'custom': 中 = 数('training-during') * 10000; break;
+      default: 中 = Math.floor(いま * (t.during_income_ratio_default || 0.5));
+    }
     return {
       enabled: !!on,
       years: parseInt(($('training-years') || {}).value, 10) || t.years_default,
-      duringIncome: 中 > 0 ? 中 : Math.floor(いま * (t.during_income_ratio_default || 0.5)),
+      work: 働き方,
+      duringIncome: 中,
       afterIncome: 数('training-after') * 10000
     };
   }
@@ -215,6 +227,7 @@
   function 訓練欄を反映() {
     var on = $('training-on').checked;
     $('training-box').style.display = on ? '' : 'none';
+    $('training-during-row').style.display = (選択('training-work') === 'custom') ? '' : 'none';
     if (on && !数('training-after')) {
       /* 何も入っていないと線が引けないので、いまの年収を初期値として置く */
       $('training-after').value = Math.max(Math.round(数('my-income')), 200);
@@ -309,7 +322,11 @@
     var tr = i.training || { enabled: false };
     $('training-on').checked = !!tr.enabled;
     $('training-years').value = String(tr.years || 2);
+    var w = tr.work || 'half';
+    var wEl = document.querySelector('input[name="training-work"][value="' + w + '"]');
+    if (wEl) { wEl.checked = true; }
     $('training-during').value = tr.duringIncome ? Math.round(tr.duringIncome / 10000) : '';
+    $('training-during-row').style.display = (w === 'custom') ? '' : 'none';
     $('training-after').value = tr.afterIncome ? Math.round(tr.afterIncome / 10000) : '';
     $('training-box').style.display = tr.enabled ? '' : 'none';
     進路欄を作る(i.children);
@@ -327,8 +344,35 @@
     $('parent-support').value = i.parentSupportMonthly;
     $('parent-age').value = i.parentAge || '';
     婚姻状態を反映();
-    $('sample-note').textContent = '「' + s.label + '」を入れました（架空の例です）。' + s.story;
-    計算する();
+    $('sample-note').innerHTML = '<strong>記入例が入りました。内容を見ながら下に進んでください。</strong><br>' +
+      esc('「' + s.label + '」（架空の例です）。' + s.story);
+    $('sample-note').classList.add('shown-note');
+    光らせる();
+    計算する(false);
+  }
+
+  /* 値が入った欄を、いったん色づけしてから、ゆっくり元にもどす。
+     どこに何が入ったのかを、目で追えるようにするため。
+     動きを減らす設定にしている方には、色づけをしない。 */
+  function 光らせる() {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { return; }
+    var 対象 = [];
+    document.querySelectorAll('#form-area input, #form-area select').forEach(function (el) {
+      if (el.type === 'radio' || el.type === 'checkbox') {
+        if (el.checked) { 対象.push(el.closest('label') || el); }
+      } else if (String(el.value).trim() !== '') {
+        対象.push(el);
+      }
+    });
+    対象.forEach(function (el) { el.classList.remove('flash'); });
+    /* いったん描き直させてから色をつけると、続けて押したときも光る */
+    void document.body.offsetWidth;
+    対象.forEach(function (el) { el.classList.add('flash'); });
+    window.requestAnimationFrame(function () {
+      window.requestAnimationFrame(function () {
+        対象.forEach(function (el) { el.classList.remove('flash'); });
+      });
+    });
   }
 
   function 見本ボタンを描く() {
@@ -418,9 +462,10 @@
 
     $('stage2-body').innerHTML =
       頭 + 見方の切りかえ() + 見方の説明() + SPSChart.凡例() +
-      '<div class="chart-box">' + SPSChart.描く(y, 最新シミュ.cliffs, グラフの見方) + '</div>' +
+      '<div class="chart-box">' + SPSChart.描く(y, 最新シミュ.cliffs, グラフの見方, 狭い画面()) + '</div>' +
       崖の説明(最新シミュ.cliffs) +
-      '<p class="hint">グラフの上を指でなぞる（マウスを乗せる）と、その年の金額が出ます。</p>' +
+      '<p class="hint">グラフの上を指でなぞる（マウスを乗せる）と、その年の金額が出ます。' +
+      '<a href="#stage2b">このグラフが置いている前提を見る</a></p>' +
       SPSChart.表(y, グラフの見方) + お金以外の注意();
 
     document.querySelectorAll('button[data-view]').forEach(function (b) {
@@ -525,17 +570,14 @@
 
     $('stage2b-body').innerHTML =
       伸びしろ + 頭 + SPSChart.資産の凡例(!!(c.training && c.training.afterIncome > 0)) +
-      '<div class="chart-box">' + SPSChart.資産を描く(c) + '</div>' +
+      '<div class="chart-box">' + SPSChart.資産を描く(c, 狭い画面()) + '</div>' +
       打ち切りの注記(c) + 資格ルートの説明(c) +
       道筋を描く(道筋(入力, データ, c, 最新判定)) +
       '<p class="band-line">' + 到達 + '</p>' +
       '<details class="explain"><summary>生活防衛資金って？（くわしく）</summary>' + 防衛資金の説明() + '</details>' +
       赤字の警告(c) +
       学費の説明(c) +
-      '<p class="hint">' + (c.startSavings > 0
-        ? '「いまの貯金」' + SPS.円(c.startSavings) + ' を出発点にしています。'
-        : 'いまの貯金を入れていないので、0円から始まるものとして描いています。') +
-      '年収は変わらないものとして計算しています。</p>';
+      前提のボックス(c);
   }
 
   /* ============================================================
@@ -734,8 +776,11 @@
     if (!t || !(t.afterIncome > 0)) { return ''; }
     var 訓 = データ.training;
     var h = ['<div class="notice"><h4>むらさきの線「資格を取るルート」について</h4>'];
-    h.push('<p style="margin:.3rem 0">学校に通う' + t.years + '年間は、働ける時間が減るぶん収入が ' +
-      SPS.円(t.duringIncome) + ' に下がるものとして計算しています。' +
+    var 働き方の文 = (t.duringIncome === 0)
+      ? '学校に通う' + t.years + '年間は<strong>働かない</strong>ものとして計算しています。'
+      : '学校に通う' + t.years + '年間の収入を、年 ' + SPS.円(t.duringIncome) + ' として計算しています。';
+    h.push('<p style="margin:.3rem 0">' + 働き方の文 +
+      '（この金額は上の入力欄で変えられます。制度で決まった数字ではありません）' +
       'そのあいだ、高等職業訓練促進給付金が毎月 ' + SPS.円(t.grantMonthly) +
       '（最後の1年はさらに ' + SPS.円(t.grantFinalYearBonus) + '）入り、修了したときに ' +
       SPS.円(t.completionGrant) + ' 入ります。修了後は、入れていただいた見込みの年収 ' +
@@ -752,6 +797,32 @@
       '" target="_blank" rel="noopener">' + esc(訓.track_record_source.law) + '</a>（最終確認 ' +
       日付表示(訓.track_record_source.last_verified) + '）</p>');
     h.push('</div>');
+    return h.join('');
+  }
+
+  /* ---------- このグラフの前提 ----------
+     甘く出るところ・厳しく出るところを、どちらも正直に書きます。 */
+  function 前提のボックス(c) {
+    var h = ['<div class="assumption-box"><h4>このグラフの前提</h4>'];
+    h.push('<ul>');
+    h.push('<li><strong>収入は、いまのまま変わらない前提です。</strong>昇給も、転職も、働く時間をふやすことも入れていません。' +
+      '（資格を取るルートだけは別で、そこだけ収入が変わります）</li>');
+    h.push('<li><strong>生活費は、いまと同じ金額がずっと続く前提です。</strong>' +
+      '実際には、お子さんが中学生・高校生になると食費などが増えます。' +
+      '<span class="warn-inline">その分、後半の線は甘め（実際より良く）に出ます。</span>' +
+      'お子さんが大きくなったときの姿を見たいときは、生活費の欄を多めに入れて試してください。</li>');
+    h.push('<li><strong>学校にかかるお金は、全国の平均値です。</strong>まん中の人の金額ではありません。' +
+      '塾に通わせるかどうかだけでも、年に数十万円変わります。</li>');
+    h.push('<li><strong>手当は、毎年その年のお子さんの年齢で計算し直しています。</strong>' +
+      '児童扶養手当も児童手当も、年齢で切れるところがあります。そこがグラフの段差になります。</li>');
+    h.push('<li><strong>物価の上昇と、これから先の制度改正は入れていません。</strong></li>');
+    if (c.startSavings > 0) {
+      h.push('<li>いまの貯金 ' + SPS.円(c.startSavings) + ' を出発点にしています。</li>');
+    } else {
+      h.push('<li>いまの貯金を入れていないので、<strong>0円から始まる</strong>ものとして描いています。</li>');
+    }
+    h.push('<li>ここに出る金額は、すべて<strong>概算</strong>です。正確な額は市区町村の窓口で確認してください。</li>');
+    h.push('</ul></div>');
     return h.join('');
   }
 
@@ -1193,7 +1264,7 @@
   }
 
   /* ---------- 計算して全部出す ---------- */
-  function 計算する() {
+  function 計算する(スクロールする) {
     最新入力 = 入力を読む();
     if (!最新入力.children.length) {
       alert('お子さんの年齢を入れてください。');
@@ -1206,9 +1277,13 @@
     落とし穴を描く(最新入力, 最新判定);
     プロンプトを描く(最新入力, 最新判定);
     ['stage1', 'stage2', 'stage2b', 'stage3', 'stage4'].forEach(function (id) { $(id).classList.add('shown'); });
-    /* いちばん見てほしいのは、貯金のグラフの冒頭のまとめ。そこに目線を合わせる */
-    var 先 = $('stage2b');
-    if (先 && 先.scrollIntoView) { 先.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    /* 記入例を入れたときは、画面を動かさない。
+       いきなり飛ばされると、どこに何が入ったのか分からなくなるため。
+       自分で「この内容で見てみる」を押したときだけ、結果まで送る。 */
+    if (スクロールする !== false) {
+      var 先 = $('stage2b');
+      if (先 && 先.scrollIntoView) { 先.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    }
   }
 
   /* ---------- 起動 ---------- */
@@ -1234,6 +1309,9 @@
         $(id).addEventListener('input', 訓練欄を反映);
         $(id).addEventListener('change', 訓練欄を反映);
       });
+      document.querySelectorAll('input[name="training-work"]').forEach(function (el) {
+        el.addEventListener('change', 訓練欄を反映);
+      });
       使っている制度欄を作る();
       進路欄を作る([]);
       document.querySelectorAll('input[name="status"]').forEach(function (r) {
@@ -1251,7 +1329,21 @@
         if (最新入力) { 最新入力.parentSupportEndAge = parseInt(this.value, 10); グラフを描く(); }
       });
 
-      $('calc').addEventListener('click', 計算する);
+      $('form-area').addEventListener('input', function () {
+        var n = $('sample-note');
+        if (n.classList.contains('shown-note')) { n.classList.remove('shown-note'); n.innerHTML = ''; }
+      });
+
+      var 前の狭さ = 狭い画面();
+      window.addEventListener('resize', function () {
+        var いま = 狭い画面();
+        if (いま !== 前の狭さ && 最新入力) {
+          前の狭さ = いま;
+          グラフを描く();
+          資産を描く();
+        }
+      });
+      $('calc').addEventListener('click', function () { 計算する(true); });
       コピー設定();
       飛び先を開く();
       $('loading').style.display = 'none';

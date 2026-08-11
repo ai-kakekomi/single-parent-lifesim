@@ -150,21 +150,26 @@
           <label><input type="checkbox" id="training-on">この道もグラフに出す</label>
         </div>
         <div id="training-box" style="display:none">
-          <div class="row">
-            <div>
-              <label for="training-years">学校に通う年数</label>
-              <select id="training-years">
-                <option value="1">1年</option>
-                <option value="2" selected>2年</option>
-                <option value="3">3年</option>
-                <option value="4">4年</option>
-              </select>
-            </div>
-            <div>
-              <label for="training-during">通っているあいだの年収（万円）</label>
-              <input type="number" id="training-during" min="0" max="3000" inputmode="numeric" placeholder="いまの半分">
-            </div>
+          <label for="training-years">学校に通う年数</label>
+          <select id="training-years">
+            <option value="1">1年</option>
+            <option value="2" selected>2年</option>
+            <option value="3">3年</option>
+            <option value="4">4年</option>
+          </select>
+
+          <label>学校に通っているあいだ、働き方は？</label>
+          <div class="inline-choice" id="training-work">
+            <label><input type="radio" name="training-work" value="none">働かない（0円）</label>
+            <label><input type="radio" name="training-work" value="half" checked>いまの半分</label>
+            <label><input type="radio" name="training-work" value="same">いまのまま</label>
+            <label><input type="radio" name="training-work" value="custom">自分で入れる</label>
           </div>
+          <div id="training-during-row" style="display:none">
+            <label for="training-during">通っているあいだの年収（万円）</label>
+            <input type="number" id="training-during" min="0" max="3000" inputmode="numeric" placeholder="例 75">
+          </div>
+          <p class="hint">看護師などのフルタイムの課程は、授業と実習でほぼ毎日うまるため、仕事との両立は簡単ではありません。「働かない」を選んだときに生活が回るかどうかも、グラフで確かめてください。</p>
           <label for="training-after">資格を取ったあとの年収の見込み（万円）</label>
           <input type="number" id="training-after" min="0" max="3000" inputmode="numeric" placeholder="例 320">
           <p class="hint">このツールは、職種ごとの平均年収を出しません。相場は「1. 仕事・収入の相談」の文章をAIに渡して調べてください。ここには、その見込みを入れてください。</p>
