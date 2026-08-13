@@ -149,135 +149,178 @@ function 生まれ月と表とカードのチェック() {
 
 /* ============================================================
  * 受け入れ条件:
- *   バランス表のあとは「つぎにやること」の一本道になっていること。
- *   ①まだ使えるお金 → ②まずやること → ③気をつけてほしいこと
- *   → ④AIに相談する文章（ここが終点）。
- *   いま見ているステップ以外は畳まれ、進みぐあいが見え、
- *   「ぜんぶ一度に見る」で従来どおり全部ひらけること。
- *   身の安全と「すぐ閉じる」は、ステップの外にいつでもあること。
+ *   家計の表のあとは、4つの章が上から順に、ぜんぶ出ていること。
+ *   （下の「つぎへ」で1つずつ進む形は、いったんやめた）
+ *   身の安全と「すぐ閉じる」は、いつでも見られること。
  * ============================================================ */
-function ステップのチェック() {
+function 章の並びのチェック() {
   return JSDOM.fromFile(path.join(ROOT, 'index.html'), {
     runScripts: 'dangerously', resources: 'usable', pretendToBeVisual: true
   }).then(function (dom) {
     var w = dom.window, d = w.document;
     w.Element.prototype.scrollIntoView = function () {};
-    function 畳んでいるか(id) { return d.getElementById(id).classList.contains('folded'); }
-    function 進み() { return d.getElementById('step-count').textContent; }
-
     return 待つ(2200).then(function () {
       d.querySelectorAll('#sample-buttons button')[0].click();
       return 待つ(250);
     }).then(function () {
-      /* 並び順 */
       var 並び = ['stage1', 'stage3a', 'stage3', 'stage4'];
       並び.forEach(function (id, i) {
-        if (i === 0) { return; }
-        ok(d.getElementById(並び[i - 1]).compareDocumentPosition(d.getElementById(id)) & 4,
-          'ステップ' + (i + 1) + '（' + id + '）は、ひとつ前のステップより後ろにある');
+        ok(d.getElementById(id).classList.contains('shown'), id + ' が出ている');
+        eq(d.getElementById(id).classList.contains('folded'), false, id + ' は畳まれていない');
+        if (i > 0) {
+          ok(d.getElementById(並び[i - 1]).compareDocumentPosition(d.getElementById(id)) & 4,
+            id + ' は、ひとつ前の章より後ろにある');
+        }
       });
       ok(d.getElementById('stage2b').compareDocumentPosition(d.getElementById('guide')) & 4,
-        '一本道は、貯金のグラフと家計の表より後ろにある');
-      ok(d.getElementById('guide').classList.contains('shown'), '計算すると、一本道の案内が出る');
+        '4つの章は、貯金のグラフと家計の表より後ろにある');
+      ok(d.getElementById('guide').classList.contains('shown'), '「つぎにやること」の案内が出る');
 
-      /* はじめは1つめのステップだけ開いている */
-      eq(進み(), '1 / 4', 'はじめは 1 / 4 と出る');
-      eq(畳んでいるか('stage1'), false, 'はじめは①だけ開いている');
-      eq(畳んでいるか('stage3a'), true, '②は畳まれている');
-      eq(畳んでいるか('stage3'), true, '③は畳まれている');
-      eq(畳んでいるか('stage4'), true, '④は畳まれている');
-      ok(d.getElementById('step-bar').classList.contains('shown'), '下に「つぎへ」の帯が出ている');
-      eq(d.getElementById('step-prev').disabled, true, '1つめでは「もどる」は押せない');
-      eq(d.querySelectorAll('#step-dots .dot').length, 4, '進みぐあいの点が4つ出る');
-      eq(d.querySelector('#step-dots .dot.now').textContent.indexOf('1'), 0,
-        'いまいるステップの点に印が付く');
-      ok(!d.getElementById('finish').classList.contains('shown'),
-        '最後まで行く前は、まとめは出さない');
+      /* 下の「つぎへ」ナビは、もう置かない */
+      ['step-bar', 'step-next', 'step-prev', 'step-dots', 'step-count', 'show-all'].forEach(function (id) {
+        eq(d.getElementById(id), null, '「' + id + '」は画面に置かない');
+      });
+      eq(d.querySelectorAll('.step-time').length, 0, 'ステップごとの所要時間の表示も置かない');
 
-      /* 各ステップに、かかる時間のめやすが書いてある */
-      eq(d.querySelectorAll('.step .step-title .step-time').length, 4,
-        '4つのステップぜんぶに、かかる時間のめやすが書いてある');
+      /* 4つとも中身が入っていて、AIに相談する文章まで一度に読める */
+      eq(d.querySelectorAll('#stage1-body details.prog').length, 18, '①に制度カードが並ぶ');
+      ok(d.querySelector('#stage3a-body .checklist li') !== null, '②にまずやることリストがある');
+      ok(d.querySelector('#stage3-body .pit.red') !== null, '③に赤い注意書きがある');
+      eq(d.querySelectorAll('#stage4-body textarea').length, 6, '④にAIに相談する文章が6本ある');
 
-      /* つぎへ、で順番に進む */
-      d.getElementById('step-next').click();
-      eq(進み(), '2 / 4', '「つぎへ」で 2 / 4 になる');
-      eq(畳んでいるか('stage3a'), false, '②が開く');
-      eq(畳んでいるか('stage1'), true, '①は畳まれる');
-      ok(d.querySelector('#stage3a-body .checklist li') !== null, '②にまずやることリストが入っている');
-      eq(d.querySelectorAll('#step-dots .dot.done').length, 1, '通りすぎたステップの点が済みになる');
-
-      d.getElementById('step-next').click();
-      eq(進み(), '3 / 4', '「つぎへ」で 3 / 4 になる');
-      ok(d.querySelector('#stage3-body .pit.red') !== null, '③に赤い注意書きが入っている');
-      ok(d.querySelector('#stage3-body .danger-list li') !== null, '③に落とし穴チェックが入っている');
-
-      d.getElementById('step-next').click();
-      eq(進み(), '4 / 4', '「つぎへ」で 4 / 4 になる');
-      eq(畳んでいるか('stage4'), false, '④が開く');
-      eq(d.querySelectorAll('#stage4-body textarea').length, 6,
-        '終点で、AIに相談する文章6本にたどり着ける');
-      eq(d.getElementById('step-next').textContent, 'おわりにする',
-        '最後のステップでは、ボタンの文字が変わる');
-
-      /* おつかれさまのまとめ */
-      ok(d.getElementById('finish').classList.contains('shown'), '最後まで来ると、まとめが出る');
+      /* 持ち帰るもののまとめ */
+      ok(d.getElementById('finish').classList.contains('shown'), '持ち帰るもののまとめが出る');
       var まとめ = d.getElementById('finish-body').textContent;
       ok(まとめ.indexOf('今日の持ち帰り') >= 0, 'まとめに「今日の持ち帰り」が出る');
-      ok(まとめ.indexOf('AIに相談する文章') >= 0, 'まとめにAIに相談する文章のことが書いてある');
       ok(まとめ.indexOf('最初の一歩') >= 0, 'まとめに「最初の一歩」が書いてある');
       var 一歩め = d.querySelector('#stage3a-body .checklist li span').textContent;
-      ok(まとめ.indexOf(一歩め) >= 0,
-        '「最初の一歩」は、まずやることリストの1つめと同じ', 一歩め);
+      ok(まとめ.indexOf(一歩め) >= 0, '「最初の一歩」は、まずやることリストの1つめと同じ', 一歩め);
 
-      /* もどる */
-      d.getElementById('step-prev').click();
-      eq(進み(), '3 / 4', '「もどる」で1つ前にもどる');
-      ok(!d.getElementById('finish').classList.contains('shown'), 'もどると、まとめは引っこむ');
-
-      /* 点を押して、直接④へ行ける */
-      d.querySelectorAll('#step-dots .dot')[3].click();
-      eq(進み(), '4 / 4', '進みぐあいの点を押すと、そのステップへ行ける');
-      eq(畳んでいるか('stage4'), false, '押した先のステップが開く');
-
-      /* ぜんぶ一度に見る */
-      var 全部 = d.getElementById('show-all');
-      全部.checked = true;
-      全部.dispatchEvent(new w.Event('change', { bubbles: true }));
-      ['stage1', 'stage3a', 'stage3', 'stage4'].forEach(function (id) {
-        eq(畳んでいるか(id), false, '「ぜんぶ一度に見る」で ' + id + ' が開く');
-      });
-      ok(!d.getElementById('step-bar').classList.contains('shown'),
-        'ぜんぶ見るときは、「つぎへ」の帯は出さない');
-      ok(d.getElementById('finish').classList.contains('shown'),
-        'ぜんぶ見るときは、まとめも出す');
-      全部.checked = false;
-      全部.dispatchEvent(new w.Event('change', { bubbles: true }));
-      eq(畳んでいるか('stage3a'), true, '切りかえを戻すと、また一本道にもどる');
-
-      /* 身の安全と「すぐ閉じる」は、ステップの外にいつでもある */
+      /* 身の安全と「すぐ閉じる」 */
       var 安全 = d.getElementById('safety');
       ok(安全.classList.contains('shown'), '身の安全の欄が出ている');
-      eq(安全.closest('.step'), null, '身の安全の欄は、ステップの中に閉じこめられていない');
-      eq(安全.closest('#guide'), null, '身の安全の欄は、一本道の外にある');
+      eq(安全.closest('#guide'), null, '身の安全の欄は、4つの章の外にある');
       ok(安全.textContent.indexOf('#8008') > 0, '相談先の番号が書いてある');
-      ok(安全.textContent.indexOf('住民票') > 0, '住民票のことが書いてある');
       ok(d.querySelectorAll('.escape-btn').length >= 2,
         '「すぐ閉じる」は、上と身の安全の欄の両方にある');
-      d.querySelectorAll('.escape-btn').forEach(function (b) {
-        eq(b.closest('.step'), null, '「すぐ閉じる」は、ステップの中に閉じこめられていない');
+
+      /* ページの中のリンクで飛べること */
+      ok(d.querySelector('.nav a[href="#stage3"]') !== null,
+        '「まず注意してほしいことを読む」のリンクがある');
+      w.close();
+    });
+  });
+}
+
+/* ============================================================
+ * 受け入れ条件（スマホでの見直し 3件）:
+ *   ・お子さんの生まれ月を入れられること（任意）
+ *   ・家計の表に「年度」と「その年度の終わりの貯金」が出ること。
+ *     その金額は、かならずグラフの線と同じであること
+ *   ・制度カードが、閉じているときは名前と金額だけの1行であること
+ * ============================================================ */
+function 生まれ月と表とカードのチェック() {
+  return JSDOM.fromFile(path.join(ROOT, 'index.html'), {
+    runScripts: 'dangerously', resources: 'usable', pretendToBeVisual: true
+  }).then(function (dom) {
+    var w = dom.window, d = w.document;
+    w.Element.prototype.scrollIntoView = function () {};
+    return 待つ(2200).then(function () {
+      /* ---- 生まれ月の入力欄 ---- */
+      var 月欄 = d.getElementById('child-month-0');
+      ok(月欄 !== null, 'お子さんの欄に、生まれ月を選ぶところがある');
+      eq(月欄.options.length, 13, '「入れない」と1月から12月で13通りから選べる');
+      eq(月欄.options[0].value, '', 'はじめは入れていない状態（任意）');
+      ok(月欄.options[0].textContent.indexOf('任意') > 0, '入れなくてよいことが書いてある');
+
+      /* 例を入れると、生まれ月も入る */
+      d.querySelectorAll('#sample-buttons button')[0].click();
+      return 待つ(250);
+    }).then(function () {
+      ok(d.getElementById('child-month-0').value !== '', '例のボタンで、生まれ月も入る');
+      eq(d.querySelectorAll('.child-month').length, 2, 'お子さんの人数ぶん、生まれ月の欄が出る');
+
+      /* ---- 家計の表：年度と、その年度の終わりの貯金 ---- */
+      var 見出し = d.getElementById('balance-year-out').textContent;
+      ok(/[0-9]+歳（20[0-9][0-9]年度）/.test(見出し),
+        '年を選ぶところに、年齢と西暦の年度が出る', 見出し);
+
+      function 年度末の行() {
+        var 行 = [].filter.call(d.querySelectorAll('#balance-body tr'), function (tr) {
+          return tr.textContent.indexOf('年度の終わりの貯金') >= 0;
+        });
+        return 行.length ? 行[0] : null;
+      }
+      ok(年度末の行() !== null, '表に「その年度の終わりの貯金」の行がある');
+
+      /* 表の金額が、グラフの線とぴったり同じであること */
+      var 数字 = function (tr) {
+        return parseInt(tr.querySelector('.num').textContent.replace(/[^0-9-]/g, ''), 10)
+          * (tr.querySelector('.num').textContent.indexOf('−') === 0 ? -1 : 1);
+      };
+      /* 画面がグラフを描くのに使った、まさにその計算結果 */
+      var 曲線 = w.SPS_LAST_CURVE;
+      ok(曲線 && 曲線.points.length > 0, 'グラフと表は、ひとつの計算結果から描かれている');
+      eq(数字(年度末の行()), 曲線.points[0].endOfYear,
+        '表の年度末の貯金は、グラフの線が持っている数字とまったく同じ');
+      eq(曲線.points[0].endOfYear, 曲線.points[1].all,
+        'その数字は、グラフの次の点そのもの（表のために計算し直していない）');
+
+      /* つまみを動かしても、ずれないこと */
+      var つまみ = d.getElementById('balance-year');
+      つまみ.value = '3';
+      つまみ.dispatchEvent(new w.Event('input', { bubbles: true }));
+      ok(d.getElementById('balance-year-out').textContent.indexOf('年度）') > 0,
+        'つまみを動かしても、年度が出たまま');
+      eq(数字(年度末の行()), 曲線.points[3].endOfYear,
+        '動かした先でも、表の数字はグラフの線と同じ');
+
+      /* 「いまのまま」の線に切りかえたら、そちらの数字になる */
+      var 切替 = [].filter.call(d.querySelectorAll('[data-scenario]'), function (b) {
+        return b.getAttribute('data-scenario') === 'now';
+      })[0];
+      切替.click();
+      eq(数字(年度末の行()), 曲線.points[3].endOfYearNow,
+        '「いまのまま」に切りかえると、その線の数字が出る');
+      [].filter.call(d.querySelectorAll('[data-scenario]'), function (b) {
+        return b.getAttribute('data-scenario') === 'all';
+      })[0].click();
+
+      /* ---- 制度カードのアコーディオン ---- */
+      var カード = d.querySelectorAll('#stage1-body details.prog');
+      eq(カード.length, 18, '制度カードが18枚とも折りたたみになっている');
+      eq([].filter.call(カード, function (x) { return x.open; }).length, 0,
+        'はじめは、どのカードも閉じている');
+      カード.forEach(function (c) {
+        var sm = c.querySelector('summary');
+        ok(sm !== null, '閉じたカードにも見出しの行がある');
+        ok(sm.querySelector('.prog-name').textContent.length > 0, '制度の名前が出ている');
+        ok(sm.querySelector('.prog-amount').textContent.length > 0, '金額か、短いラベルが出ている');
+        /* 閉じている行に出るのは、名前と金額だけ。出典や申請先は中に入れる */
+        eq(sm.querySelectorAll('a').length, 0, '閉じた行にリンクは置かない');
+        ok(sm.textContent.indexOf('最終確認') < 0, '閉じた行に最終確認の日付は出さない');
+        ok(c.querySelector('.prog-detail .src') !== null, '開くと出典と最終確認の日付が出る');
+        ok(c.querySelector('.prog-detail .apply') !== null, '開くと申請するところが出る');
       });
 
-      /* 計算し直したら、また1つめから */
-      d.getElementById('calc').click();
-      return 待つ(200);
-    }).then(function () {
-      eq(進み(), '1 / 4', '計算し直すと、一本道は1つめにもどる');
-      /* ページの中のリンクで飛んでも、そのステップが開く */
-      var link = d.querySelector('.nav a[href="#stage3"]');
-      ok(link !== null, '「まず注意してほしいことを読む」のリンクがある');
-      link.click();
-      eq(畳んでいるか('stage3'), false, 'リンクで飛んだ先のステップが開く');
-      eq(進み(), '3 / 4', 'リンクで飛ぶと、進みぐあいもそこに合う');
+      /* 金額が出せないものに、それらしい数字を置いていないこと */
+      var 確認ラベル = [].map.call(d.querySelectorAll('#stage1-body details.prog .prog-amount'),
+        function (x) { return x.textContent; });
+      ok(確認ラベル.some(function (t) { return t.indexOf('窓口で確認') >= 0; }),
+        '金額を出せないものは「窓口で確認」と書く');
+      確認ラベル.forEach(function (t) {
+        ok(t.indexOf('およそ') < 0 || t.indexOf('年およそ ＋') === 0,
+          '金額を出すときは「年およそ ＋◯◯円」の形だけ', t);
+      });
+      var 児手カード = d.getElementById('prog-jido_teate');
+      ok(児手カード.querySelector('.prog-amount').textContent.indexOf('年およそ ＋') === 0,
+        '児童手当は、閉じたままでも1年ぶんの金額が読める',
+        児手カード.querySelector('.prog-amount').textContent);
+
+      /* 未申告の「対象の可能性が高い」ものが先頭に来る並びは、そのまま */
+      var 見出したち = [].map.call(d.querySelectorAll('#stage1-body .cat-head'),
+        function (x) { return x.textContent; });
+      eq(見出したち[0], '対象の可能性が高い', '当てはまるものが、いちばん上のかたまりに来る');
       w.close();
     });
   });
@@ -1172,7 +1215,7 @@ server.listen(0, '127.0.0.1', function () {
         w.close();
       });
     });
-  }).then(道筋のチェック).then(タグ漏れのチェック).then(ステップのチェック).then(生まれ月と表とカードのチェック).then(function () {
+  }).then(道筋のチェック).then(タグ漏れのチェック).then(章の並びのチェック).then(生まれ月と表とカードのチェック).then(function () {
     server.close();
     console.log('\n============================================');
     console.log('  画面のチェック: 成功 ' + 成功 + ' 件 ／ 失敗 ' + 失敗 + ' 件');

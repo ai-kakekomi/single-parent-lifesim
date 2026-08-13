@@ -6,12 +6,6 @@
 
   var データ = null, 見本 = null, 落とし穴 = null;
   var 最新入力 = null, 最新判定 = null, 最新シミュ = null;
-  /* 「つぎにやること」の一本道。いま何番目のステップにいるか */
-  var ステップの並び = ['stage1', 'stage3a', 'stage3', 'stage4'];
-  var ステップの名 = ['まだ使えるお金をさがす', 'まずやることリスト',
-    '気をつけてほしいこと', 'AIに相談する文章を持って帰る'];
-  var いまのステップ = 0;
-  var ぜんぶ見るか = false;
   var 最初の一歩 = '';
   var 最新資産 = null;
   var 資格ルートを出したところ = false;   // 線を伸ばす動きは、出した直後の1回だけ
@@ -1775,7 +1769,7 @@
     items.forEach(function (it) { 出ている[it.id] = true; });
     var 行動 = (落とし穴.action_checklist || []).filter(function (r) { return !r.pit || 出ている[r.pit]; });
 
-    /* ② まずやること と ③ 気をつけてほしいこと は、別のステップに置く。
+    /* 「まずやること」と「気をつけてほしいこと」は、別の章に分けて置く。
        一度にぜんぶ出すと、どれから手をつければいいのか分からなくなるため。 */
     最初の一歩 = やること.length ? やること[0].text : '';
     $('stage3a-body').innerHTML = チェックリストを描く(やること);
@@ -1856,7 +1850,7 @@
     });
   }
 
-  /* ---------- 身の安全（ステップの外に置く） ----------
+  /* ---------- 身の安全 ----------
      順番を待たずに、いつでもここから相談先へ行けるようにする。
      中身は制度データのDVの項目から作るので、出典は一次資料のまま。 */
   function 身の安全を描く() {
@@ -1876,60 +1870,7 @@
     $('safety-body').innerHTML = h.join('');
   }
 
-  /* ---------- つぎにやること（一本道のステップ） ---------- */
-  function ステップを反映(飛ぶか) {
-    var 出ているか = $('stage1').classList.contains('shown');
-    var 案内 = $('guide');
-    if (案内) { 案内.classList.toggle('shown', 出ているか); }
-
-    ステップの並び.forEach(function (id, i) {
-      var 章 = $(id);
-      if (!章) { return; }
-      章.classList.toggle('folded', !ぜんぶ見るか && i !== いまのステップ);
-    });
-
-    /* 進みぐあいの点 */
-    var 点 = $('step-dots');
-    if (点) {
-      点.innerHTML = ステップの並び.map(function (id, i) {
-        var 状態 = ぜんぶ見るか ? 'all' : (i < いまのステップ ? 'done' : (i === いまのステップ ? 'now' : 'yet'));
-        return '<button type="button" class="dot ' + 状態 + '" data-step-to="' + i + '" role="listitem" ' +
-          'aria-current="' + (!ぜんぶ見るか && i === いまのステップ ? 'step' : 'false') + '">' +
-          '<span class="dot-num">' + (i + 1) + '</span>' +
-          '<span class="dot-name">' + esc(ステップの名[i]) + '</span></button>';
-      }).join('');
-    }
-
-    /* 下に出しっぱなしのボタン */
-    var 帯 = $('step-bar');
-    if (帯) {
-      var 出す = 出ているか && !ぜんぶ見るか;
-      帯.classList.toggle('shown', 出す);
-      $('step-count').textContent = (いまのステップ + 1) + ' / ' + ステップの並び.length;
-      $('step-prev').disabled = (いまのステップ === 0);
-      $('step-next').textContent = (いまのステップ === ステップの並び.length - 1)
-        ? 'おわりにする' : 'つぎへ';
-    }
-
-    /* 最後まで来たら、持ち帰るもののまとめを出す */
-    var 終 = $('finish');
-    if (終) {
-      var 出すか = 出ているか && (ぜんぶ見るか || いまのステップ === ステップの並び.length - 1);
-      終.classList.toggle('shown', 出すか);
-      if (出すか) { まとめを描く(); }
-    }
-
-    if (飛ぶか && !ぜんぶ見るか) {
-      var 先 = $(ステップの並び[いまのステップ]);
-      if (先 && 先.scrollIntoView) { 先.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-    }
-  }
-
-  function ステップへ(i, 飛ぶか) {
-    いまのステップ = Math.max(0, Math.min(ステップの並び.length - 1, i));
-    ステップを反映(飛ぶか !== false);
-  }
-
+  /* ---------- 持ち帰るもののまとめ ---------- */
   function まとめを描く() {
     var h = [];
     h.push('<p>ここまでで、今日やれることは終わりです。がんばりました。</p>');
@@ -1946,23 +1887,6 @@
       '持っていきたいものは、コピーしてメモ帳などに貼りつけてから閉じてください。</p>');
     h.push('<p class="hint">金額はすべて概算です。最後は必ず、お住まいの市区町村の窓口で確かめてください。</p>');
     $('finish-body').innerHTML = h.join('');
-  }
-
-  /** ページの中のリンク（#stage3 など）で飛んだときも、そのステップを開く */
-  function ステップへのリンクを効かせる() {
-    document.addEventListener('click', function (e) {
-      var 点 = e.target.closest('button[data-step-to]');
-      if (点) { ステップへ(parseInt(点.getAttribute('data-step-to'), 10), true); return; }
-      var a = e.target.closest('a[href^="#"]');
-      if (!a) { return; }
-      var id = a.getAttribute('href').slice(1);
-      var 章 = document.getElementById(id);
-      if (!章) { return; }
-      var 親 = 章.closest('.step');
-      if (!親) { return; }
-      var i = ステップの並び.indexOf(親.id);
-      if (i >= 0 && i !== いまのステップ && !ぜんぶ見るか) { ステップへ(i, false); }
-    });
   }
 
   /* ---------- 見出しの番号 ----------
@@ -1997,10 +1921,10 @@
     ['stage1', 'stage2b', 'stage3', 'stage3a', 'stage4'].forEach(function (id) { $(id).classList.add('shown'); });
     $('stage2').classList.toggle('shown', 比較を出す);
     $('safety').classList.add('shown');
+    $('guide').classList.add('shown');
+    $('finish').classList.add('shown');
+    まとめを描く();
     見出しの番号をふり直す();
-    /* 計算し直したら、一本道は最初のステップに戻す */
-    いまのステップ = 0;
-    ステップを反映(false);
     /* 記入例を入れたときは、画面を動かさない。
        いきなり飛ばされると、どこに何が入ったのか分からなくなるため。
        自分で「この内容で見てみる」を押したときだけ、結果まで送る。 */
@@ -2075,26 +1999,10 @@
         }
       });
       $('calc').addEventListener('click', function () { 計算する(true); });
-      $('step-next').addEventListener('click', function () {
-        if (いまのステップ >= ステップの並び.length - 1) {
-          var 終 = $('finish');
-          if (終 && 終.scrollIntoView) { 終.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-          return;
-        }
-        ステップへ(いまのステップ + 1, true);
-      });
-      $('step-prev').addEventListener('click', function () { ステップへ(いまのステップ - 1, true); });
-      $('show-all').addEventListener('change', function () {
-        /* この切りかえも、どこにも保存しません */
-        ぜんぶ見るか = this.checked;
-        ステップを反映(false);
-      });
       コピー設定();
       飛び先を開く();
-      ステップへのリンクを効かせる();
       身の安全を描く();
       見出しの番号をふり直す();
-      ステップを反映(false);
       $('loading').style.display = 'none';
       $('form-area').style.display = '';
     } catch (err) {

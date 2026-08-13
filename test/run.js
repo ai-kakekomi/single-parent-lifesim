@@ -2092,6 +2092,63 @@ var 収入キー = 貸与c.points[0].breakdown.all.income.map(function (r) { ret
 ok(収入キー.indexOf('loan') === -1, '借りたお金を、収入として数えていない');
 
 /* ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+ * グラフが、画面の幅にちゃんと収まること
+ *   本文の幅は760px、左右の余白を引くと720px。
+ *   これを超えると、パソコンでも横スクロールが必要になってしまう。
+ *   文字が上や左右にはみ出すと、スマートフォンで見切れる。
+ * ---------------------------------------------------------- */
+見出し('13-2. グラフが画面に収まること');
+
+var 本文の幅 = 720;
+見本.samples.forEach(function (sm) {
+  var 入 = Object.assign({}, sm.input, { divorced_childSupportMonthly: sm.input.childSupportMonthly });
+  var si = SPS.シミュレーション(入, データ);
+  var cv = SPS.資産カーブ(入, データ);
+  [['貯金（パソコン）', Chart.資産を描く(cv, false)],
+   ['貯金（スマホ）', Chart.資産を描く(cv, true)],
+   ['くらべる（パソコン）', Chart.描く(si.years, si.cliffs)],
+   ['くらべる（スマホ）', Chart.描く(si.years, si.cliffs, 'perPerson', true)]].forEach(function (g) {
+    var 名 = '[' + sm.id + '] ' + g[0];
+    var svg = g[1];
+    var W = parseFloat(/width="([0-9.]+)"/.exec(svg)[1]);
+    ok(W <= 本文の幅, 名 + 'の幅が本文の幅に収まっている', W + 'px');
+    var 字 = 文字を拾う(svg);
+    ok(字.length > 0, 名 + 'に文字がある');
+    var 右はみ = 字.filter(function (t) { return t.x2 > W + 1; });
+    var 左はみ = 字.filter(function (t) { return t.x1 < -1; });
+    /* y は文字の下側なので、上に文字の高さぶんの余裕がいる */
+    var 上はみ = 字.filter(function (t) { return t.y - t.h < 0; });
+    ok(右はみ.length === 0, 名 + 'の文字が右にはみ出さない', 右はみ.map(function (t) { return t.文; }).join(' / '));
+    ok(左はみ.length === 0, 名 + 'の文字が左にはみ出さない', 左はみ.map(function (t) { return t.文; }).join(' / '));
+    ok(上はみ.length === 0, 名 + 'の文字が上で切れない', 上はみ.map(function (t) { return t.文; }).join(' / '));
+  });
+});
+
+/* 画面の作り（CSS）の側でも、横スクロールにならないようにしてあること */
+var css = fs.readFileSync(path.join(ROOT, 'css', 'style.css'), 'utf8');
+ok(/\.chart-box svg \{[^}]*width: 100%/.test(css), 'グラフは、入れ物の幅にあわせて縮む');
+ok(!/\.chart-box \{[^}]*overflow-x: auto/.test(css), 'グラフの入れ物に、横スクロールを付けていない');
+ok(!/\.chart-box svg \{[^}]*min-width: [1-9]/.test(css), 'グラフに、縮まない下限の幅を付けていない');
+ok(/\.legend[^}]*flex-wrap: wrap/.test(css), '凡例は、入りきらなければ折り返す');
+
+/* お子さんの年齢の欄が、生まれ月の欄に押しつぶされないこと */
+ok(/\.child-row input\[type="number"\] \{[^}]*min-width/.test(css),
+  'お子さんの年齢を入れる欄に、これ以上は細くならない幅を決めてある');
+ok(/\.child-row \.child-month \{[^}]*min-width/.test(css),
+  '生まれ月の欄にも、下限の幅を決めてある');
+ok(/\.child-row \{[^}]*flex-wrap: wrap/.test(css),
+  '幅が足りないときは、生まれ月の欄を下の行に送る');
+
+/* 下の「つぎへ」ナビは、もう置いていない */
+var 画面 = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+['step-bar', 'step-next', 'step-prev', 'step-dots', 'show-all'].forEach(function (id) {
+  ok(画面.indexOf('id="' + id + '"') < 0, '「' + id + '」は画面に置いていない');
+});
+ok(fs.readFileSync(path.join(ROOT, 'js', 'app.js'), 'utf8').indexOf('ステップを反映') < 0,
+  'ステップを進めるしくみも、まるごと消してある');
+
+/* ------------------------------------------------------------ */
 見出し('14. 画面と処理のつながり');
 
 var html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
