@@ -623,3 +623,22 @@ table.map-table tbody th { background: #f6f8fa; white-space: nowrap; width: 5rem
   .dot { padding: .25rem; }
   .step-bar button { min-width: 5rem; font-size: .9rem; }
 }
+
+/* 制度カードは、閉じたときは1行だけ */
+details.prog > summary {
+  display: flex; align-items: baseline; gap: .5rem; flex-wrap: wrap;
+  cursor: pointer; list-style: none; padding: .1rem 0;
+}
+details.prog > summary::-webkit-details-marker { display: none; }
+details.prog > summary::before {
+  content: '▶'; font-size: .65rem; color: var(--ink-sub); flex: 0 0 auto;
+  transition: transform .15s;
+}
+details.prog[open] > summary::before { transform: rotate(90deg); }
+.prog-name { font-weight: 700; flex: 1 1 60%; line-height: 1.5; }
+.prog-amount { font-size: .84rem; font-weight: 700; white-space: nowrap; }
+.prog-amount.plus { color: var(--ok); }
+.prog-amount.check { color: var(--check); font-weight: 400; }
+.prog-amount.none { color: var(--ink-sub); font-weight: 400; }
+.prog-detail { margin-top: .5rem; border-top: 1px dashed var(--line); padding-top: .5rem; }
+.prog-badges { margin: 0 0 .4rem; }

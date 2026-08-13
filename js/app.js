@@ -58,16 +58,23 @@
   }
 
   /* ---------- 子どもの年齢の入力欄 ---------- */
-  function 子ども欄を作る(人数, 年齢たち) {
+  function 子ども欄を作る(人数, 年齢たち, 生まれ月たち) {
     var box = $('children-box');
     box.innerHTML = '';
     for (var i = 0; i < 人数; i++) {
       var v = (年齢たち && 年齢たち[i] != null) ? 年齢たち[i] : '';
+      var m = (生まれ月たち && 生まれ月たち[i] != null) ? 生まれ月たち[i] : '';
+      var 月の選択 = ['<option value="">生まれ月（任意）</option>'];
+      for (var k = 1; k <= 12; k++) {
+        月の選択.push('<option value="' + k + '"' + (String(m) === String(k) ? ' selected' : '') +
+          '>' + k + '月生まれ</option>');
+      }
       var d = document.createElement('div');
       d.className = 'child-row';
       d.innerHTML = '<span class="child-label">' + (i + 1) + '人目</span>' +
         '<input type="number" min="0" max="30" inputmode="numeric" id="child-age-' + i + '" value="' + esc(v) + '" placeholder="年齢">' +
-        '<span class="child-label" style="flex:0 0 2rem">歳</span>';
+        '<span class="child-label" style="flex:0 0 2rem">歳</span>' +
+        '<select id="child-month-' + i + '" class="child-month">' + 月の選択.join('') + '</select>';
       box.appendChild(d);
     }
   }
@@ -77,6 +84,19 @@
       var el = $('child-age-' + i);
       var v = el ? parseInt(el.value, 10) : NaN;
       if (isFinite(v) && v >= 0) { out.push(v); }
+    }
+    return out;
+  }
+  /** 生まれ月（入れていなければ null）。年齢を入れた子だけ、同じ並びで返す */
+  function 子どもの生まれ月たち() {
+    var n = parseInt($('child-count').value, 10) || 0, out = [];
+    for (var i = 0; i < n; i++) {
+      var 年 = $('child-age-' + i);
+      var a = 年 ? parseInt(年.value, 10) : NaN;
+      if (!(isFinite(a) && a >= 0)) { continue; }
+      var el = $('child-month-' + i);
+      var v = el ? parseInt(el.value, 10) : NaN;
+      out.push((isFinite(v) && v >= 1 && v <= 12) ? v : null);
     }
     return out;
   }
@@ -292,6 +312,7 @@
   function 入力を読む() {
     var 子 = 子どもの年齢たち();
     return {
+      childMonths: 子どもの生まれ月たち(),
       isSingleParent: 選択('status') === 'single',
       myAge: 数('my-age'),
       myIncome: 数('my-income') * 10000,
@@ -327,7 +348,7 @@
     $('my-income').value = Math.round(i.myIncome / 10000);
     $('spouse-income').value = Math.round(i.spouseIncome / 10000);
     $('child-count').value = i.children.length;
-    子ども欄を作る(i.children.length, i.children);
+    子ども欄を作る(i.children.length, i.children, i.childMonths || []);
     $('area').value = i.area;
     var ht = document.querySelector('input[name="housing-type"][value="' + i.housingType + '"]');
     if (ht) { ht.checked = true; }
@@ -423,6 +444,18 @@
     });
   }
 
+  /** 閉じたカードに出す、いちばん短い言い方。
+      1年でいくらか出せるものだけ金額にする。出せないものは推し量らない。 */
+  function 短い金額(r) {
+    if (r.status === 'unlikely') { return { text: '対象外の見込み', tone: 'none' }; }
+    if (r.yearly != null && r.yearly > 0) {
+      return { text: '年およそ ＋' + SPS.円(r.yearly), tone: 'plus' };
+    }
+    if (r.yearly === 0) { return { text: '軽くなる額は0円', tone: 'none' }; }
+    if (r.program.repayment === 'loan') { return { text: '借りるもの（窓口で確認）', tone: 'check' }; }
+    return { text: '窓口で確認', tone: 'check' };
+  }
+
   /* ---------- Stage 1 制度チェック ---------- */
   function 制度を描く(判定) {
     var 使用中 = {};
@@ -437,11 +470,20 @@
         出力.push('<p class="cat-head">' + ラベル名[現在] + '</p>');
       }
       var p = r.program;
+      /* 閉じているときは、制度の名前と金額だけの1行にする。
+         はじめから全部ひらいていると、一覧を目で追えないため。
+         金額が出せないものに、それらしい数字を置くことはしない。 */
+      var 見出しの額 = 短い金額(r);
       出力.push(
-        '<div class="prog ' + (使用中[p.id] ? 'used' : r.status) + '" id="prog-' + esc(p.id) + '">' +
-        '<h4>' + esc(p.name) + 返済バッジ(p) +
+        '<details class="prog ' + (使用中[p.id] ? 'used' : r.status) + '" id="prog-' + esc(p.id) + '">' +
+        '<summary>' +
+        '<span class="prog-name">' + esc(p.name) + '</span>' +
+        '<span class="prog-amount ' + 見出しの額.tone + '">' + esc(見出しの額.text) + '</span>' +
+        '</summary>' +
+        '<div class="prog-detail">' +
+        '<p class="prog-badges">' + 返済バッジ(p) +
         (使用中[p.id] ? ' <span class="badge used">✓ 利用中</span>'
-                      : ' <span class="badge ' + r.status + '">' + esc(r.label) + '</span>') + '</h4>' +
+                      : ' <span class="badge ' + r.status + '">' + esc(r.label) + '</span>') + '</p>' +
         '<p>' + esc(p.summary) + '</p>' +
         (r.amountText ? '<p class="amount">' + esc(r.amountText) + '</p>' : '') +
         (r.status !== 'unlikely' ? '<p>' + esc(p.benefit_summary) + '</p>' : '') +
@@ -453,7 +495,7 @@
         '<p class="src">根拠: ' + esc(p.source.law) + '／' +
         '<a href="' + esc(p.source.url) + '" target="_blank" rel="noopener">' + esc(p.source.publisher) + 'のページを開く</a>' +
         '（最終確認 ' + 日付表示(p.source.last_verified) + '）</p>' +
-        '</div>'
+        '</div></details>'
       );
     });
     $('stage1-body').innerHTML = 出力.join('');
@@ -562,6 +604,9 @@
       return;
     }
     最新資産 = SPS.資産カーブ(入力, データ);
+    /* グラフも家計の表も、この1つの計算結果だけを見て描く。
+       画面のチェック（test/ui.js）が、表とグラフのずれを見つけられるように外へ出しておく。 */
+    window.SPS_LAST_CURVE = 最新資産;
     var c = 最新資産;
     if (c.training) { c.training.animate = 資格ルートを出したところ; }
     資格ルートを出したところ = false;
@@ -631,7 +676,7 @@
     function 見ている年を反映(c2) {
       var 並び2 = 選んだ並び(c2);
       var 出 = $('balance-year-out');
-      if (出) { 出.textContent = 並び2[選んだ年].youngestAge + '歳'; }
+      if (出) { 出.textContent = 年の見出し(並び2[選んだ年]); }
       var 体 = $('balance-body');
       if (体) { 体.innerHTML = 表の中身(c2); }
       var 絵 = $('curve-chart');
@@ -1087,7 +1132,7 @@
     /* 年を選ぶつまみ */
     h.push('<div class="balance-controls">');
     h.push('<label for="balance-year">いちばん下のお子さんが</label>');
-    h.push('<output id="balance-year-out" class="balance-age">' + 並び[選んだ年].youngestAge + '歳</output>');
+    h.push('<output id="balance-year-out" class="balance-age">' + 年の見出し(並び[選んだ年]) + '</output>');
     h.push('<input type="range" id="balance-year" min="0" max="' + (並び.length - 1) +
       '" step="1" value="' + 選んだ年 + '" aria-label="見たい年を選ぶ">');
     h.push('</div>');
@@ -1105,6 +1150,12 @@
     h.push('<div id="balance-body">' + 表の中身(c) + '</div>');
     h.push('</div>');
     return h.join('');
+  }
+
+  /** 「7歳（2029年度）」のような見出し。年度は4月から翌年3月まで */
+  function 年の見出し(pt) {
+    if (!pt) { return ''; }
+    return pt.youngestAge + '歳' + (pt.fiscalYear ? '（' + pt.fiscalYear + '年度）' : '');
   }
 
   /** つまみを動かしたときに入れかえる部分だけ */
@@ -1192,6 +1243,17 @@
     h.push('<tr class="sum"><td>出ていくお金の合計</td><td class="num">' + SPS.円(支出計) + '</td></tr>');
     h.push('<tr class="total ' + (差引 < 0 ? 'minus' : 'plus') + '"><td>ひと月の残り</td><td class="num">' +
       (差引 < 0 ? '−' + SPS.円(-差引) : SPS.円(差引)) + '</td></tr>');
+    /* この年度の終わりに、貯金がいくらになっている見込みか。
+       グラフの線がその時点で持っている数字を、そのまま出す。
+       表のために計算し直すと、線と表がずれるため（過去に実際にずれた）。 */
+    /* いま見ている線（いまのまま／制度活用／資格を取る）の数字を使う */
+    var 年末 = (選んだ線 === 'now') ? pt.endOfYearNow : pt.endOfYear;
+    if (年末 != null) {
+      h.push('<tr class="total ' + (年末 < 0 ? 'minus' : 'plus') + '">' +
+        '<td>' + (pt.fiscalYear ? pt.fiscalYear + '年度' : 'この年') + 'の終わりの貯金（見込み）' +
+        '<span class="why">グラフの線が、この時点で通っている金額です</span></td>' +
+        '<td class="num">' + (年末 < 0 ? '−' + SPS.円(-年末) : SPS.円(年末)) + '</td></tr>');
+    }
     h.push('</tbody></table>');
     if (差引 < 0) {
       h.push('<p class="hint balance-minus">この年は、ひと月に ' + SPS.円(-差引) +
@@ -1957,9 +2019,9 @@
       読み込む();
 
       見本ボタンを描く();
-      子ども欄を作る(1, [null]);
+      子ども欄を作る(1, [null], [null]);
       $('child-count').addEventListener('change', function () {
-        子ども欄を作る(parseInt(this.value, 10) || 0, 子どもの年齢たち());
+        子ども欄を作る(parseInt(this.value, 10) || 0, 子どもの年齢たち(), 子どもの生まれ月たち());
         進路欄を作る(子どもの年齢たち());
       });
       $('children-box').addEventListener('change', function () { 進路欄を作る(子どもの年齢たち()); });

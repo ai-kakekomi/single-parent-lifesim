@@ -34,6 +34,120 @@ var 型 = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charse
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8' };
 
 /* ============================================================
+ * 受け入れ条件（スマホでの見直し 3件）:
+ *   ・お子さんの生まれ月を入れられること（任意）
+ *   ・家計の表に「年度」と「その年度の終わりの貯金」が出ること。
+ *     その金額は、かならずグラフの線と同じであること
+ *   ・制度カードが、閉じているときは名前と金額だけの1行であること
+ * ============================================================ */
+function 生まれ月と表とカードのチェック() {
+  return JSDOM.fromFile(path.join(ROOT, 'index.html'), {
+    runScripts: 'dangerously', resources: 'usable', pretendToBeVisual: true
+  }).then(function (dom) {
+    var w = dom.window, d = w.document;
+    w.Element.prototype.scrollIntoView = function () {};
+    return 待つ(2200).then(function () {
+      /* ---- 生まれ月の入力欄 ---- */
+      var 月欄 = d.getElementById('child-month-0');
+      ok(月欄 !== null, 'お子さんの欄に、生まれ月を選ぶところがある');
+      eq(月欄.options.length, 13, '「入れない」と1月から12月で13通りから選べる');
+      eq(月欄.options[0].value, '', 'はじめは入れていない状態（任意）');
+      ok(月欄.options[0].textContent.indexOf('任意') > 0, '入れなくてよいことが書いてある');
+
+      /* 例を入れると、生まれ月も入る */
+      d.querySelectorAll('#sample-buttons button')[0].click();
+      return 待つ(250);
+    }).then(function () {
+      ok(d.getElementById('child-month-0').value !== '', '例のボタンで、生まれ月も入る');
+      eq(d.querySelectorAll('.child-month').length, 2, 'お子さんの人数ぶん、生まれ月の欄が出る');
+
+      /* ---- 家計の表：年度と、その年度の終わりの貯金 ---- */
+      var 見出し = d.getElementById('balance-year-out').textContent;
+      ok(/[0-9]+歳（20[0-9][0-9]年度）/.test(見出し),
+        '年を選ぶところに、年齢と西暦の年度が出る', 見出し);
+
+      function 年度末の行() {
+        var 行 = [].filter.call(d.querySelectorAll('#balance-body tr'), function (tr) {
+          return tr.textContent.indexOf('年度の終わりの貯金') >= 0;
+        });
+        return 行.length ? 行[0] : null;
+      }
+      ok(年度末の行() !== null, '表に「その年度の終わりの貯金」の行がある');
+
+      /* 表の金額が、グラフの線とぴったり同じであること */
+      var 数字 = function (tr) {
+        return parseInt(tr.querySelector('.num').textContent.replace(/[^0-9-]/g, ''), 10)
+          * (tr.querySelector('.num').textContent.indexOf('−') === 0 ? -1 : 1);
+      };
+      /* 画面がグラフを描くのに使った、まさにその計算結果 */
+      var 曲線 = w.SPS_LAST_CURVE;
+      ok(曲線 && 曲線.points.length > 0, 'グラフと表は、ひとつの計算結果から描かれている');
+      eq(数字(年度末の行()), 曲線.points[0].endOfYear,
+        '表の年度末の貯金は、グラフの線が持っている数字とまったく同じ');
+      eq(曲線.points[0].endOfYear, 曲線.points[1].all,
+        'その数字は、グラフの次の点そのもの（表のために計算し直していない）');
+
+      /* つまみを動かしても、ずれないこと */
+      var つまみ = d.getElementById('balance-year');
+      つまみ.value = '3';
+      つまみ.dispatchEvent(new w.Event('input', { bubbles: true }));
+      ok(d.getElementById('balance-year-out').textContent.indexOf('年度）') > 0,
+        'つまみを動かしても、年度が出たまま');
+      eq(数字(年度末の行()), 曲線.points[3].endOfYear,
+        '動かした先でも、表の数字はグラフの線と同じ');
+
+      /* 「いまのまま」の線に切りかえたら、そちらの数字になる */
+      var 切替 = [].filter.call(d.querySelectorAll('[data-scenario]'), function (b) {
+        return b.getAttribute('data-scenario') === 'now';
+      })[0];
+      切替.click();
+      eq(数字(年度末の行()), 曲線.points[3].endOfYearNow,
+        '「いまのまま」に切りかえると、その線の数字が出る');
+      [].filter.call(d.querySelectorAll('[data-scenario]'), function (b) {
+        return b.getAttribute('data-scenario') === 'all';
+      })[0].click();
+
+      /* ---- 制度カードのアコーディオン ---- */
+      var カード = d.querySelectorAll('#stage1-body details.prog');
+      eq(カード.length, 18, '制度カードが18枚とも折りたたみになっている');
+      eq([].filter.call(カード, function (x) { return x.open; }).length, 0,
+        'はじめは、どのカードも閉じている');
+      カード.forEach(function (c) {
+        var sm = c.querySelector('summary');
+        ok(sm !== null, '閉じたカードにも見出しの行がある');
+        ok(sm.querySelector('.prog-name').textContent.length > 0, '制度の名前が出ている');
+        ok(sm.querySelector('.prog-amount').textContent.length > 0, '金額か、短いラベルが出ている');
+        /* 閉じている行に出るのは、名前と金額だけ。出典や申請先は中に入れる */
+        eq(sm.querySelectorAll('a').length, 0, '閉じた行にリンクは置かない');
+        ok(sm.textContent.indexOf('最終確認') < 0, '閉じた行に最終確認の日付は出さない');
+        ok(c.querySelector('.prog-detail .src') !== null, '開くと出典と最終確認の日付が出る');
+        ok(c.querySelector('.prog-detail .apply') !== null, '開くと申請するところが出る');
+      });
+
+      /* 金額が出せないものに、それらしい数字を置いていないこと */
+      var 確認ラベル = [].map.call(d.querySelectorAll('#stage1-body details.prog .prog-amount'),
+        function (x) { return x.textContent; });
+      ok(確認ラベル.some(function (t) { return t.indexOf('窓口で確認') >= 0; }),
+        '金額を出せないものは「窓口で確認」と書く');
+      確認ラベル.forEach(function (t) {
+        ok(t.indexOf('およそ') < 0 || t.indexOf('年およそ ＋') === 0,
+          '金額を出すときは「年およそ ＋◯◯円」の形だけ', t);
+      });
+      var 児手カード = d.getElementById('prog-jido_teate');
+      ok(児手カード.querySelector('.prog-amount').textContent.indexOf('年およそ ＋') === 0,
+        '児童手当は、閉じたままでも1年ぶんの金額が読める',
+        児手カード.querySelector('.prog-amount').textContent);
+
+      /* 未申告の「対象の可能性が高い」ものが先頭に来る並びは、そのまま */
+      var 見出したち = [].map.call(d.querySelectorAll('#stage1-body .cat-head'),
+        function (x) { return x.textContent; });
+      eq(見出したち[0], '対象の可能性が高い', '当てはまるものが、いちばん上のかたまりに来る');
+      w.close();
+    });
+  });
+}
+
+/* ============================================================
  * 受け入れ条件:
  *   バランス表のあとは「つぎにやること」の一本道になっていること。
  *   ①まだ使えるお金 → ②まずやること → ③気をつけてほしいこと
@@ -1058,7 +1172,7 @@ server.listen(0, '127.0.0.1', function () {
         w.close();
       });
     });
-  }).then(道筋のチェック).then(タグ漏れのチェック).then(ステップのチェック).then(function () {
+  }).then(道筋のチェック).then(タグ漏れのチェック).then(ステップのチェック).then(生まれ月と表とカードのチェック).then(function () {
     server.close();
     console.log('\n============================================');
     console.log('  画面のチェック: 成功 ' + 成功 + ' 件 ／ 失敗 ' + 失敗 + ' 件');

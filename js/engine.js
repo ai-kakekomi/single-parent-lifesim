@@ -183,19 +183,94 @@
   }
 
   /* ------------------------------------------------------------
+   * 3-2. 生まれ月から「学年の年齢」を出す
+   *
+   *   日本の制度は、たいてい「4月1日時点の年齢」で動きます。
+   *   ・学年（1月から3月生まれの早生まれは、同じ年齢でも1つ上の学年）
+   *   ・児童手当・児童扶養手当（18歳になったあと、最初の3月31日まで）
+   *   ・保育料（年度の初めの年齢で決まる）
+   *
+   *   生まれ月を入れてもらえたときだけ、この「学年の年齢」で計算します。
+   *   入れていないときは、これまでどおり、いまの年齢をそのまま足していきます
+   *   （そのぶん、切りかわる年が1年ずれることがあります）。
+   *
+   *   日にちまでは聞きません。月だけで判断します。
+   * ---------------------------------------------------------- */
+  function 今年度(いま) {
+    var d = いま || new Date();
+    return (d.getMonth() + 1 < 4) ? d.getFullYear() - 1 : d.getFullYear();
+  }
+
+  /** 生まれた年（月までしか分からないので、月で当たりをつける） */
+  function 生まれ年(いまの年齢, 生まれ月, いま) {
+    var d = いま || new Date();
+    return d.getFullYear() - いまの年齢 - ((d.getMonth() + 1 < 生まれ月) ? 1 : 0);
+  }
+
+  /**
+   * 学年の年齢（その年度の4月1日時点の年齢）
+   * @param {number} いまの年齢
+   * @param {number} 生まれ月 1〜12。分からないときは null
+   * @param {number} 年度のずれ 0なら今年度、1なら来年度
+   * @return {number|null} 生まれ月が分からなければ null
+   */
+  function 学年の年齢(いまの年齢, 生まれ月, 年度のずれ, いま) {
+    var m = Math.floor(生まれ月 || 0);
+    if (!(m >= 1 && m <= 12)) { return null; }
+    var d = いま || new Date();
+    var b = 生まれ年(いまの年齢, m, d);
+    /* 4月から12月生まれの子は、4月1日の時点でまだ誕生日が来ていない */
+    return 今年度(d) + (年度のずれ || 0) - b - ((m >= 4) ? 1 : 0);
+  }
+
+  /** お子さんを年齢の若い順にそろえる（生まれ月をいっしょに持たせる） */
+  function 子の並び(入力) {
+    var 月一覧 = 入力.childMonths || [];
+    return (入力.children || []).map(function (a, i) {
+      return { age: a, month: 月一覧[i] || null };
+    }).sort(function (x, y) { return x.age - y.age; });
+  }
+
+  /** その年の、お子さんそれぞれの「学年の年齢」。生まれ月がなければ、いまの年齢＋年数 */
+  function 学年の年齢たち(並び, 年数, いま) {
+    return 並び.map(function (c) {
+      var g = 学年の年齢(c.age, c.month, 年数, いま);
+      return (g === null) ? c.age + 年数 : g;
+    });
+  }
+
+  /** ひとりでも生まれ月を入れてもらえたか */
+  function 生まれ月がわかるか(並び) {
+    return 並び.some(function (c) { return !!c.month; });
+  }
+
+  /* ------------------------------------------------------------
    * 4. 児童手当（所得による制限はない。子の年齢と第何子かで決まる）
    *    第3子のカウントは「22歳になった年度末までの子」を上から数える。
    * ---------------------------------------------------------- */
-  function 児童手当(子の年齢一覧, 表) {
+  /**
+   * @param {boolean} 学年で見るか 渡した年齢が「4月1日時点の年齢」のときは true。
+   *   このとき、区切りが1つ下がる。18歳になったあと最初の3月31日まで＝学年の年齢17まで、
+   *   22歳になった年度末まで＝学年の年齢21まで。
+   *   「3歳になったあと最初の3月31日まで」は学年の年齢2まで＝もとの「3歳未満」と同じ範囲なので、
+   *   そこだけはずらさない。
+   */
+  function 児童手当(子の年齢一覧, 表, 学年で見るか) {
+    var ずれ = 学年で見るか ? 1 : 0;
+    var 支給の上限 = 表.pay_upto_age - ずれ;
+    var 数える上限 = 表.count_child_upto_age - ずれ;
+    /* 「3歳に達する日以後の最初の3月31日まで」は、学年の年齢でいうと2まで。
+       もともとの「3歳未満」と同じ範囲（0・1・2）なので、ここはずらさない。 */
+    var 三歳未満 = 3;
     var ages = (子の年齢一覧 || []).slice().sort(function (a, b) { return b - a; }); // 年上から
     var 順位 = 0, 合計 = 0, 明細 = [];
     for (var i = 0; i < ages.length; i++) {
       var age = ages[i];
-      if (age <= 表.count_child_upto_age) { 順位++; } else { continue; }
-      if (age > 表.pay_upto_age) { continue; } // カウント対象だが支給対象外（大学生年代など）
+      if (age <= 数える上限) { 順位++; } else { continue; }
+      if (age > 支給の上限) { continue; } // カウント対象だが支給対象外（大学生年代など）
       var 第3子以降 = (順位 >= 3);
       var 月額;
-      if (age < 3) {
+      if (age < 三歳未満) {
         月額 = 第3子以降 ? 表.monthly.under3_third_plus : 表.monthly.under3;
       } else {
         月額 = 第3子以降 ? 表.monthly.age3_to_18_third_plus : 表.monthly.age3_to_18;
@@ -391,8 +466,11 @@
     var 児扶表 = データ.programs_by_id.jido_fuyo_teate.eligibility;
     var 児手表 = データ.programs_by_id.jido_teate.eligibility;
 
-    var 子 = (入力.children || []).slice().sort(function (a, b) { return a - b; });
+    var 並び = 子の並び(入力);
+    var 子 = 並び.map(function (c) { return c.age; });
     if (!子.length) { return { years: [], cliffs: [] }; }
+    var 学年で見るか = 生まれ月がわかるか(並び);
+    var 年度のはじめ = 今年度();
     var 末子 = 子[0];
     var 年数 = Math.max(1, t.simulate_until_youngest_age - 末子 + 1);
 
@@ -408,16 +486,20 @@
     var years = [], cliffs = [];
     for (var y = 0; y < 年数; y++) {
       var ages = 子.map(function (a) { return a + y; });
+      /* 制度は「4月1日時点の年齢」で動く。生まれ月を入れてもらえたときは、そちらで見る */
+      var 学年 = 学年の年齢たち(並び, y);
       // 児童手当の対象年齢の子だけ数える
-      var 児扶対象数 = ages.filter(function (a) { return a <= 児扶表.pay_upto_age; }).length;
+      var 児扶対象数 = 学年.filter(function (a) {
+        return a <= (児扶表.pay_upto_age - (学年で見るか ? 1 : 0));
+      }).length;
 
       /* --- 結婚を続けた場合 --- */
-      var 婚児手 = 児童手当(ages, 児手表).monthly;
+      var 婚児手 = 児童手当(学年, 児手表, 学年で見るか).monthly;
       var 婚親支援 = (親の年齢 && (親の年齢 + y) >= 親支援終了年齢) ? 0 : 親支援月;
       var 婚合計 = 婚姻中手取り月 + 婚児手 + 婚親支援 - (入力.housingNow || 0);
 
       /* --- 離婚した場合 --- */
-      var 離児手 = 児童手当(ages, 児手表).monthly;
+      var 離児手 = 児童手当(学年, 児手表, 学年で見るか).monthly;
       var 離児扶 = 児童扶養手当({
         salaryGross: 入力.myIncome,
         childSupportYearly: 養育費月 * 12,
@@ -435,6 +517,10 @@
         offset: y,
         youngestAge: 末子 + y,
         childAges: ages,
+        /* 学費や保育料は、この「学年の年齢」で見る */
+        schoolAges: 学年,
+        usesSchoolAge: 学年で見るか,
+        fiscalYear: 年度のはじめ + y,
         married: {
           takehome: 婚姻中手取り月, jidoTeate: 婚児手, jidoFuyoTeate: 0, childSupport: 0,
           parentSupport: 婚親支援, housing: (入力.housingNow || 0),
@@ -941,9 +1027,11 @@
         } };
       var 状況全部 = { income: 入力.myIncome, children: 子の人数, taxFree: 非課税か,
         grants: { kyufukin: true, university: true } };
-      var 学 = その年の学費(y.childAges, プラン一覧, 学費表, 状況いま, 塾設定);
-      var 学全部 = その年の学費(y.childAges, プラン一覧, 学費表, 状況全部, 塾設定);
-      var 安 = その年の学費(y.childAges, y.childAges.map(function () { return 安いプラン; }),
+      /* 学年の年齢で見る。生まれ月を入れていないときは、いまの年齢＋年数がそのまま入っている */
+      var 学齢 = y.schoolAges || y.childAges;
+      var 学 = その年の学費(学齢, プラン一覧, 学費表, 状況いま, 塾設定);
+      var 学全部 = その年の学費(学齢, プラン一覧, 学費表, 状況全部, 塾設定);
+      var 安 = その年の学費(学齢, 学齢.map(function () { return 安いプラン; }),
         学費表, 状況全部, 塾設定);
       var 学費月いま = Math.round(学.net / 12);
       var 学費月全部 = Math.round(学全部.net / 12);
@@ -958,7 +1046,7 @@
         + ((使用中.hitorioya_kojo && 控除が使える) ? 控除の効果 : 0);
 
       /* 0歳から2歳の保育料（国が定めた上限額のめやす） */
-      var 保育の内訳 = 保育料の内訳(y.childAges, 入力.myIncome, !!入力.isSingleParent, データ.childcare);
+      var 保育の内訳 = 保育料の内訳(学齢, 入力.myIncome, !!入力.isSingleParent, データ.childcare);
       var 今年の保育料 = 保育の内訳.total;
       var 土台 = d.total - d.jidoFuyoTeate - d.jidoTeate - (控除が使える ? 控除の効果 : 0)
         - 今年の生活費 - 今年の保育料;
@@ -980,7 +1068,7 @@
               ? '所得が限度額をこえているため対象外'
               : (対象の子がいるか(y.childAges, 児扶表) ? 'まだ申請していない' : '対象の年齢のお子さんがいない')) : null) },
           { key: 'jidoTeate', name: '児童手当', amount: 児手,
-            reason: (児手 === 0 ? (児童手当(y.childAges, 児手表).monthly > 0
+            reason: (児手 === 0 ? (児童手当(学齢, 児手表, !!y.usesSchoolAge).monthly > 0
               ? 'まだ申請していない' : '高校生年代までのお子さんがいない') : null) },
           { key: 'kojo', name: 'ひとり親控除で税が軽くなるぶん', amount: 控除,
             reason: (控除 === 0 ? (控除が使える ? 'まだ申告していない' : '所得が500万円をこえているため対象外') : null) },
@@ -1011,7 +1099,7 @@
               return { index: x.index, age: x.age, stage: x.stage,
                 amount: x.amount, gross: x.gross, discount: x.discount };
             }),
-            reason: (今年の保育料 === 0 ? (対象の未就学児(y.childAges, データ.childcare)
+            reason: (今年の保育料 === 0 ? (対象の未就学児(学齢, データ.childcare)
               ? '住民税が非課税の世帯なので0円、または2人目以降で0円'
               : '3歳から5歳は無償化されているため0円') : null) }
         ];
@@ -1038,6 +1126,8 @@
         offset: i,
         youngestAge: y.youngestAge,
         childAges: y.childAges,
+        schoolAges: 学齢,
+        fiscalYear: y.fiscalYear,
         tuition: 学全部.net,
         tuitionGross: 学全部.total,
         tuitionSupport: 学全部.support,
@@ -1053,8 +1143,13 @@
         all: 貯金全部
       });
 
-      /* いちばん最後の点は「末子22歳の時点」なので、そこから先は積まない */
-      if (i >= sim.years.length - 1) { return; }
+      /* いちばん最後の点は「末子22歳の時点」なので、そこから先は積まない。
+         その年の終わりの貯金は、いまの点のままになる */
+      if (i >= sim.years.length - 1) {
+        points[i].endOfYearNow = 貯金いま;
+        points[i].endOfYear = 貯金全部;
+        return;
+      }
 
       学費の合計 += 学全部.net;
       学費の総額 += 学全部.total;
@@ -1080,6 +1175,11 @@
         if (赤字になる月いま === null && 貯金いま < 0) { 赤字になる月いま = いま番号; }
         if (床 != null && 床に当たる月いま === null && 貯金いま <= 床) { 床に当たる月いま = いま番号; }
       }
+
+      /* その年の終わりの貯金。1年ぶん積んだあとの残高そのものなので、
+         かならずグラフの次の点と同じ数字になる（表とグラフで別の計算をしない）。 */
+      points[i].endOfYearNow = 貯金いま;
+      points[i].endOfYear = 貯金全部;
 
       /* 大学に通う年で赤字になっていないか */
       if (大学で赤字 === null && 貯金全部 < 0 && 学全部.detail.some(function (x) { return x.age >= 18; })) {
@@ -1277,10 +1377,10 @@
         salaryGross: 年収, childSupportYearly: 養育費月 * 12,
         dependents: 児扶対象数, childCount: 児扶対象数
       }, 児扶表);
-      var 児手 = 児童手当(y.childAges, 児手表).monthly;
+      var 児手 = 児童手当(y.schoolAges || y.childAges, 児手表, !!y.usesSchoolAge).monthly;
       var 手取り月 = Math.floor(手取りめやす(年収, true) / 12);
       var 親支援 = (親の年齢 && (親の年齢 + i) >= 親支援終了年齢) ? 0 : 親支援月;
-      var 学の全体 = その年の学費(y.childAges, プラン一覧, 学費表, {
+      var 学の全体 = その年の学費(y.schoolAges || y.childAges, プラン一覧, 学費表, {
         income: 年収, children: (入力.children || []).length,
         taxFree: (給与所得(年収) <= (訓練表.resident_tax_free_limit || 1350000)),
         grants: { kyufukin: true, university: true }
@@ -1290,7 +1390,8 @@
       /* お子さんが大きくなったぶん、生活費（の食費部分）がふえる。
          こちらの線も、本体のカーブと同じ扱いにそろえる。 */
       var 今年の生活費 = Math.round(生活費 * 生活費の倍率(いまの子の年齢, y.childAges, 成長表));
-      var 保育の内訳2 = 保育料の内訳(y.childAges, 年収, true, データ.childcare);
+      var 学齢2 = y.schoolAges || y.childAges;
+      var 保育の内訳2 = 保育料の内訳(学齢2, 年収, true, データ.childcare);
       var 今年の保育料 = 保育の内訳2.total;
       var 月収支 = 手取り月 + 児扶.monthly + 児手 + 給付 + 養育費月 + 親支援
         - 住居 - 今年の生活費 - Math.round(学 / 12) - 今年の保育料;
@@ -1299,6 +1400,8 @@
          いちばん左の点は「いまの貯金」で、3本の線がそこから分かれる形にする。 */
       points.push({
         offset: i, youngestAge: y.youngestAge,
+        childAges: y.childAges, schoolAges: y.schoolAges || y.childAges,
+        fiscalYear: y.fiscalYear,
         training: 訓練中, income: 年収, grant: 給付,
         livingCost: 今年の生活費,
         monthly: 月収支, all: 貯金,
@@ -1340,7 +1443,7 @@
       if (床 != null && 床に当たる年 === null && 貯金 <= 床) { 床に当たる年 = i; }
 
       if (i === 0) { 月ごと.push({ month: 0, all: 貯金 }); }
-      if (i >= sim.years.length - 1) { return; }
+      if (i >= sim.years.length - 1) { points[i].endOfYear = 貯金; return; }
 
       for (var m = 0; m < 12; m++) {
         貯金 += 月収支;
@@ -1351,6 +1454,8 @@
         if (赤字になる月 === null && 貯金 < 0) { 赤字になる月 = 月ごと.length - 1; }
         if (谷の底 === null || 貯金 < 谷の底) { 谷の底 = 貯金; }
       }
+      /* その年の終わりの貯金。線と同じ数字を、そのまま表に渡す */
+      points[i].endOfYear = 貯金;
     });
 
     /* 「いまのまま」を追い越す年。
@@ -1401,8 +1506,13 @@
   function 制度判定(入力, データ) {
     var out = [];
     var 児扶 = null;
+    /* 制度は「4月1日時点の年齢」で動く。生まれ月を入れてもらえたときは、そちらで見る */
+    var 並び = 子の並び(入力);
+    var 学年で見るか = 生まれ月がわかるか(並び);
+    var 学齢 = 学年の年齢たち(並び, 0);
     データ.programs.forEach(function (p) {
-      var r = { program: p, status: 'check', label: '確認したいもの', note: '', amountText: '' };
+      /* yearly は「1年でいくらか」。出せないものは null のまま（推し量った数字は出さない） */
+      var r = { program: p, status: 'check', label: '確認したいもの', note: '', amountText: '', yearly: null };
       if (p.judgment_type === 'check') {
         out.push(r); return;
       }
@@ -1415,11 +1525,14 @@
             r.note = 'ひとり親になった場合に対象になり得ます。下の比較グラフでは、離婚した場合の額を見込んで計算しています。';
             break;
           }
+          var 対象数 = 学年で見るか
+            ? 学齢.filter(function (a) { return a <= e.pay_upto_age - 1; }).length
+            : 入力.eligibleChildCount;
           var j = 児童扶養手当({
             salaryGross: 入力.myIncome,
             childSupportYearly: (入力.childSupportMonthly || 0) * 12,
-            dependents: 入力.eligibleChildCount,
-            childCount: 入力.eligibleChildCount
+            dependents: 対象数,
+            childCount: 対象数
           }, e);
           児扶 = j;
           if (j.status === 'none') { r.status = 'unlikely'; r.label = '対象外の見込み'; r.note = j.reason || ''; }
@@ -1428,16 +1541,18 @@
             r.label = (j.status === 'full') ? '全部支給の可能性が高い' : '一部支給の可能性が高い';
             r.amountText = 'ひと月あたり およそ ' + 円(j.monthly) + '（年およそ ' + 円(j.monthly * 12) + '）';
             r.note = '判定に使った所得は およそ ' + 円(j.income) + '。全部支給の限度額 ' + 円(j.limits.full)
-              + '／一部支給の限度額 ' + 円(j.limits.partial) + '（お子さん等の数 ' + (入力.eligibleChildCount) + '人として）。';
+              + '／一部支給の限度額 ' + 円(j.limits.partial) + '（お子さん等の数 ' + 対象数 + '人として）。';
+            r.yearly = j.monthly * 12;
           }
           break;
         }
 
         case 'jido_teate': {
-          var h = 児童手当(入力.children || [], e);
+          var h = 児童手当(学年で見るか ? 学齢 : (入力.children || []), e, 学年で見るか);
           if (h.monthly > 0) {
             r.status = 'likely'; r.label = '対象の可能性が高い';
             r.amountText = 'ひと月あたり ' + 円(h.monthly) + '（年 ' + 円(h.monthly * 12) + '）';
+            r.yearly = h.monthly * 12;
             r.note = '収入による制限はありません。受け取っていない場合は、さかのぼれる分に限りがあるので早めに窓口へ。';
           } else {
             r.status = 'unlikely'; r.label = '対象外の見込み';
@@ -1454,6 +1569,7 @@
             var 効果 = 軽さ.total;
             r.amountText = '税が 年およそ ' + 円(効果) + ' 軽くなる見込み';
             r.taxSaving = 軽さ;
+            r.yearly = 効果;
             r.note = '勤め先の年末調整、または確定申告で申告します。申告していない年があれば、5年前までさかのぼって取り戻せます。';
             if (効果 === 0) {
               r.amountText = '軽くなる税は 0円の見込み（それでも申告してください）';
@@ -1501,6 +1617,10 @@
     児童扶養手当の所得額: 児童扶養手当の所得額,
     児童扶養手当: 児童扶養手当,
     児童手当: 児童手当,
+    今年度: 今年度,
+    学年の年齢: 学年の年齢,
+    子の並び: 子の並び,
+    学年の年齢たち: 学年の年齢たち,
     手取りめやす: 手取りめやす,
     住民税額: 住民税額,
     ひとり親控除の効果: ひとり親控除の効果,

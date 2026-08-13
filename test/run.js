@@ -1454,6 +1454,141 @@ var 落とし穴id = {};
   ok(行動.some(function (r) { return r.pit === id; }), '「' + id + '」を避けるためのチェック項目がある');
 });
 
+/* ------------------------------------------------------------
+ * 生まれ月（学年の年齢）
+ *   日本の制度は「4月1日時点の年齢」で動く。
+ *   1月から3月生まれ（早生まれ）の子は、同じ年齢でも学年が1つ上になる。
+ * ---------------------------------------------------------- */
+見出し('7-3. 生まれ月と、学年の年齢');
+
+var いま基準 = new Date(2026, 7, 13);   /* 2026年8月13日 → 2026年度 */
+eq(SPS.今年度(いま基準), 2026, '8月は、その年の年度');
+eq(SPS.今年度(new Date(2027, 1, 5)), 2026, '2月は、前の年の年度のまま');
+eq(SPS.今年度(new Date(2027, 3, 1)), 2027, '4月から、新しい年度になる');
+
+/* 早生まれは、同じ年齢でも学年が1つ上 */
+eq(SPS.学年の年齢(6, 6, 0, いま基準), 5, '6歳の6月生まれは、4月1日時点で5歳（年長）');
+eq(SPS.学年の年齢(6, 2, 0, いま基準), 6, '6歳の2月生まれ（早生まれ）は、4月1日時点で6歳（小1）');
+eq(SPS.学年の年齢(6, 4, 0, いま基準), 5, '4月生まれは、その年度のあいだ、まだ誕生日が来ていない扱い');
+eq(SPS.学年の年齢(17, 2, 0, いま基準), 17, '17歳の2月生まれは高3');
+eq(SPS.学年の年齢(18, 6, 0, いま基準), 17, '18歳の6月生まれも高3。早生まれの子と同じ学年になる');
+eq(SPS.学年の年齢(6, 6, 1, いま基準), 6, '来年度には、ひとつ上がる');
+eq(SPS.学年の年齢(6, null, 0, いま基準), null, '生まれ月を入れていなければ、学年の年齢は出さない');
+eq(SPS.学年の年齢(6, 13, 0, いま基準), null, 'ありえない月は、入っていないものとして扱う');
+
+/* 入れていない子がいても、並びは崩さない */
+var 並びA = SPS.子の並び({ children: [8, 5], childMonths: [6, 2] });
+eq(並びA[0].age, 5, '年齢の若い順にそろえる');
+eq(並びA[0].month, 2, '生まれ月も、いっしょについてくる');
+
+/* 児童手当は「18歳になったあと最初の3月31日まで」＝ 学年の年齢17まで */
+var 児手表2 = データ.programs_by_id.jido_teate.eligibility;
+ok(SPS.児童手当([17], 児手表2, true).monthly > 0, '学年の年齢17（高3）までは、児童手当が出る');
+eq(SPS.児童手当([18], 児手表2, true).monthly, 0, '学年の年齢18になると、児童手当は終わる');
+ok(SPS.児童手当([2], 児手表2, true).monthly > SPS.児童手当([3], 児手表2, true).monthly,
+  '3歳になったあと最初の3月31日まで（学年の年齢2まで）は、額が大きい');
+/* 生まれ月を入れていないときは、これまでどおりの見方 */
+ok(SPS.児童手当([18], 児手表2).monthly > 0, '生まれ月がないときは、これまでどおり18歳まで出す');
+
+/* 早生まれの子は、学費の切りかわりが1年早い */
+(function () {
+  var 共通 = { isSingleParent: true, myIncome: 2000000, spouseIncome: 0,
+    currentSavings: 500000, livingCost: 150000, plans: [], usedPrograms: [],
+    children: [6], eligibleChildCount: 1 };
+  var 早 = SPS.資産カーブ(Object.assign({}, 共通, { childMonths: [2] }), データ);
+  var 遅 = SPS.資産カーブ(Object.assign({}, 共通, { childMonths: [6] }), データ);
+  eq(早.points[0].schoolAges[0], 6, '6歳の早生まれは、いま小1');
+  eq(遅.points[0].schoolAges[0], 5, '6歳の6月生まれは、いだ年長');
+  ok(早.points[0].tuition >= 遅.points[0].tuition,
+    '小学生になっている早生まれの子のほうが、いまの学費は少なくない');
+  var なし = SPS.資産カーブ(Object.assign({}, 共通), データ);
+  eq(なし.points[0].schoolAges[0], 6, '生まれ月を入れていなければ、いまの年齢をそのまま使う');
+}());
+
+/* 見本ぜんぶに生まれ月が入っていること */
+見本.samples.forEach(function (sm) {
+  ok(Array.isArray(sm.input.childMonths)
+    && sm.input.childMonths.length === sm.input.children.length,
+    '[' + sm.id + '] 見本のお子さん全員に生まれ月が入っている');
+  sm.input.childMonths.forEach(function (m) {
+    ok(m >= 1 && m <= 12, '[' + sm.id + '] 生まれ月が1月から12月の範囲にある', String(m));
+  });
+});
+
+/* ------------------------------------------------------------
+ * 見本すべて × すべての年 × すべての線 で、表とグラフが食い違わないこと。
+ * 生まれ月を入れた場合と、入れていない場合の両方で回す。
+ * ---------------------------------------------------------- */
+見出し('7-4. 表とグラフが、いつでも同じ数字であること');
+
+['生まれ月あり', '生まれ月なし'].forEach(function (やり方) {
+  var 行数 = 0;
+  見本.samples.forEach(function (sm) {
+    var 入 = Object.assign({}, sm.input, {
+      divorced_childSupportMonthly: sm.input.childSupportMonthly
+    });
+    if (やり方 === '生まれ月なし') { delete 入.childMonths; }
+    /* 資格ルートの線も入れて、3本ぜんぶ確かめる */
+    入.training = Object.assign({}, 入.training, { enabled: true });
+    var c = SPS.資産カーブ(入, データ);
+
+    [['all', c.points], ['now', c.points],
+     ['training', c.training ? c.training.points : []]].forEach(function (組) {
+      var 線 = 組[0], 並び = 組[1];
+      並び.forEach(function (pt, i) {
+        行数++;
+        /* 年度が入っていて、1年ずつ進む */
+        ok(pt.fiscalYear === SPS.今年度() + i,
+          '[' + やり方 + '/' + sm.id + '/' + 線 + '] ' + i + '年目の年度が正しい', String(pt.fiscalYear));
+        /* その年の終わりの貯金は、かならず次の点と同じ（表とグラフで別の計算をしない） */
+        var 年末 = (線 === 'now') ? pt.endOfYearNow : pt.endOfYear;
+        ok(年末 != null, '[' + やり方 + '/' + sm.id + '/' + 線 + '] ' + i + '年目に年度末の貯金がある');
+        if (i < 並び.length - 1) {
+          var 次 = (線 === 'now') ? 並び[i + 1].now : 並び[i + 1].all;
+          eq(年末, 次,
+            '[' + やり方 + '/' + sm.id + '/' + 線 + '] ' + i + '年目の年度末は、次の年の点と同じ');
+        }
+        /* 月ごとの線とも合っていること */
+        var 月並び = (線 === 'training') ? c.training.monthly : c.monthly;
+        if (月並び && 月並び[(i + 1) * 12]) {
+          eq(年末, (線 === 'now') ? 月並び[(i + 1) * 12].now : 月並び[(i + 1) * 12].all,
+            '[' + やり方 + '/' + sm.id + '/' + 線 + '] ' + i + '年目の年度末は、月ごとの線とも同じ');
+        }
+      });
+    });
+  });
+  ok(行数 > 100, やり方 + 'で、じゅうぶんな数の年を確かめている（' + 行数 + '行）');
+});
+
+/* ------------------------------------------------------------
+ * 制度カードの「閉じたときの1行」に出す金額
+ * ---------------------------------------------------------- */
+見出し('7-5. 制度カードの短い金額');
+
+(function () {
+  var 入 = { isSingleParent: true, myIncome: 2000000, otherIncome: 0, spouseIncome: 0,
+    children: [5, 8], childMonths: [2, 6], eligibleChildCount: 2,
+    currentSavings: 300000, livingCost: 150000, childSupportMonthly: 0 };
+  var 判 = SPS.制度判定(入, データ);
+  判.results.forEach(function (r) {
+    if (r.program.judgment_type === 'check') {
+      eq(r.yearly, null,
+        '窓口で確かめるものに、それらしい金額を置かない（' + r.program.id + '）');
+    }
+    if (r.yearly != null) {
+      ok(r.yearly >= 0, '1年ぶんの金額はマイナスにならない（' + r.program.id + '）');
+      ok(r.status !== 'unlikely', '対象外のものに金額は付けない（' + r.program.id + '）');
+    }
+  });
+  var 児手 = 判.results.filter(function (r) { return r.program.id === 'jido_teate'; })[0];
+  ok(児手.yearly > 0, '児童手当は1年ぶんの金額が出る');
+  eq(児手.yearly, SPS.児童手当([SPS.学年の年齢(5, 2, 0), SPS.学年の年齢(8, 6, 0)],
+    データ.programs_by_id.jido_teate.eligibility, true).monthly * 12,
+    '児童手当の年額は、学年の年齢で計算したものと一致する');
+  var 児扶 = 判.results.filter(function (r) { return r.program.id === 'jido_fuyo_teate'; })[0];
+  ok(児扶.yearly === null || 児扶.yearly > 0, '児童扶養手当は、出るときだけ金額が付く');
+}());
+
 /* ------------------------------------------------------------ */
 見出し('12. AIに相談する文章');
 
