@@ -401,4 +401,4 @@ node test/ui.js     # jsdom がなければ、何もせず終わります
 非営利団体 AIかけこみ寺（NPO法人設立認証申請中）
 <https://ai-kakekomi.com>
 
-配信: <https://ai-kakekomi.com/tools/single-parent-lifesim/>　リポジトリ: <https://github.com/ai-kakekomi/single-parent-lifesim>
+配信: <https://ai-kakekomi.com/apps/single-parent-lifesim/>　リポジトリ: <https://github.com/ai-kakekomi/single-parent-lifesim>
