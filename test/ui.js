@@ -367,7 +367,7 @@ function タグ漏れのチェック() {
 
       /* 赤字の世帯（警告カードが出る条件）でも同じことを確かめる */
       d.querySelectorAll('#sample-buttons button')[0].click();
-      d.getElementById('living-cost').value = '200000';
+      d.getElementById('living-cost').value = '20';
       d.getElementById('calc').click();
       d.querySelectorAll('details').forEach(function (x) { x.open = true; });
       var 赤字 = 生タグを探す();
@@ -444,9 +444,9 @@ function 道筋のチェック() {
       d.getElementById('child-count').dispatchEvent(new w.Event('change'));
       d.getElementById('child-age-0').value = '4';
       d.getElementById('child-age-1').value = '9';
-      d.getElementById('living-cost').value = '120000';
+      d.getElementById('living-cost').value = '12';
       d.getElementById('current-savings').value = '0';
-      d.getElementById('housing-now').value = '60000';
+      d.getElementById('housing-now').value = '6';
       d.getElementById('training-on').checked = false;
       d.getElementById('calc').click();
       var 極 = d.querySelector('#stage2b-body .path-block');
@@ -609,27 +609,32 @@ server.listen(0, '127.0.0.1', function () {
           var box = d.querySelector('.money-read[data-for="' + id + '"]');
           return box ? box.textContent : null;
         }
-        eq(d.getElementById('living-cost').type, 'text',
-          '円の欄は文字の欄。「,」を打つため（数字の欄には「,」を入れられない）');
-        eq(d.getElementById('living-cost').getAttribute('inputmode'), 'numeric',
-          'それでもスマホでは数字のキーボードが出る');
-        打つ('current-savings', '300000');
-        eq(d.getElementById('current-savings').value, '300,000',
-          '円の欄は、打っているそばから3けたごとに区切られる');
-        eq(読み替え('current-savings'), '= 30万円',
-          '円の欄の下に、万円に直した数字が出る');
-        打つ('housing-now', '78000');
-        eq(読み替え('housing-now'), '= 7.8万円',
-          '割り切れないときは小数第1位まで出る');
+        eq(d.getElementById('living-cost').getAttribute('data-money'), 'man',
+          '金額の欄はすべて万円で入れてもらう（円の欄と混ぜない）');
+        eq(d.getElementById('living-cost').step, '0.1',
+          '月々の金額は1000円きざみ（0.1万円）');
+        eq(d.getElementById('my-income').step, '10',
+          '年収は10万円きざみ');
+        eq(d.getElementById('living-cost').getAttribute('inputmode'), 'decimal',
+          '小数点を打てるキーボードが出る');
+        打つ('current-savings', '30');
+        eq(読み替え('current-savings'), '= 300,000円',
+          '欄の下に、円に直した数字がけた区切りで出る');
+        打つ('housing-now', '6.5');
+        eq(読み替え('housing-now'), '= 65,000円',
+          '小数第1位まで入れられる（6.5万円 = 65,000円）');
+        打つ('housing-now', '6.35');
+        eq(読み替え('housing-now'), '= 63,500円',
+          'きざみより細かく打っても、そのまま受け取る');
         打つ('my-income', '200');
         eq(読み替え('my-income'), '= 2,000,000円',
-          '万円の欄の下には、円に直した数字が出る');
+          '年収の欄にも同じ読み替えが出る');
         打つ('current-savings', '');
         eq(読み替え('current-savings'), '',
           '空のときは読み替えを出さない（うるさくしない）');
         ok(d.querySelector('.money-read[data-for="cost-food"]') === null,
           'うちわけの欄は横に細いので、読み替えは出さない');
-        打つ('current-savings', '300000');
+        打つ('current-savings', '30');
 
         /* 生活費のうちわけ（任意）*/
         var うち = d.querySelector('details.breakdown');
@@ -642,9 +647,9 @@ server.listen(0, '127.0.0.1', function () {
           var el = d.getElementById(id); el.value = String(v);
           el.dispatchEvent(new w.Event('input', { bubbles: true }));
         }
-        入れる('cost-food', 60000); 入れる('cost-utility', 18000);
-        入れる('cost-comm', 22000); 入れる('cost-insurance', 5000); 入れる('cost-other', 15000);
-        eq(d.getElementById('living-cost').value, '120,000', 'うちわけの合計が、毎月の生活費に自動で入る（3けたごとに区切って出る）');
+        入れる('cost-food', 6); 入れる('cost-utility', 1.8);
+        入れる('cost-comm', 2.2); 入れる('cost-insurance', 0.5); 入れる('cost-other', 1.5);
+        eq(d.getElementById('living-cost').value, '12', 'うちわけの合計が、毎月の生活費に自動で入る（万円で）');
         ok(d.getElementById('cost-total').textContent.indexOf('120,000円') > 0, '合計が表示される');
         var 見立て = d.getElementById('cost-advice').textContent;
         ok(d.querySelectorAll('#cost-advice ul.cost-share li').length === 5, '費目ごとの割合が出る');
@@ -657,8 +662,8 @@ server.listen(0, '127.0.0.1', function () {
         ok(見立て.indexOf('必ず') === -1 && 見立て.indexOf('すべきです') === -1,
           '断言口調になっていない');
         /* 入れ直すと、貯金のグラフも追いかけて変わる */
-        入れる('cost-food', 40000);
-        eq(d.getElementById('living-cost').value, '100,000', '入れ直すと合計も変わる');
+        入れる('cost-food', 4);
+        eq(d.getElementById('living-cost').value, '10', '入れ直すと合計も変わる');
 
         /* 家計のうちわけ表 */
         var 表 = d.querySelector('#stage2b-body .balance-block');
@@ -1003,7 +1008,7 @@ server.listen(0, '127.0.0.1', function () {
 
         /* 赤字の見せ方（例1をもとに、生活費を上げて赤字にする） */
         d.querySelectorAll('#sample-buttons button')[0].click();
-        d.getElementById('living-cost').value = '150000';
+        d.getElementById('living-cost').value = '15';
         /* 資格ルートはいったん切って、カードのボタンで入ることを確かめる */
         d.getElementById('training-on').checked = false;
         d.getElementById('training-after').value = '';

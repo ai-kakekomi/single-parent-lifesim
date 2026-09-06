@@ -25,41 +25,38 @@
     var v = parseFloat(String(el.value).replace(/[^\d.-]/g, ''));
     return isFinite(v) ? Math.max(0, v) : 0;
   }
-  /* ---------- 金額の欄の見え方 ----------
-     原田さんから2つ教わって足した（2026/9/6）。
-       ・万円の欄と円の欄が混ざっていて、どちらか分からない
-       ・30000 のままだと、けたが多いときに読めない
+  /* ---------- 金額の欄 ----------
+     原田さんから「万円と円が混ざっていて分かりにくい」「けたが多いと読めない」と
+     教わって、金額の欄はすべて万円に統一した（2026/9/6）。
 
-     単位を万円に揃える案もあった。ただ、家賃や食費は円で、年収は万円で
-     考える人が多い。金額の幅が100倍ちがうので、片方に寄せるとどちらかが
-     不自然になる（家賃 6.5万円／年収 2,000,000円）。
-     そこで揃えず、打ったそばから「,」を入れ、欄の下にもう一方の単位も出す。
+     ・入れてもらうのは万円。小数第1位まで入る（6.5万円 = 65,000円）
+     ・欄の下に、円に直した数字を小さく出す（= 65,000円）。けたはそこで確かめられる
+     ・上下の矢印のきざみは、年収が10万円、月々の金額が1000円（issue #2）
 
-     数() は数字以外を落として読むので、「,」が入っても計算には影響しない。 */
+     計算はぜんぶ円で動いている。境目は 万() だけなので、
+     ここを通さずに 数() で読むと1万分の1になる。 */
 
-  function 桁区切り(v) {
-    var n = String(v == null ? '' : v).replace(/[^\d]/g, '');
-    if (!n) { return ''; }
-    return String(parseInt(n, 10)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  /** 万円で入れてもらった欄を、円にして返す */
+  function 万(id) {
+    return Math.round(数(id) * 10000);
+  }
+
+  /** 円で持っている数字を、欄に入れる万円の文字にする（小数第1位まで） */
+  function 円を万円に(v) {
+    return String(Math.round((v || 0) / 1000) / 10);
   }
 
   /* うちわけの欄は横に細く並んでいるので、読み替えは出さない */
   function 読み替えを出す(el) {
     var box = document.querySelector('.money-read[data-for="' + el.id + '"]');
     if (!box) { return; }
-    var v = 数(el.id);
-    if (!v) { box.textContent = ''; return; }
-    box.textContent = (el.getAttribute('data-money') === 'man')
-      ? '= ' + SPS.円(v * 10000)
-      : '= ' + SPS.万円(v);
+    var v = 万(el.id);
+    box.textContent = v ? ('= ' + SPS.円(v)) : '';
   }
 
   /* プログラムから値を入れたあとにも呼ぶ（見本を入れたとき・うちわけの合計） */
   function 金額欄を整える() {
-    Array.prototype.forEach.call(document.querySelectorAll('[data-money]'), function (el) {
-      if (el.getAttribute('data-money') === 'yen') { el.value = 桁区切り(el.value); }
-      読み替えを出す(el);
-    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-money]'), 読み替えを出す);
   }
 
   function 金額欄の用意() {
@@ -70,18 +67,7 @@
         box.setAttribute('data-for', el.id);
         el.parentNode.insertBefore(box, el.nextSibling);
       }
-      el.addEventListener('input', function () {
-        if (el.getAttribute('data-money') === 'yen') {
-          /* 打っている途中に「,」が増えると、carets が左へ飛ぶ。
-             末尾に打っているときだけ、末尾へ戻す */
-          var 末尾 = (el.selectionStart === el.value.length);
-          el.value = 桁区切り(el.value);
-          if (末尾) {
-            try { el.setSelectionRange(el.value.length, el.value.length); } catch (_) { /* 数値欄では使えない */ }
-          }
-        }
-        読み替えを出す(el);
-      });
+      el.addEventListener('input', function () { 読み替えを出す(el); });
     });
     金額欄を整える();
   }
@@ -171,7 +157,7 @@
   function うちわけを読む() {
     var 出 = { items: [], total: 0, 入力あり: false };
     費目.forEach(function (f) {
-      var v = 数(f.id);
+      var v = 万(f.id);
       if (v > 0) { 出.入力あり = true; }
       出.items.push({ id: f.id, name: f.name, value: v });
       出.total += v;
@@ -186,7 +172,8 @@
       $('cost-advice').innerHTML = '';
       return;
     }
-    $('living-cost').value = 桁区切り(u.total);
+    /* 合計は円で持っているので、欄に戻すときは万円に直す */
+    $('living-cost').value = String(Math.round(u.total / 1000) / 10);
     読み替えを出す($('living-cost'));
     $('cost-total').innerHTML = '合計 <strong>' + SPS.円(u.total) + '</strong>（この金額を、上の「毎月の生活費」に入れました）';
     $('cost-advice').innerHTML = うちわけの見立て(u);
@@ -322,7 +309,7 @@
   /* ---------- 塾・習いごとにかけるお金 ---------- */
   function 塾の入力() {
     var 決め方 = 選択('juku-mode') || 'average';
-    return { useAverage: (決め方 === 'average'), monthly: 数('juku-cost') };
+    return { useAverage: (決め方 === 'average'), monthly: 万('juku-cost') };
   }
   function 塾欄を反映() {
     var 自分で = (選択('juku-mode') === 'custom');
@@ -377,18 +364,18 @@
       eligibleChildCount: 子.filter(function (a) { return a <= 18; }).length,
       area: $('area').value.trim(),
       housingType: 選択('housing-type'),
-      livingCost: 数('living-cost'),
-      currentSavings: 数('current-savings'),
+      livingCost: 万('living-cost'),
+      currentSavings: 万('current-savings'),
       usedPrograms: 使っている制度(),
       training: 訓練の入力(),
       plans: 進路プラン(),
       juku: 塾の入力(),
-      housingNow: 数('housing-now'),
-      housingAfter: (選択('status') === 'single') ? 数('housing-now') : 数('housing-after'),
+      housingNow: 万('housing-now'),
+      housingAfter: (選択('status') === 'single') ? 万('housing-now') : 万('housing-after'),
       childSupportState: 選択('cs-state'),
-      childSupportMonthly: 数('cs-monthly'),
-      divorced_childSupportMonthly: 数('cs-monthly'),
-      parentSupportMonthly: 数('parent-support'),
+      childSupportMonthly: 万('cs-monthly'),
+      divorced_childSupportMonthly: 万('cs-monthly'),
+      parentSupportMonthly: 万('parent-support'),
       parentAge: 数('parent-age'),
       parentSupportEndAge: 数('parent-end-age') || データ.tables.parent_support_end_age_default
     };
@@ -411,8 +398,8 @@
     document.querySelectorAll('.cost-item').forEach(function (el) { el.value = ''; });
     $('cost-total').textContent = '';
     $('cost-advice').innerHTML = '';
-    $('living-cost').value = i.livingCost;
-    $('current-savings').value = i.currentSavings || 0;
+    $('living-cost').value = 円を万円に(i.livingCost);
+    $('current-savings').value = 円を万円に(i.currentSavings || 0);
     document.querySelectorAll('.used-prog').forEach(function (el) {
       el.checked = (i.usedPrograms || []).indexOf(el.value) >= 0;
     });
@@ -422,7 +409,7 @@
     var j = i.juku || { useAverage: true };
     var jEl = document.querySelector('input[name="juku-mode"][value="' + (j.useAverage ? 'average' : 'custom') + '"]');
     if (jEl) { jEl.checked = true; }
-    $('juku-cost').value = j.monthly ? j.monthly : '';
+    $('juku-cost').value = j.monthly ? 円を万円に(j.monthly) : '';
     $('juku-row').style.display = j.useAverage ? 'none' : '';
 
     var tr = i.training || { enabled: false };
@@ -442,12 +429,12 @@
         if (el) { el.value = pl[st]; }
       });
     });
-    $('housing-now').value = i.housingNow;
-    $('housing-after').value = i.housingAfter;
+    $('housing-now').value = 円を万円に(i.housingNow);
+    $('housing-after').value = 円を万円に(i.housingAfter);
     var cs = document.querySelector('input[name="cs-state"][value="' + i.childSupportState + '"]');
     if (cs) { cs.checked = true; }
-    $('cs-monthly').value = i.childSupportMonthly;
-    $('parent-support').value = i.parentSupportMonthly;
+    $('cs-monthly').value = 円を万円に(i.childSupportMonthly);
+    $('parent-support').value = 円を万円に(i.parentSupportMonthly);
     $('parent-age').value = i.parentAge || '';
     /* 見本の数字も、手で打ったときと同じ見た目にする */
     金額欄を整える();
