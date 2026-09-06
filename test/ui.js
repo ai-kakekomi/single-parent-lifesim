@@ -67,17 +67,18 @@ function 生まれ月と表とカードのチェック() {
         '年を選ぶところに、年齢と西暦の年度が出る', 見出し);
 
       function 年度末の行() {
-        var 行 = [].filter.call(d.querySelectorAll('#balance-body tr'), function (tr) {
-          return tr.textContent.indexOf('年度の終わりの貯金') >= 0;
+        var 行 = [].filter.call(d.querySelectorAll('#balance-body .bs-cell'), function (c) {
+          return c.textContent.indexOf('年度の終わりの貯金') >= 0;
         });
         return 行.length ? 行[0] : null;
       }
-      ok(年度末の行() !== null, '表に「その年度の終わりの貯金」の行がある');
+      ok(年度末の行() !== null, '「その年度の終わりの貯金」が、うちわけより先に出ている');
 
       /* 表の金額が、グラフの線とぴったり同じであること */
-      var 数字 = function (tr) {
-        return parseInt(tr.querySelector('.num').textContent.replace(/[^0-9-]/g, ''), 10)
-          * (tr.querySelector('.num').textContent.indexOf('−') === 0 ? -1 : 1);
+      var 数字 = function (el) {
+        var 金 = el.querySelector('.num') || el.querySelector('.bs-num');
+        return parseInt(金.textContent.replace(/[^0-9-]/g, ''), 10)
+          * (金.textContent.indexOf('−') === 0 ? -1 : 1);
       };
       /* 画面がグラフを描くのに使った、まさにその計算結果 */
       var 曲線 = w.SPS_LAST_CURVE;
@@ -205,8 +206,13 @@ function 章の並びのチェック() {
         '「すぐ閉じる」は、上と身の安全の欄の両方にある');
 
       /* ページの中のリンクで飛べること */
-      ok(d.querySelector('.nav a[href="#stage3"]') !== null,
-        '「まず注意してほしいことを読む」のリンクがある');
+      ok(d.querySelector('.nav a[href="#safety"]') !== null,
+        '「身の安全のことを先に読む」のリンクがある');
+      /* 飛び先は、計算する前から見えている節でなければならない。
+         もとは #stage3 を指していたが、あそこは .stage なので
+         計算するまで display:none で、押しても何も起きなかった（issue #1）*/
+      ok(!d.getElementById('safety').classList.contains('stage'),
+        '飛び先の「身の安全」は、計算しなくても出ている節');
       w.close();
     });
   });
@@ -246,17 +252,18 @@ function 生まれ月と表とカードのチェック() {
         '年を選ぶところに、年齢と西暦の年度が出る', 見出し);
 
       function 年度末の行() {
-        var 行 = [].filter.call(d.querySelectorAll('#balance-body tr'), function (tr) {
-          return tr.textContent.indexOf('年度の終わりの貯金') >= 0;
+        var 行 = [].filter.call(d.querySelectorAll('#balance-body .bs-cell'), function (c) {
+          return c.textContent.indexOf('年度の終わりの貯金') >= 0;
         });
         return 行.length ? 行[0] : null;
       }
-      ok(年度末の行() !== null, '表に「その年度の終わりの貯金」の行がある');
+      ok(年度末の行() !== null, '「その年度の終わりの貯金」が、うちわけより先に出ている');
 
       /* 表の金額が、グラフの線とぴったり同じであること */
-      var 数字 = function (tr) {
-        return parseInt(tr.querySelector('.num').textContent.replace(/[^0-9-]/g, ''), 10)
-          * (tr.querySelector('.num').textContent.indexOf('−') === 0 ? -1 : 1);
+      var 数字 = function (el) {
+        var 金 = el.querySelector('.num') || el.querySelector('.bs-num');
+        return parseInt(金.textContent.replace(/[^0-9-]/g, ''), 10)
+          * (金.textContent.indexOf('−') === 0 ? -1 : 1);
       };
       /* 画面がグラフを描くのに使った、まさにその計算結果 */
       var 曲線 = w.SPS_LAST_CURVE;
@@ -521,7 +528,7 @@ server.listen(0, '127.0.0.1', function () {
           'もう一度切りかえると、ひとりあたりに戻る');
         ok(d.getElementById('stage2-body').textContent.indexOf('相手の収入が家計にきちんと入っていることが前提') > 0,
           'お金の話だけである、という注記が出ている');
-        ok(d.querySelector('#stage2-body a[href="#stage3"]') !== null,
+        ok(d.querySelector('#stage2-body a[href="#safety"]') !== null,
           '身の安全のことを見に行くリンクがある');
 
         /* グラフの左はしが、入力した貯金額であること（1年ずれていないこと） */

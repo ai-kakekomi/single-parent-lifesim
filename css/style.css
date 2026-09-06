@@ -615,3 +615,22 @@ details.prog[open] > summary::before { transform: rotate(90deg); }
   font-variant-numeric: tabular-nums;
 }
 .money-read:empty { min-height: 0; }
+
+/* 「その年の家計を見る」の、大事な3つの数字。
+   前は表のいちばん下にあって、スクロールしないと残りが見えなかった（issue #3）。 */
+.balance-summary {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: .5rem; margin: .6rem 0;
+}
+.bs-cell {
+  display: flex; flex-direction: column; gap: .15rem;
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: .5rem .65rem; background: #fff;
+}
+.bs-label { font-size: .76rem; color: var(--ink-sub); }
+.bs-num { font-size: 1.02rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bs-cell.bs-main { background: var(--accent-soft); border-color: var(--accent-dark); }
+.bs-cell.bs-main .bs-num { font-size: 1.2rem; }
+.bs-cell.minus .bs-num { color: var(--danger); }
+.balance-detail { margin: .5rem 0; }
+.balance-detail summary { cursor: pointer; font-size: .88rem; font-weight: 600; color: var(--accent-dark); }

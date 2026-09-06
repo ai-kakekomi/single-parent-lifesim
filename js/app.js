@@ -634,7 +634,7 @@
       '<p>結婚を続けた場合の金額は、<strong>相手の収入が家計にきちんと入っていることが前提</strong>です。</p>' +
       '<p>生活費を渡してもらえない。使い道を細かく責められる。身の安全に不安がある。' +
       'そういう場合は、お金の多い少ないとは別の問題です。グラフの数字だけで決めないでください。</p>' +
-      '<p><a href="#stage3">身の安全のことは、下の「気をつけてほしいこと」を見てください</a>／' +
+      '<p><a href="#safety">身の安全のことを読む</a>／' +
       '<a href="manual.html#erase" target="_blank" rel="noopener">相談できるところの一覧を開く</a></p>' +
       '</div>';
   }
@@ -1223,6 +1223,32 @@
         できごと.map(function (e) { return '<li>' + e + '</li>'; }).join('') + '</ul></div>');
     }
 
+    /* 大事な3つの数字を、うちわけより先に出す。
+       いままでは表のいちばん下にあり、スクロールしないと残りが見えなかった（issue #3）。
+       この年度の終わりの貯金は、グラフの線が持っている数字をそのまま使う。
+       表のために計算し直すと、線と表がずれる（過去に実際にずれた）。 */
+    var 年末 = (選んだ線 === 'now') ? pt.endOfYearNow : pt.endOfYear;
+    h.push('<div class="balance-summary">');
+    h.push('<div class="bs-cell"><span class="bs-label">入ってくるお金</span>' +
+      '<span class="bs-num">' + SPS.円(収入計) + '</span></div>');
+    h.push('<div class="bs-cell"><span class="bs-label">出ていくお金</span>' +
+      '<span class="bs-num">' + SPS.円(支出計) + '</span></div>');
+    h.push('<div class="bs-cell bs-main ' + (差引 < 0 ? 'minus' : 'plus') + '">' +
+      '<span class="bs-label">ひと月の残り</span><span class="bs-num">' +
+      (差引 < 0 ? '−' + SPS.円(-差引) : SPS.円(差引)) + '</span></div>');
+    if (年末 != null) {
+      h.push('<div class="bs-cell ' + (年末 < 0 ? 'minus' : 'plus') + '">' +
+        '<span class="bs-label">' + (pt.fiscalYear ? pt.fiscalYear + '年度' : 'この年') +
+        'の終わりの貯金</span><span class="bs-num">' +
+        (年末 < 0 ? '−' + SPS.円(-年末) : SPS.円(年末)) + '</span></div>');
+    }
+    h.push('</div>');
+    if (差引 < 0) {
+      h.push('<p class="hint balance-minus">この年は、ひと月に ' + SPS.円(-差引) +
+        ' ずつ貯金が減っていきます。</p>');
+    }
+
+    h.push('<details class="balance-detail"><summary>何にいくらか、うちわけを見る</summary>');
     h.push('<table class="balance"><tbody>');
     h.push('<tr class="sec"><th colspan="2">入ってくるお金（ひと月）</th></tr>');
     b.income.forEach(function (r) {
@@ -1286,24 +1312,10 @@
       }
     });
     h.push('<tr class="sum"><td>出ていくお金の合計</td><td class="num">' + SPS.円(支出計) + '</td></tr>');
-    h.push('<tr class="total ' + (差引 < 0 ? 'minus' : 'plus') + '"><td>ひと月の残り</td><td class="num">' +
-      (差引 < 0 ? '−' + SPS.円(-差引) : SPS.円(差引)) + '</td></tr>');
-    /* この年度の終わりに、貯金がいくらになっている見込みか。
-       グラフの線がその時点で持っている数字を、そのまま出す。
-       表のために計算し直すと、線と表がずれるため（過去に実際にずれた）。 */
-    /* いま見ている線（いまのまま／制度活用／資格を取る）の数字を使う */
-    var 年末 = (選んだ線 === 'now') ? pt.endOfYearNow : pt.endOfYear;
-    if (年末 != null) {
-      h.push('<tr class="total ' + (年末 < 0 ? 'minus' : 'plus') + '">' +
-        '<td>' + (pt.fiscalYear ? pt.fiscalYear + '年度' : 'この年') + 'の終わりの貯金（見込み）' +
-        '<span class="why">グラフの線が、この時点で通っている金額です</span></td>' +
-        '<td class="num">' + (年末 < 0 ? '−' + SPS.円(-年末) : SPS.円(年末)) + '</td></tr>');
-    }
     h.push('</tbody></table>');
-    if (差引 < 0) {
-      h.push('<p class="hint balance-minus">この年は、ひと月に ' + SPS.円(-差引) +
-        ' ずつ貯金が減っていきます。</p>');
-    }
+    h.push('<p class="hint">上の「' + (pt.fiscalYear ? pt.fiscalYear + '年度' : 'この年') +
+      'の終わりの貯金」は、グラフの線がこの時点で通っている金額です。</p>');
+    h.push('</details>');
     return h.join('');
   }
 
