@@ -616,6 +616,13 @@ server.listen(0, '127.0.0.1', function () {
           var box = d.querySelector('.money-read[data-for="' + id + '"]');
           return box ? box.textContent : null;
         }
+        /* ここで欄をいじると、あとの検査が見ている家計まで変わってしまう。
+           元の値を控えて、終わったら戻す（実際に、グラフの赤い床が
+           画面から消えて、あとの検査が落ちた） */
+        var 控え = {};
+        ['current-savings', 'housing-now', 'my-income'].forEach(function (id) {
+          控え[id] = d.getElementById(id).value;
+        });
         eq(d.getElementById('living-cost').getAttribute('data-money'), 'man',
           '金額の欄はすべて万円で入れてもらう（円の欄と混ぜない）');
         eq(d.getElementById('living-cost').step, '0.1',
@@ -641,7 +648,7 @@ server.listen(0, '127.0.0.1', function () {
           '空のときは読み替えを出さない（うるさくしない）');
         ok(d.querySelector('.money-read[data-for="cost-food"]') === null,
           'うちわけの欄は横に細いので、読み替えは出さない');
-        打つ('current-savings', '30');
+        Object.keys(控え).forEach(function (id) { 打つ(id, 控え[id]); });
 
         /* 生活費のうちわけ（任意）*/
         var うち = d.querySelector('details.breakdown');
@@ -871,7 +878,13 @@ server.listen(0, '127.0.0.1', function () {
         ok(網たたみ.querySelector('.explain-body') !== null, '中身が入れものに入っている');
         ok(網たたみ.textContent.indexOf('うすい赤') > 0 && 網たたみ.textContent.indexOf('濃い赤') > 0,
           '2段階の赤の意味が中に書いてある');
-        /* 長い説明はたたんでも、グラフの中の短いラベルは残っている */
+        /* 長い説明はたたんでも、グラフの中の短いラベルは残っている。
+           ここまでの検査で生活費などをいじっているので、いったん見本の
+           そのままの状態に戻してから見る。借りられる上限の線は、
+           家計がその高さまで下がるときにだけ描くので、少しでも
+           家計が軽くなると線ごと画面から外れてしまう。 */
+        d.querySelectorAll('#sample-buttons button')[1].click();
+        d.getElementById('calc').click();
         var 絵の字 = d.querySelector('#curve-chart svg').textContent;
         ok(絵の字.indexOf('借りられません') > 0, 'グラフの中の「借りられません」のラベルは残っている');
         ok(d.querySelector('#curve-chart svg [fill="url(#hatch)"]') === null,
