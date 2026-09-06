@@ -277,6 +277,12 @@ table.compare caption { padding-bottom: .25rem; }
 }
 .headline-box.ok { background: var(--ok-soft); border-color: #9dcdb2; }
 .headline-box .big { font-size: 1.12rem; font-weight: 700; margin: 0 0 .4rem; line-height: 1.6; }
+/* いちばん見せたい数字。ここだけ大きく、まわりは静かにする */
+.headline-box .headline-num {
+  margin: 0; line-height: 1.1; font-size: 1.3rem; font-weight: 700; color: var(--warn);
+  font-variant-numeric: tabular-nums;
+}
+.headline-box .headline-num strong { font-size: 2.6rem; letter-spacing: -.02em; }
 .headline-box p { margin: .35rem 0; font-size: .92rem; }
 .headline-box a.jump-big { font-weight: 700; }
 
@@ -309,6 +315,14 @@ details.explain > summary::-webkit-details-marker { display: none; }
 details.explain > summary::before { content: '▶ '; font-size: .75rem; }
 details.explain[open] > summary::before { content: '▼ '; }
 details.explain > summary:hover { background: var(--accent-soft); }
+/* 参考資料のたたみ。中身のパネルは、たたみの中では枠を重ねない */
+details.explain.ref { margin: .8rem 0; }
+details.explain.ref > .panel { margin: .4rem 0 0; box-shadow: none; }
+details.explain.ref > .notice { margin: .4rem 0 0; }
+details.explain.fold > summary { font-weight: 600; color: var(--ink); }
+details.explain.ref > .assumption-box { margin: .4rem 0 0; }
+details.explain.prompt-fold { margin: .4rem 0 0; }
+details.explain.prompt-fold > textarea { margin-top: .4rem; }
 
 /* ---- 足りないぶんを埋める手 ---- */
 .gap-amount { font-size: 1.02rem; }
@@ -316,6 +330,8 @@ ol.gap-list { padding-left: 1.3rem; margin: .6rem 0; }
 ol.gap-list li { margin-bottom: .7rem; font-size: .89rem; line-height: 1.7; }
 ol.gap-list li.strong { background: rgba(255,255,255,.8); border-radius: 6px; padding: .5rem .6rem; }
 ol.gap-list a { color: var(--accent-dark); }
+ol.gap-list.folded li:nth-child(n+4) { display: none; }
+button.gap-more { margin: .2rem 0 .6rem; }
 
 @media (max-width: 420px) {
   .legend { font-size: .78rem; gap: .5rem; }

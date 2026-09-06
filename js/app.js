@@ -337,9 +337,32 @@
     }).join('');
     document.querySelectorAll('.plan-select').forEach(function (el) {
       el.addEventListener('change', function () {
+        進路の見出しを直す();
         if (最新入力) { 最新入力.plans = 進路プラン(); 資産を描く(); }
       });
     });
+    進路の見出しを直す();
+  }
+  /* 進路の欄はたたんである。既定（全部公立・国立大に自宅から）のままなら1行で済ませ、
+     変えてあるときは見出しにそう書いて、たたみも開いておく。
+     たたんだ裏で私立が選ばれたまま、というのを防ぐため */
+  function 進路の見出しを直す() {
+    var fold = $('plan-fold');
+    if (!fold) { return; }
+    var 帯 = (データ.tuition && データ.tuition.bands) || [];
+    var 既定 = {};
+    帯.forEach(function (b) { 既定[b.stage] = b.default; });
+    var 変えた = 0;
+    document.querySelectorAll('.plan-select').forEach(function (el) {
+      if (el.value !== 既定[el.getAttribute('data-stage')]) { 変えた += 1; }
+    });
+    var sum = fold.querySelector('summary');
+    if (変えた) {
+      sum.textContent = '進路を ' + 変えた + ' か所、既定から変えてあります。中身を見る';
+      fold.open = true;
+    } else {
+      sum.textContent = 'いまは「公立の小・中・高 → 国立大学に自宅から」で計算しています。変える';
+    }
   }
   function 進路プラン() {
     var out = [];
@@ -429,6 +452,7 @@
         if (el) { el.value = pl[st]; }
       });
     });
+    進路の見出しを直す();
     $('housing-now').value = 円を万円に(i.housingNow);
     $('housing-after').value = 円を万円に(i.housingAfter);
     var cs = document.querySelector('input[name="cs-state"][value="' + i.childSupportState + '"]');
@@ -663,8 +687,9 @@
     if (c.gaps.length) {
       var 名 = c.gaps.map(function (g) { return データ.programs_by_id[g.id].name.replace(/（.*$/, ''); }).join('・');
       伸びしろ = '<div class="headline-box">' +
-        '<p class="big">まだ使っていない制度で、<strong>10年で約' +
-        Math.round(c.diffAtTenYears / 10000).toLocaleString('ja-JP') + '万円</strong>変わります</p>' +
+        '<p class="big">まだ使っていない制度で、10年で</p>' +
+        '<p class="headline-num">約<strong>' + Math.round(c.diffAtTenYears / 10000).toLocaleString('ja-JP') + '</strong>万円</p>' +
+        '<p class="big">変わります</p>' +
         '<p>いま申告されていないのは <strong>' + esc(名) + '</strong> です。' +
         'ひと月あたり約' + SPS.円(c.gapMonthly) + '。いちばん下のお子さんが22歳になるまでだと、約' +
         Math.round(c.finalDiff / 10000).toLocaleString('ja-JP') + '万円の差です。</p>' +
@@ -1084,7 +1109,9 @@
   /* ---------- このグラフの前提 ----------
      甘く出るところ・厳しく出るところを、どちらも正直に書きます。 */
   function 前提のボックス(c) {
-    var h = ['<div class="assumption-box"><h4>このグラフの前提</h4>'];
+    /* 常に置いてはあるが、たたんでおく。読む人は少なく、読みたい人には全部見せる */
+    var h = ['<details class="explain ref"><summary>このグラフの前提。収入・生活費・学費をどう置いたか（くわしく）</summary>' +
+      '<div class="assumption-box"><h4>このグラフの前提</h4>'];
     h.push('<ul>');
     h.push('<li><strong>収入は、いまのまま変わらない前提です。</strong>昇給も、転職も、働く時間をふやすことも入れていません。' +
       '（資格を取るルートだけは別で、そこだけ収入が変わります）</li>');
@@ -1123,7 +1150,7 @@
       h.push('<li>いまの貯金を入れていないので、<strong>0円から始まる</strong>ものとして描いています。</li>');
     }
     h.push('<li>ここに出る金額は、すべて<strong>概算</strong>です。正確な額は市区町村の窓口で確認してください。</li>');
-    h.push('</ul></div>');
+    h.push('</ul></div></details>');
     return h.join('');
   }
 
@@ -1395,7 +1422,12 @@
   function 学費の説明(c) {
     var t = データ.tuition;
     if (!t) { return ''; }
-    var h = ['<div class="panel tight">'];
+    /* 参考資料なので、たたんでおく。開かなくても済むように、合計と実際の負担は見出しの行に出す */
+    var 要点 = '学校にかかるお金 合計 約' + Math.round(c.tuitionGrossTotal / 10000).toLocaleString('ja-JP') + '万円';
+    if (c.tuitionSupportTotal > 0) {
+      要点 += '、制度を使うと実際の負担は 約' + Math.round(c.tuitionTotal / 10000).toLocaleString('ja-JP') + '万円';
+    }
+    var h = ['<details class="explain ref"><summary>' + 要点 + '（くわしく）</summary><div class="panel tight">'];
     h.push('<h3 style="margin-top:0">学校にかかるお金</h3>');
     if (c.tuitionSupportTotal > 0) {
       h.push('<p>いまの進路の見込みだと、学校にかかるお金は これから合計およそ <strong>' +
@@ -1429,7 +1461,7 @@
       '<a href="' + esc(t.source_university.url) + '" target="_blank" rel="noopener">日本学生支援機構「学生生活調査」</a>／' +
       '<a href="' + esc(t.source_entrance.url) + '" target="_blank" rel="noopener">文部科学省「私立大学等の学生納付金等調査」</a>／' +
       '<a href="' + esc(t.source_free_preschool.url) + '" target="_blank" rel="noopener">こども家庭庁「幼児教育・保育の無償化」</a></p>');
-    h.push('</div>');
+    h.push('</div></details>');
     return h.join('');
   }
 
@@ -1446,7 +1478,7 @@
     var 修学 = データ.programs_by_id.koutou_kyoiku_shugaku_shien;
     var 給付金 = データ.programs_by_id.koukou_shugaku_shienkin;
 
-    var h = ['<div class="panel scholarship-map">'];
+    var h = ['<details class="explain ref"><summary>奨学金の見取り図。返さなくていいもの・返すもの・借りた場合の返し方（くわしく）</summary><div class="panel scholarship-map">'];
     h.push('<h3 style="margin-top:0">奨学金の見取り図</h3>');
     h.push('<p class="hint">お金の助けには「返さなくていいもの」と「あとで返すもの」があります。' +
       '<strong>返さなくていいものから使い切る</strong>のが順番です。</p>');
@@ -1518,7 +1550,7 @@
       '学力基準: <a href="' + esc(L.academic_source.url) + '" target="_blank" rel="noopener">' +
       esc(L.academic_source.publisher) + '「進学前（予約採用）の第一種奨学金の学力基準」</a>' +
       '（最終確認 ' + 日付表示(L.academic_source.last_verified) + '）</p>');
-    h.push('</div>');
+    h.push('</div></details>');
     return h.join('');
   }
 
@@ -1603,7 +1635,9 @@
     }
     h.push('<p><strong>借金では埋められません。</strong>カードローンやリボ払いで足りないぶんを埋めると、' +
       '来月からは返済も足されて、もっと足りなくなります。下の手を1つずつ試してください。</p>');
-    h.push('<ol class="gap-list">');
+    /* 上から順に試すものなので、まず3つだけ見せる。残りはボタンで開く（ol は1本のまま。番号を通すため） */
+    var 隠す = 手.length > 4;
+    h.push('<ol class="gap-list' + (隠す ? ' folded' : '') + '">');
     手.forEach(function (o) {
       var 制度 = o.prog ? データ.programs_by_id[o.prog] : null;
       h.push('<li' + (o.strong ? ' class="strong"' : '') + '>' +
@@ -1613,6 +1647,9 @@
         (o.prog ? '<br><a href="#prog-' + esc(o.prog) + '">この制度のくわしい説明を見る</a>' : '') + '</li>');
     });
     h.push('</ol>');
+    if (隠す) {
+      h.push('<button type="button" class="ghost gap-more">残りの ' + (手.length - 3) + ' つの手も見る</button>');
+    }
     h.push('<p>全部やらなくて大丈夫です。上から1つずつで十分です。ひとりで抱えないでください。</p>');
     h.push('</div>');
 
@@ -1871,7 +1908,9 @@
       return '<div class="prompt-card">' +
         '<h4>' + esc(p.title) + '</h4>' +
         '<p class="hint">' + esc(p.desc) + '</p>' +
-        '<textarea readonly id="pr-' + i + '">' + esc(p.text) + '</textarea>' +
+        /* 文章そのものは長いのでたたむ。コピーは読まなくても押せるように、外に出しておく */
+        '<details class="explain prompt-fold"><summary>文章を読む（くわしく）</summary>' +
+        '<textarea readonly id="pr-' + i + '">' + esc(p.text) + '</textarea></details>' +
         '<div class="copy-row"><button type="button" class="ghost" data-copy="pr-' + i + '">この文章をコピーする</button>' +
         '<span class="copy-msg" id="msg-pr-' + i + '"></span></div>' +
         '</div>';
@@ -1896,20 +1935,20 @@
 
   function コピー設定() {
     document.addEventListener('click', function (e) {
+      var more = e.target.closest('button.gap-more');
+      if (more) {
+        var ol = more.parentNode.querySelector('ol.gap-list');
+        if (ol) { ol.classList.remove('folded'); }
+        more.remove();
+        return;
+      }
       var b = e.target.closest('button[data-copy]');
       if (!b) { return; }
+      /* 文章の欄はたたんであることが多く、隠れた欄を select() してもコピーできない。
+         値だけ取り出して、共通のコピー処理に渡す */
       var ta = $(b.getAttribute('data-copy'));
       var msg = $('msg-' + b.getAttribute('data-copy'));
-      ta.select();
-      var ok = false;
-      try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
-      if (!ok && navigator.clipboard) {
-        navigator.clipboard.writeText(ta.value).then(function () { msg.textContent = 'コピーしました'; });
-      } else {
-        msg.textContent = ok ? 'コピーしました' : 'コピーできませんでした。文章を選んでコピーしてください。';
-      }
-      window.getSelection().removeAllRanges();
-      setTimeout(function () { msg.textContent = ''; }, 3000);
+      コピーする(ta.value, msg);
     });
   }
 

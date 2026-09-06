@@ -151,8 +151,11 @@
 
       <fieldset>
         <legend>お子さんの進路の見込み</legend>
-        <p class="hint" style="margin-top:0">いまの見込みで大丈夫です。あとから変えると、貯金のグラフがその場で変わります。</p>
-        <div id="plan-box"></div>
+        <details class="explain fold" id="plan-fold">
+          <summary>いまは「公立の小・中・高 → 国立大学に自宅から」で計算しています。変える</summary>
+          <p class="hint" style="margin-top:.5rem">いまの見込みで大丈夫です。あとから変えると、貯金のグラフがその場で変わります。</p>
+          <div id="plan-box"></div>
+        </details>
       </fieldset>
 
       <fieldset>
@@ -245,6 +248,8 @@
         <strong>家族の人数がちがうので、そのまま足した金額では比べられません。ひとりあたりに直した金額で比べています。</strong>
       </p>
 
+      <details class="explain ref">
+        <summary>このグラフが置いている仮定と、入っていない大事なもの</summary>
       <div class="notice">
         <h4>このグラフが置いている仮定</h4>
         <ul>
@@ -263,6 +268,7 @@
           （サポートダイヤル 0570-078374。収入が一定以下なら無料で相談でき、弁護士費用の立替えも使えます）へ。
         </p>
       </div>
+      </details>
 
       <div class="panel tight">
         <label for="parent-end-age">親御さんからの援助が終わると考える年齢</label>
