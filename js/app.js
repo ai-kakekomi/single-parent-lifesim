@@ -1848,7 +1848,7 @@
     var b = $('copy-todo');
     if (b) {
       b.addEventListener('click', function () {
-        var 文 = ['まずやること（ひとり親ライフチョイス・シミュレータ）', ''].concat(
+        var 文 = ['まずやること（ひとり親ライフプランシミュレータ）', ''].concat(
           やること.map(function (it) { return '□ ' + it.text; }),
           ['', '※ 金額はすべて概算です。正確な額は市区町村の窓口で確認してください。']).join('\n');
         コピーする(文, $('copy-todo-msg'));
@@ -1857,7 +1857,7 @@
     var b2 = $('copy-rule');
     if (b2) {
       b2.addEventListener('click', function () {
-        var 文 = ['落とし穴チェック（ひとり親ライフチョイス・シミュレータ）', ''].concat(
+        var 文 = ['落とし穴チェック（ひとり親ライフプランシミュレータ）', ''].concat(
           行動.map(function (r) { return '□ ' + r.text; })).join('\n');
         コピーする(文, $('copy-rule-msg'));
       });
