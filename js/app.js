@@ -25,6 +25,67 @@
     var v = parseFloat(String(el.value).replace(/[^\d.-]/g, ''));
     return isFinite(v) ? Math.max(0, v) : 0;
   }
+  /* ---------- 金額の欄の見え方 ----------
+     原田さんから2つ教わって足した（2026/9/6）。
+       ・万円の欄と円の欄が混ざっていて、どちらか分からない
+       ・30000 のままだと、けたが多いときに読めない
+
+     単位を万円に揃える案もあった。ただ、家賃や食費は円で、年収は万円で
+     考える人が多い。金額の幅が100倍ちがうので、片方に寄せるとどちらかが
+     不自然になる（家賃 6.5万円／年収 2,000,000円）。
+     そこで揃えず、打ったそばから「,」を入れ、欄の下にもう一方の単位も出す。
+
+     数() は数字以外を落として読むので、「,」が入っても計算には影響しない。 */
+
+  function 桁区切り(v) {
+    var n = String(v == null ? '' : v).replace(/[^\d]/g, '');
+    if (!n) { return ''; }
+    return String(parseInt(n, 10)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+
+  /* うちわけの欄は横に細く並んでいるので、読み替えは出さない */
+  function 読み替えを出す(el) {
+    var box = document.querySelector('.money-read[data-for="' + el.id + '"]');
+    if (!box) { return; }
+    var v = 数(el.id);
+    if (!v) { box.textContent = ''; return; }
+    box.textContent = (el.getAttribute('data-money') === 'man')
+      ? '= ' + SPS.円(v * 10000)
+      : '= ' + SPS.万円(v);
+  }
+
+  /* プログラムから値を入れたあとにも呼ぶ（見本を入れたとき・うちわけの合計） */
+  function 金額欄を整える() {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-money]'), function (el) {
+      if (el.getAttribute('data-money') === 'yen') { el.value = 桁区切り(el.value); }
+      読み替えを出す(el);
+    });
+  }
+
+  function 金額欄の用意() {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-money]'), function (el) {
+      if (!el.classList.contains('cost-item')) {
+        var box = document.createElement('p');
+        box.className = 'money-read';
+        box.setAttribute('data-for', el.id);
+        el.parentNode.insertBefore(box, el.nextSibling);
+      }
+      el.addEventListener('input', function () {
+        if (el.getAttribute('data-money') === 'yen') {
+          /* 打っている途中に「,」が増えると、carets が左へ飛ぶ。
+             末尾に打っているときだけ、末尾へ戻す */
+          var 末尾 = (el.selectionStart === el.value.length);
+          el.value = 桁区切り(el.value);
+          if (末尾) {
+            try { el.setSelectionRange(el.value.length, el.value.length); } catch (_) { /* 数値欄では使えない */ }
+          }
+        }
+        読み替えを出す(el);
+      });
+    });
+    金額欄を整える();
+  }
+
   function 選択(name) {
     var el = document.querySelector('input[name="' + name + '"]:checked');
     return el ? el.value : '';
@@ -125,7 +186,8 @@
       $('cost-advice').innerHTML = '';
       return;
     }
-    $('living-cost').value = u.total;
+    $('living-cost').value = 桁区切り(u.total);
+    読み替えを出す($('living-cost'));
     $('cost-total').innerHTML = '合計 <strong>' + SPS.円(u.total) + '</strong>（この金額を、上の「毎月の生活費」に入れました）';
     $('cost-advice').innerHTML = うちわけの見立て(u);
     if (最新入力) {
@@ -387,6 +449,8 @@
     $('cs-monthly').value = i.childSupportMonthly;
     $('parent-support').value = i.parentSupportMonthly;
     $('parent-age').value = i.parentAge || '';
+    /* 見本の数字も、手で打ったときと同じ見た目にする */
+    金額欄を整える();
     婚姻状態を反映();
     $('sample-note').innerHTML = '<strong>記入例が入りました。内容を見ながら下に進んでください。</strong><br>' +
       esc('「' + s.label + '」（架空の例です）。' + s.story);
@@ -1999,6 +2063,7 @@
         }
       });
       $('calc').addEventListener('click', function () { 計算する(true); });
+      金額欄の用意();
       コピー設定();
       飛び先を開く();
       身の安全を描く();

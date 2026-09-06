@@ -599,6 +599,38 @@ server.listen(0, '127.0.0.1', function () {
         ok(d.querySelector('#stage2b-body a[href*="fsa.go.jp"]') !== null, '金融庁の出典リンクがある');
         ok(d.querySelector('#stage2b-body a[href*="shiruporuto.jp"]') !== null, '金融広報中央委員会の出典リンクがある');
 
+        /* 金額の欄の見え方（原田さんからの指摘・2026/9/6）*/
+        function 打つ(id, v) {
+          var el = d.getElementById(id); el.value = String(v);
+          el.dispatchEvent(new w.Event('input', { bubbles: true }));
+          return el;
+        }
+        function 読み替え(id) {
+          var box = d.querySelector('.money-read[data-for="' + id + '"]');
+          return box ? box.textContent : null;
+        }
+        eq(d.getElementById('living-cost').type, 'text',
+          '円の欄は文字の欄。「,」を打つため（数字の欄には「,」を入れられない）');
+        eq(d.getElementById('living-cost').getAttribute('inputmode'), 'numeric',
+          'それでもスマホでは数字のキーボードが出る');
+        打つ('current-savings', '300000');
+        eq(d.getElementById('current-savings').value, '300,000',
+          '円の欄は、打っているそばから3けたごとに区切られる');
+        eq(読み替え('current-savings'), '= 30万円',
+          '円の欄の下に、万円に直した数字が出る');
+        打つ('housing-now', '78000');
+        eq(読み替え('housing-now'), '= 7.8万円',
+          '割り切れないときは小数第1位まで出る');
+        打つ('my-income', '200');
+        eq(読み替え('my-income'), '= 2,000,000円',
+          '万円の欄の下には、円に直した数字が出る');
+        打つ('current-savings', '');
+        eq(読み替え('current-savings'), '',
+          '空のときは読み替えを出さない（うるさくしない）');
+        ok(d.querySelector('.money-read[data-for="cost-food"]') === null,
+          'うちわけの欄は横に細いので、読み替えは出さない');
+        打つ('current-savings', '300000');
+
         /* 生活費のうちわけ（任意）*/
         var うち = d.querySelector('details.breakdown');
         ok(うち !== null, '生活費のうちわけの欄がある');
@@ -612,7 +644,7 @@ server.listen(0, '127.0.0.1', function () {
         }
         入れる('cost-food', 60000); 入れる('cost-utility', 18000);
         入れる('cost-comm', 22000); 入れる('cost-insurance', 5000); 入れる('cost-other', 15000);
-        eq(d.getElementById('living-cost').value, '120000', 'うちわけの合計が、毎月の生活費に自動で入る');
+        eq(d.getElementById('living-cost').value, '120,000', 'うちわけの合計が、毎月の生活費に自動で入る（3けたごとに区切って出る）');
         ok(d.getElementById('cost-total').textContent.indexOf('120,000円') > 0, '合計が表示される');
         var 見立て = d.getElementById('cost-advice').textContent;
         ok(d.querySelectorAll('#cost-advice ul.cost-share li').length === 5, '費目ごとの割合が出る');
@@ -626,7 +658,7 @@ server.listen(0, '127.0.0.1', function () {
           '断言口調になっていない');
         /* 入れ直すと、貯金のグラフも追いかけて変わる */
         入れる('cost-food', 40000);
-        eq(d.getElementById('living-cost').value, '100000', '入れ直すと合計も変わる');
+        eq(d.getElementById('living-cost').value, '100,000', '入れ直すと合計も変わる');
 
         /* 家計のうちわけ表 */
         var 表 = d.querySelector('#stage2b-body .balance-block');

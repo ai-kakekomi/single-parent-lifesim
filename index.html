@@ -69,14 +69,14 @@
         </div>
         <div>
           <label for="my-income">あなたの年収（万円）</label>
-          <input type="number" id="my-income" min="0" max="3000" inputmode="numeric" placeholder="例 200">
+          <input type="number" data-money="man" id="my-income" min="0" max="3000" inputmode="numeric" placeholder="例 200">
           <p class="hint"><span class="term" tabindex="0" data-tip="源泉徴収票の「支払金額」の欄の数字です。税金や社会保険料が引かれる前の金額のことで、手取りではありません。">額面</span>で入れてください（手取りではありません）</p>
         </div>
       </div>
 
       <div data-only="married">
         <label for="spouse-income">配偶者の年収（万円・額面）</label>
-        <input type="number" id="spouse-income" min="0" max="5000" inputmode="numeric" placeholder="例 450">
+        <input type="number" data-money="man" id="spouse-income" min="0" max="5000" inputmode="numeric" placeholder="例 450">
       </div>
 
       <label for="child-count">お子さんの人数</label>
@@ -99,18 +99,18 @@
           <label><input type="radio" name="housing-type" value="実家・同居">実家・同居</label>
         </div>
         <label for="living-cost">毎月の生活費（<span class="term" tabindex="0" data-tip="家賃・住宅ローンは「住居費」の欄に、授業料・給食費・教材費・塾代などは別に計算するので、ここには入れないでください。二重に数えないためです。">住居費と、学校にかかるお金をのぞく</span>・円）</label>
-        <input type="number" id="living-cost" min="0" max="2000000" inputmode="numeric" placeholder="例 110000">
+        <input type="text" data-money="yen" id="living-cost" min="0" max="2000000" inputmode="numeric" placeholder="例 110000">
         <p class="hint">食費・光熱費・通信費・日用品・被服費など。<strong>家賃と、学校にかかるお金（授業料・給食費・教材費・塾代）は入れないでください。</strong>それらは別々に計算します。ぴったりでなくて大丈夫です。</p>
 
         <details class="explain breakdown">
           <summary>うちわけを入れる（くわしく・任意）</summary>
           <p class="hint">入れなくても大丈夫です。入れると、どこが重いかが見えて、見直しの候補が出ます。入れた合計が、上の「毎月の生活費」に自動で入ります。</p>
           <div class="cost-rows">
-            <div class="cost-row"><label for="cost-food">食費</label><input type="number" id="cost-food" class="cost-item" min="0" max="1000000" inputmode="numeric" placeholder="円"></div>
-            <div class="cost-row"><label for="cost-utility">水道・光熱費</label><input type="number" id="cost-utility" class="cost-item" min="0" max="1000000" inputmode="numeric" placeholder="円"></div>
-            <div class="cost-row"><label for="cost-comm">通信費（スマホ・ネット）</label><input type="number" id="cost-comm" class="cost-item" min="0" max="1000000" inputmode="numeric" placeholder="円"></div>
-            <div class="cost-row"><label for="cost-insurance">保険料</label><input type="number" id="cost-insurance" class="cost-item" min="0" max="1000000" inputmode="numeric" placeholder="円"></div>
-            <div class="cost-row"><label for="cost-other">そのほか（日用品・被服・交通など）</label><input type="number" id="cost-other" class="cost-item" min="0" max="1000000" inputmode="numeric" placeholder="円"></div>
+            <div class="cost-row"><label for="cost-food">食費</label><input type="text" data-money="yen" id="cost-food" class="cost-item" min="0" max="1000000" inputmode="numeric" placeholder="円"></div>
+            <div class="cost-row"><label for="cost-utility">水道・光熱費</label><input type="text" data-money="yen" id="cost-utility" class="cost-item" min="0" max="1000000" inputmode="numeric" placeholder="円"></div>
+            <div class="cost-row"><label for="cost-comm">通信費（スマホ・ネット）</label><input type="text" data-money="yen" id="cost-comm" class="cost-item" min="0" max="1000000" inputmode="numeric" placeholder="円"></div>
+            <div class="cost-row"><label for="cost-insurance">保険料</label><input type="text" data-money="yen" id="cost-insurance" class="cost-item" min="0" max="1000000" inputmode="numeric" placeholder="円"></div>
+            <div class="cost-row"><label for="cost-other">そのほか（日用品・被服・交通など）</label><input type="text" data-money="yen" id="cost-other" class="cost-item" min="0" max="1000000" inputmode="numeric" placeholder="円"></div>
           </div>
           <p class="cost-total" id="cost-total"></p>
           <div id="cost-advice"></div>
@@ -122,22 +122,22 @@
           <label><input type="radio" name="juku-mode" value="custom">自分で決める</label>
         </div>
         <div id="juku-row" style="display:none">
-          <input type="number" id="juku-cost" min="0" max="200000" inputmode="numeric" placeholder="0でもかまいません">
+          <input type="text" data-money="yen" id="juku-cost" min="0" max="200000" inputmode="numeric" placeholder="0でもかまいません">
         </div>
         <p class="hint">学校にかかるお金には、塾や習いごとの費用が入っています。全国平均だと、公立の小学校で年256,489円（ひと月あたり約21,000円）。<strong>この平均は、収入の高い家庭に引っぱられて高めに出ます。</strong>お子さんの実際にあわせて変えてください。0円にもできます。</p>
 
         <label for="current-savings">いまの貯金額（円）</label>
-        <input type="number" id="current-savings" min="0" max="100000000" inputmode="numeric" placeholder="例 300000">
+        <input type="text" data-money="yen" id="current-savings" min="0" max="100000000" inputmode="numeric" placeholder="例 300000">
         <p class="hint">これから貯金がどうふえていくかの、出発点になります。だいたいで大丈夫です。ここに入れた数字も、どこにも送られません。</p>
 
         <div class="row">
           <div>
             <label for="housing-now">いまの住居費（月・円）</label>
-            <input type="number" id="housing-now" min="0" max="500000" inputmode="numeric" placeholder="例 65000">
+            <input type="text" data-money="yen" id="housing-now" min="0" max="500000" inputmode="numeric" placeholder="例 65000">
           </div>
           <div data-only="married">
             <label for="housing-after">離婚したあとの住居費の見込み（月・円）</label>
-            <input type="number" id="housing-after" min="0" max="500000" inputmode="numeric" placeholder="例 60000">
+            <input type="text" data-money="yen" id="housing-after" min="0" max="500000" inputmode="numeric" placeholder="例 60000">
             <p class="hint">こちらで勝手に見積もることはしません。あなたが考えている金額を入れてください。公営住宅なら、民間の賃貸より月に数万円安くなることがあります。</p>
           </div>
         </div>
@@ -178,11 +178,11 @@
           </div>
           <div id="training-during-row" style="display:none">
             <label for="training-during">通っているあいだの年収（万円）</label>
-            <input type="number" id="training-during" min="0" max="3000" inputmode="numeric" placeholder="例 75">
+            <input type="number" data-money="man" id="training-during" min="0" max="3000" inputmode="numeric" placeholder="例 75">
           </div>
           <p class="hint">看護師などのフルタイムの課程は、授業と実習でほぼ毎日うまるため、仕事との両立は簡単ではありません。「働かない」を選んだときに生活が回るかどうかも、グラフで確かめてください。</p>
           <label for="training-after">資格を取ったあとの年収の見込み（万円）</label>
-          <input type="number" id="training-after" min="0" max="3000" inputmode="numeric" placeholder="例 320">
+          <input type="number" data-money="man" id="training-after" min="0" max="3000" inputmode="numeric" placeholder="例 320">
           <p class="hint">このツールは、職種ごとの平均年収を出しません。相場は「1. 仕事・収入の相談」の文章をAIに渡して調べてください。ここには、その見込みを入れてください。</p>
         </div>
       </fieldset>
@@ -198,7 +198,7 @@
           <label><input type="radio" name="cs-state" value="受け取っていない">受け取っていない</label>
         </div>
         <label for="cs-monthly">受け取っている（受け取る予定の）金額（月・円）</label>
-        <input type="number" id="cs-monthly" min="0" max="500000" inputmode="numeric" placeholder="例 40000">
+        <input type="text" data-money="yen" id="cs-monthly" min="0" max="500000" inputmode="numeric" placeholder="例 40000">
         <p class="hint">受け取った養育費は、その8割が児童扶養手当の判定に使われる所得に足されます。</p>
       </fieldset>
 
@@ -207,7 +207,7 @@
         <div class="row">
           <div>
             <label for="parent-support">援助の額（月・円）</label>
-            <input type="number" id="parent-support" min="0" max="500000" inputmode="numeric" placeholder="なければ空欄">
+            <input type="text" data-money="yen" id="parent-support" min="0" max="500000" inputmode="numeric" placeholder="なければ空欄">
           </div>
           <div>
             <label for="parent-age">その親御さんの年齢</label>

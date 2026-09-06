@@ -605,3 +605,13 @@ details.prog[open] > summary::before { transform: rotate(90deg); }
 .prog-amount.none { color: var(--ink-sub); font-weight: 400; }
 .prog-detail { margin-top: .5rem; border-top: 1px dashed var(--line); padding-top: .5rem; }
 .prog-badges { margin: 0 0 .4rem; }
+
+/* 金額欄の下に小さく出す、もう一方の単位への読み替え。
+   円の欄には「= 11.0万円」、万円の欄には「= 2,000,000円」。
+   万円と円が混ざっていて分かりにくい、と教わって足した（2026/9/6）。 */
+.money-read {
+  font-size: .78rem; color: var(--ink-sub);
+  margin: .15rem 0 0; min-height: 1em;
+  font-variant-numeric: tabular-nums;
+}
+.money-read:empty { min-height: 0; }
