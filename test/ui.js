@@ -1260,14 +1260,12 @@ server.listen(0, '127.0.0.1', function () {
         ok(崖.indexOf('親からの支援が終わる想定（親75歳）') > 0, '親の援助が終わる崖が画面に出る', 崖);
         ok(崖.indexOf('11歳') > 0, '親が68歳なら、一番下の子が11歳のときに援助が終わる', 崖);
 
-        /* スライダーを動かすと崖が動く */
-        var sl = d.getElementById('parent-end-age');
-        sl.value = '80';
-        sl.dispatchEvent(new w.Event('input'));
-        return 待つ(200).then(function () {
-          var 崖2 = d.querySelector('#stage2-body .cliff-list').textContent;
-          ok(崖2.indexOf('16歳') > 0, 'スライダーを80歳にすると、崖が5年うしろにずれる', 崖2);
-        });
+        /* 援助が終わる年齢は、入力してもらわない（本人にも分からないため）。仮定として固定し、前提に書く */
+        ok(d.getElementById('parent-end-age') === null, '援助が終わる年齢のスライダーは、もう置いていない');
+        ok(d.getElementById('stage2').textContent.indexOf('親御さんが75歳になるまで') > 0,
+          '75歳という仮定が、離婚の比較の前提に書いてある');
+        ok(d.getElementById('stage2b-body').textContent.indexOf('歳になるまで続くものとしています') > 0,
+          '同じ仮定が、貯金シミュレーションの前提にも書いてある');
       }).then(function () {
         ok(エラー.length === 0, '画面を動かしてもエラーが出ない', エラー.join(' / '));
         w.close();

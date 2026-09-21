@@ -407,7 +407,8 @@
       divorced_childSupportMonthly: 万('cs-monthly'),
       parentSupportMonthly: 万('parent-support'),
       parentAge: 数('parent-age'),
-      parentSupportEndAge: 数('parent-end-age') || データ.tables.parent_support_end_age_default
+      /* 援助がいつまで続くかは、本人にも分からない。入力してもらわず、仮定（75歳）で固定する */
+      parentSupportEndAge: データ.tables.parent_support_end_age_default
     };
   }
 
@@ -1159,6 +1160,10 @@
       '<div class="assumption-box"><h4>このグラフの前提</h4>'];
     h.push('<ul>');
     h.push('<li><strong>ひとり親になったあとの姿を出しています。</strong>離婚を考えている段階の方は、「離婚した場合」の姿です。</li>');
+    if (最新入力 && 最新入力.parentSupportMonthly > 0) {
+      h.push('<li><strong>親御さんからの援助は、親御さんが' + データ.tables.parent_support_end_age_default +
+        '歳になるまで続くものとしています。</strong>いつまで続くかは誰にも分からないので、私たちが置いた仮定です。</li>');
+    }
     h.push('<li><strong>収入は、いまのまま変わらない前提です。</strong>昇給も、転職も、働く時間をふやすことも入れていません。' +
       '（資格を取るルートだけは別で、そこだけ収入が変わります）</li>');
     h.push('<li><strong>生活費は、お子さんの成長に合わせて食費の部分が増えます。</strong>' +
@@ -2244,16 +2249,6 @@
         });
       });
       婚姻状態を反映();
-
-      var sl = $('parent-end-age');
-      sl.min = データ.tables.parent_support_end_age_min;
-      sl.max = データ.tables.parent_support_end_age_max;
-      sl.value = データ.tables.parent_support_end_age_default;
-      $('parent-end-age-out').textContent = sl.value + '歳';
-      sl.addEventListener('input', function () {
-        $('parent-end-age-out').textContent = this.value + '歳';
-        if (最新入力) { 最新入力.parentSupportEndAge = parseInt(this.value, 10); グラフを描く(); }
-      });
 
       $('form-area').addEventListener('input', function () {
         var n = $('sample-note');
