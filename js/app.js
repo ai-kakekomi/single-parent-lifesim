@@ -538,13 +538,18 @@
   function 制度を描く(判定) {
     var 使用中 = {};
     (最新入力.usedPrograms || []).forEach(function (id) { 使用中[id] = true; });
-    var 順 = { likely: 0, check: 1, unlikely: 2 };
-    var 並び = 判定.results.slice().sort(function (a, b) { return 順[a.status] - 順[b.status]; });
-    var ラベル名 = { likely: '対象の可能性が高い', check: '窓口で確認したいもの', unlikely: '対象外の見込み' };
+    /* かたまりは「まだ使っていない・対象の可能性が高い」→「窓口で確認したい」→「すでに使っている」→「対象外」。
+       使っているものと使っていないものが同じかたまりに混ざっていると、
+       閉じた状態では、どれをこれから申請すればいいのか見分けられなかった。 */
+    function かたまり(r) { return 使用中[r.program.id] ? 'used' : r.status; }
+    var 順 = { likely: 0, check: 1, used: 2, unlikely: 3 };
+    var 並び = 判定.results.slice().sort(function (a, b) { return 順[かたまり(a)] - 順[かたまり(b)]; });
+    var ラベル名 = { likely: '対象の可能性が高い（まだ使っていないもの）', check: '窓口で確認したいもの',
+      used: 'すでに使っている制度', unlikely: '対象外の見込み' };
     var 出力 = [], 現在 = null;
     並び.forEach(function (r) {
-      if (r.status !== 現在) {
-        現在 = r.status;
+      if (かたまり(r) !== 現在) {
+        現在 = かたまり(r);
         出力.push('<p class="cat-head">' + ラベル名[現在] + '</p>');
       }
       var p = r.program;
@@ -555,13 +560,14 @@
       出力.push(
         '<details class="prog ' + (使用中[p.id] ? 'used' : r.status) + '" id="prog-' + esc(p.id) + '">' +
         '<summary>' +
-        '<span class="prog-name">' + esc(p.name) + '</span>' +
+        '<span class="prog-name">' + esc(p.name) +
+        /* 閉じたままでも、利用中かどうかが分かるようにする */
+        (使用中[p.id] ? ' <span class="badge used">✓ 利用中</span>' : '') + '</span>' +
         '<span class="prog-amount ' + 見出しの額.tone + '">' + esc(見出しの額.text) + '</span>' +
         '</summary>' +
         '<div class="prog-detail">' +
         '<p class="prog-badges">' + 返済バッジ(p) +
-        (使用中[p.id] ? ' <span class="badge used">✓ 利用中</span>'
-                      : ' <span class="badge ' + r.status + '">' + esc(r.label) + '</span>') + '</p>' +
+        (使用中[p.id] ? '' : ' <span class="badge ' + r.status + '">' + esc(r.label) + '</span>') + '</p>' +
         '<p>' + esc(p.summary) + '</p>' +
         (r.amountText ? '<p class="amount">' + esc(r.amountText) + '</p>' : '') +
         (r.status !== 'unlikely' ? '<p>' + esc(p.benefit_summary) + '</p>' : '') +

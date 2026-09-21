@@ -142,7 +142,7 @@ function 生まれ月と表とカードのチェック() {
       /* 未申告の「対象の可能性が高い」ものが先頭に来る並びは、そのまま */
       var 見出したち = [].map.call(d.querySelectorAll('#stage1-body .cat-head'),
         function (x) { return x.textContent; });
-      eq(見出したち[0], '対象の可能性が高い', '当てはまるものが、一番上のかたまりに来る');
+      ok(見出したち[0].indexOf('対象の可能性が高い') === 0, '当てはまるものが、一番上のかたまりに来る', 見出したち[0]);
       w.close();
     });
   });
@@ -328,7 +328,7 @@ function 生まれ月と表とカードのチェック() {
       /* 未申告の「対象の可能性が高い」ものが先頭に来る並びは、そのまま */
       var 見出したち = [].map.call(d.querySelectorAll('#stage1-body .cat-head'),
         function (x) { return x.textContent; });
-      eq(見出したち[0], '対象の可能性が高い', '当てはまるものが、一番上のかたまりに来る');
+      ok(見出したち[0].indexOf('対象の可能性が高い') === 0, '当てはまるものが、一番上のかたまりに来る', 見出したち[0]);
       w.close();
     });
   });
@@ -500,8 +500,8 @@ server.listen(0, '127.0.0.1', function () {
         eq(d.querySelectorAll('#stage1-body .prog').length, 18, '制度カードが18枚出る');
         eq(d.querySelectorAll('#stage1-body .prog .src a').length, 18, 'どのカードにも出典のリンクが付いている');
         ok(d.querySelector('#stage1-body .prog .src').textContent.indexOf('最終確認') > 0, '最終確認日が出ている');
-        ok(d.querySelector('#stage1-body .prog .amount').textContent.indexOf('13,870円') > 0,
-          '一部支給の金額（13,870円）が画面に出る', d.querySelector('#stage1-body .prog .amount').textContent);
+        ok(d.querySelector('#prog-jido_fuyo_teate .amount').textContent.indexOf('13,870円') > 0,
+          '一部支給の金額（13,870円）が画面に出る', d.querySelector('#prog-jido_fuyo_teate .amount').textContent);
 
         /* 離婚の比べ方は「離婚を考えている」ときだけ出るので、
            この区間だけ状態を切り替えて確かめる */
@@ -929,7 +929,12 @@ server.listen(0, '127.0.0.1', function () {
         eq(d.querySelectorAll('#used-programs input.used-prog').length, 9, 'すでに使っている制度を申告する欄が9つある');
         var 利用中 = d.querySelectorAll('#stage1-body .prog.used');
         eq(利用中.length, 2, '見本2は2件を利用中と申告しているので、2枚が利用中の表示になる', 利用中.length);
-        ok(利用中[0].querySelector('.badge.used').textContent.indexOf('利用中') > 0, '利用中のしるしが出ている');
+        ok(利用中[0].querySelector('summary .badge.used').textContent.indexOf('利用中') > 0,
+          '利用中のしるしが、閉じた状態の見出しの行に出ている');
+        var かたまり名 = [].map.call(d.querySelectorAll('#stage1-body .cat-head'), function (x) { return x.textContent; });
+        ok(かたまり名.indexOf('すでに使っている制度') >= 0, '使っている制度は、別のかたまりに分けてある', かたまり名.join(' / '));
+        var 先頭のかたまり = d.querySelector('#stage1-body .cat-head').nextElementSibling;
+        ok(!先頭のかたまり.classList.contains('used'), '一番上のかたまりには、まだ使っていない制度が来る');
         ok(d.getElementById('stage1-summary').textContent.indexOf('すでに2件を使っている') >= 0,
           'まとめにも、すでに使っている件数が出る', d.getElementById('stage1-summary').textContent);
 
