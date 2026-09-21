@@ -2017,7 +2017,7 @@
     { id: 'divorce', 絵: '⚖️', 名: '離婚した場合と比べる', 章: ['stage2'], 婚姻中だけ: true },
     { id: 'pitfalls', 絵: '⚠️', 名: 'はまりやすい落とし穴', 章: ['stage3'] },
     { id: 'ai', 絵: '🤖', 名: 'AIに相談する文章を作る', 章: ['stage4', 'finish'] },
-    { id: 'glossary', 絵: '📖', 名: '用語の辞典', 章: ['stage5'] }
+    { id: 'glossary', 絵: '📖', 名: '知っておきたい制度の言葉', 章: ['stage5'] }
   ];
   var 見ているもの = 'savings';
 
@@ -2064,7 +2064,7 @@
     if (id === 'glossary') {
       var 語数 = 0;
       ((window.SPS_DATA_GLOSSARY || {}).groups || []).forEach(function (g) { 語数 += g.terms.length; });
-      return '制度の言葉を、短く説明しています（<strong>' + 語数 + '語</strong>）';
+      return '窓口や書類で出てくる言葉を、短く説明しています（<strong>' + 語数 + '語</strong>）';
     }
     return '';
   }
