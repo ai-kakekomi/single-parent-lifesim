@@ -72,7 +72,7 @@ function 生まれ月と表とカードのチェック() {
         });
         return 行.length ? 行[0] : null;
       }
-      ok(年度末の行() !== null, '「その年度の終わりの貯金」が、うちわけより先に出ている');
+      ok(年度末の行() !== null, '「その年度の終わりの貯金」が、内訳より先に出ている');
 
       /* 表の金額が、グラフの線とぴったり同じであること */
       var 数字 = function (el) {
@@ -88,22 +88,22 @@ function 生まれ月と表とカードのチェック() {
       eq(曲線.points[0].endOfYear, 曲線.points[1].all,
         'その数字は、グラフの次の点そのもの（表のために計算し直していない）');
 
-      /* つまみを動かしても、ずれないこと */
-      var つまみ = d.getElementById('balance-year');
-      つまみ.value = '3';
-      つまみ.dispatchEvent(new w.Event('input', { bubbles: true }));
+      /* スライダーを動かしても、ずれないこと */
+      var スライダー = d.getElementById('balance-year');
+      スライダー.value = '3';
+      スライダー.dispatchEvent(new w.Event('input', { bubbles: true }));
       ok(d.getElementById('balance-year-out').textContent.indexOf('年度）') > 0,
-        'つまみを動かしても、年度が出たまま');
+        'スライダーを動かしても、年度が出たまま');
       eq(数字(年度末の行()), 曲線.points[3].endOfYear,
         '動かした先でも、表の数字はグラフの線と同じ');
 
-      /* 「いまのまま」の線に切りかえたら、そちらの数字になる */
+      /* 「いまのまま」の線に切り替えたら、そちらの数字になる */
       var 切替 = [].filter.call(d.querySelectorAll('[data-scenario]'), function (b) {
         return b.getAttribute('data-scenario') === 'now';
       })[0];
       切替.click();
       eq(数字(年度末の行()), 曲線.points[3].endOfYearNow,
-        '「いまのまま」に切りかえると、その線の数字が出る');
+        '「いまのまま」に切り替えると、その線の数字が出る');
       [].filter.call(d.querySelectorAll('[data-scenario]'), function (b) {
         return b.getAttribute('data-scenario') === 'all';
       })[0].click();
@@ -142,7 +142,7 @@ function 生まれ月と表とカードのチェック() {
       /* 未申告の「対象の可能性が高い」ものが先頭に来る並びは、そのまま */
       var 見出したち = [].map.call(d.querySelectorAll('#stage1-body .cat-head'),
         function (x) { return x.textContent; });
-      eq(見出したち[0], '対象の可能性が高い', '当てはまるものが、いちばん上のかたまりに来る');
+      eq(見出したち[0], '対象の可能性が高い', '当てはまるものが、一番上のかたまりに来る');
       w.close();
     });
   });
@@ -150,8 +150,8 @@ function 生まれ月と表とカードのチェック() {
 
 /* ============================================================
  * 受け入れ条件:
- *   家計の表のあとは、4つの章が上から順に、ぜんぶ出ていること。
- *   （下の「つぎへ」で1つずつ進む形は、いったんやめた）
+ *   家計の表のあとは、4つの章が上から順に、全部出ていること。
+ *   （下の「次へ」で1つずつ進む形は、いったんやめた）
  *   身の安全と「すぐ閉じる」は、いつでも見られること。
  * ============================================================ */
 function 章の並びのチェック() {
@@ -178,7 +178,7 @@ function 章の並びのチェック() {
       ok(d.getElementById('guide').classList.contains('shown'), '4つの章の入れものが出る');
       ok(d.getElementById('menu').classList.contains('shown'), '結果のメニューが出る');
 
-      /* 下の「つぎへ」ナビは、もう置かない */
+      /* 下の「次へ」ナビは、もう置かない */
       ['step-bar', 'step-next', 'step-prev', 'step-dots', 'step-count', 'show-all'].forEach(function (id) {
         eq(d.getElementById(id), null, '「' + id + '」は画面に置かない');
       });
@@ -258,7 +258,7 @@ function 生まれ月と表とカードのチェック() {
         });
         return 行.length ? 行[0] : null;
       }
-      ok(年度末の行() !== null, '「その年度の終わりの貯金」が、うちわけより先に出ている');
+      ok(年度末の行() !== null, '「その年度の終わりの貯金」が、内訳より先に出ている');
 
       /* 表の金額が、グラフの線とぴったり同じであること */
       var 数字 = function (el) {
@@ -274,22 +274,22 @@ function 生まれ月と表とカードのチェック() {
       eq(曲線.points[0].endOfYear, 曲線.points[1].all,
         'その数字は、グラフの次の点そのもの（表のために計算し直していない）');
 
-      /* つまみを動かしても、ずれないこと */
-      var つまみ = d.getElementById('balance-year');
-      つまみ.value = '3';
-      つまみ.dispatchEvent(new w.Event('input', { bubbles: true }));
+      /* スライダーを動かしても、ずれないこと */
+      var スライダー = d.getElementById('balance-year');
+      スライダー.value = '3';
+      スライダー.dispatchEvent(new w.Event('input', { bubbles: true }));
       ok(d.getElementById('balance-year-out').textContent.indexOf('年度）') > 0,
-        'つまみを動かしても、年度が出たまま');
+        'スライダーを動かしても、年度が出たまま');
       eq(数字(年度末の行()), 曲線.points[3].endOfYear,
         '動かした先でも、表の数字はグラフの線と同じ');
 
-      /* 「いまのまま」の線に切りかえたら、そちらの数字になる */
+      /* 「いまのまま」の線に切り替えたら、そちらの数字になる */
       var 切替 = [].filter.call(d.querySelectorAll('[data-scenario]'), function (b) {
         return b.getAttribute('data-scenario') === 'now';
       })[0];
       切替.click();
       eq(数字(年度末の行()), 曲線.points[3].endOfYearNow,
-        '「いまのまま」に切りかえると、その線の数字が出る');
+        '「いまのまま」に切り替えると、その線の数字が出る');
       [].filter.call(d.querySelectorAll('[data-scenario]'), function (b) {
         return b.getAttribute('data-scenario') === 'all';
       })[0].click();
@@ -328,7 +328,7 @@ function 生まれ月と表とカードのチェック() {
       /* 未申告の「対象の可能性が高い」ものが先頭に来る並びは、そのまま */
       var 見出したち = [].map.call(d.querySelectorAll('#stage1-body .cat-head'),
         function (x) { return x.textContent; });
-      eq(見出したち[0], '対象の可能性が高い', '当てはまるものが、いちばん上のかたまりに来る');
+      eq(見出したち[0], '対象の可能性が高い', '当てはまるものが、一番上のかたまりに来る');
       w.close();
     });
   });
@@ -423,7 +423,7 @@ function 道筋のチェック() {
         seishain_one_kid: ['まだ受け取れるお金があります'],
         over_limit: ['学費の山'],
         considering_divorce: ['養育費を取り決めると'],
-        on_the_edge: ['手当が減りはじめます'],
+        on_the_edge: ['手当が減り始めます'],
         parent_support: ['援助があるうちに']
       };
       var 数え = [];
@@ -503,8 +503,8 @@ server.listen(0, '127.0.0.1', function () {
         ok(d.querySelector('#stage1-body .prog .amount').textContent.indexOf('13,870円') > 0,
           '一部支給の金額（13,870円）が画面に出る', d.querySelector('#stage1-body .prog .amount').textContent);
 
-        /* 離婚のくらべ方は「離婚を考えている」ときだけ出るので、
-           この区間だけ状態を切りかえて確かめる */
+        /* 離婚の比べ方は「離婚を考えている」ときだけ出るので、
+           この区間だけ状態を切り替えて確かめる */
         (function () {
           var el = d.querySelector('input[name="status"][value="married"]');
           el.checked = true;
@@ -513,26 +513,26 @@ server.listen(0, '127.0.0.1', function () {
         eq(d.querySelectorAll('#stage2-body svg path').length, 2, 'グラフの線が2本');
         ok(d.querySelectorAll('#stage2-body table.compare tr').length > 2, '数字だけの表も出る');
 
-        /* ひとりあたりに直した金額が既定で、切りかえもできる */
-        ok(d.getElementById('stage2-body').textContent.indexOf('ひとりあたりに直した金額で比べています') > 0,
-          '人数がちがうから比べられない、という説明が出ている');
-        ok(d.querySelector('#stage2-body svg').textContent.indexOf('ひとりあたりに直した、ひと月のお金') >= 0,
-          'グラフの縦軸が、ひとりあたりの金額になっている');
+        /* 1人あたりに直した金額が既定で、切り替えもできる */
+        ok(d.getElementById('stage2-body').textContent.indexOf('1人あたりに直した金額で比べています') > 0,
+          '人数が違うから比べられない、という説明が出ている');
+        ok(d.querySelector('#stage2-body svg').textContent.indexOf('1人あたりに直した、1か月のお金') >= 0,
+          'グラフの縦軸が、1人あたりの金額になっている');
         var 切替 = d.querySelectorAll('#stage2-body button[data-view]');
-        eq(切替.length, 2, '見方の切りかえボタンが2つある');
-        eq(切替[0].getAttribute('aria-pressed'), 'true', 'はじめは「ひとりあたり」が選ばれている');
+        eq(切替.length, 2, '見方の切り替えボタンが2つある');
+        eq(切替[0].getAttribute('aria-pressed'), 'true', 'はじめは「1人あたり」が選ばれている');
         切替[1].click();
-        ok(d.getElementById('stage2-body').textContent.indexOf('家ぜんたい') > 0,
-          '切りかえると、家ぜんたいの金額が見られる');
+        ok(d.getElementById('stage2-body').textContent.indexOf('家全体') > 0,
+          '切り替えると、家全体の金額が見られる');
         d.querySelectorAll('#stage2-body button[data-view]')[0].click();
-        ok(d.getElementById('stage2-body').textContent.indexOf('ひとりあたりに直した金額で比べています') > 0,
-          'もう一度切りかえると、ひとりあたりに戻る');
+        ok(d.getElementById('stage2-body').textContent.indexOf('1人あたりに直した金額で比べています') > 0,
+          'もう一度切り替えると、1人あたりに戻る');
         ok(d.getElementById('stage2-body').textContent.indexOf('相手の収入が家計にきちんと入っていることが前提') > 0,
           'お金の話だけである、という注記が出ている');
         ok(d.querySelector('#stage2-body a[href="#safety"]') !== null,
           '身の安全のことを見に行くリンクがある');
 
-        /* グラフの左はしが、入力した貯金額であること（1年ずれていないこと） */
+        /* グラフの左端が、入力した貯金額であること（1年ずれていないこと） */
         (function () {
           var 見本一覧 = require(path.join(ROOT, 'data', 'samples.js')).samples;
           var SPSe = require(path.join(ROOT, 'js', 'engine.js'));
@@ -543,11 +543,11 @@ server.listen(0, '127.0.0.1', function () {
             var c2 = SPSe.資産カーブ(Object.assign({}, sm.input,
               { divorced_childSupportMonthly: sm.input.childSupportMonthly }), データ本);
             eq(c2.points[0].all, sm.input.currentSavings,
-              '[' + sm.id + '] グラフの左はしが、入力した貯金額と同じ');
+              '[' + sm.id + '] グラフの左端が、入力した貯金額と同じ');
           });
         }());
 
-        /* 貯金のたまり方（資産カーブ）が、いちばん最初の出力になっている */
+        /* 貯金のたまり方（資産カーブ）が、一番最初の出力になっている */
         ok(d.getElementById('stage2b').classList.contains('shown'), '貯金のたまり方の欄が出る');
         ok(d.getElementById('stage2b').compareDocumentPosition(d.getElementById('stage1')) & 4,
           '貯金のグラフが、制度の一覧より前に出ている');
@@ -562,7 +562,7 @@ server.listen(0, '127.0.0.1', function () {
           '「記入例が入りました」のお知らせが出る');
         ok(d.getElementById('sample-note').classList.contains('shown-note'),
           'お知らせが目立つ形で出ている');
-        /* 色づけは、次の描画で消えていく（CSSのtransitionで元にもどる）。
+        /* 色づけは、次の描画で消えていく（CSSのtransitionで元に戻る）。
            押した直後に見ないと確かめられないので、ここで押して、すぐ数える。 */
         d.querySelectorAll('#sample-buttons button')[2].click();
         var 光った = d.querySelectorAll('#form-area .flash').length;
@@ -594,13 +594,13 @@ server.listen(0, '127.0.0.1', function () {
         ok(d.querySelector('#stage2b-body a[href*="jasso.go.jp"]') !== null, '日本学生支援機構の出典リンクがある');
         ok(d.getElementById('stage2b-body').textContent.indexOf('生活防衛資金') > 0,
           '生活防衛資金の説明が出る');
-        ok(d.getElementById('stage2b-body').textContent.indexOf('ここにとどくまで、投資のことは考えなくていいです') > 0,
+        ok(d.getElementById('stage2b-body').textContent.indexOf('ここに届くまで、投資のことは考えなくていいです') > 0,
           '帯の説明が、断言の形で書かれている');
         var 帯文 = d.getElementById('stage2b-body').textContent;
-        ok(帯文.indexOf('にとどくまで、いまのペースで') > 0 ||
+        ok(帯文.indexOf('に届くまで、いまのペースで') > 0 ||
            帯文.indexOf('すでに貯め終えています') > 0 ||
-           帯文.indexOf('とどきません') > 0,
-          '生活防衛資金にとどくまでの時期、または もう貯まっていることが出る', 帯文.slice(0, 160));
+           帯文.indexOf('届きません') > 0,
+          '生活防衛資金に届くまでの時期、または もう貯まっていることが出る', 帯文.slice(0, 160));
         ok(帯文.indexOf('生活費の半年分') > 0, '生活防衛資金は半年分で書かれている');
         ok(d.querySelector('#stage2b-body .stance') !== null,
           '3〜6か月分という幅が、私たちの立場の表明として分けて書かれている');
@@ -648,14 +648,14 @@ server.listen(0, '127.0.0.1', function () {
         eq(読み替え('current-savings'), '',
           '空のときは読み替えを出さない（うるさくしない）');
         ok(d.querySelector('.money-read[data-for="cost-food"]') === null,
-          'うちわけの欄は横に細いので、読み替えは出さない');
+          '内訳の欄は横に細いので、読み替えは出さない');
         Object.keys(控え).forEach(function (id) { 打つ(id, 控え[id]); });
 
-        /* 生活費のうちわけ（任意）*/
+        /* 生活費の内訳（任意）*/
         var うち = d.querySelector('details.breakdown');
-        ok(うち !== null, '生活費のうちわけの欄がある');
+        ok(うち !== null, '生活費の内訳の欄がある');
         ok(!うち.open, 'はじめは閉じている（入れなくてもいい）');
-        eq(d.querySelectorAll('.cost-item').length, 5, 'うちわけの費目が5つある');
+        eq(d.querySelectorAll('.cost-item').length, 5, '内訳の費目が5つある');
         eq(d.getElementById('cost-total').textContent, '', '入れる前は、合計は出ない');
         var 前の生活費 = d.getElementById('living-cost').value;
         function 入れる(id, v) {
@@ -664,14 +664,14 @@ server.listen(0, '127.0.0.1', function () {
         }
         入れる('cost-food', 6); 入れる('cost-utility', 1.8);
         入れる('cost-comm', 2.2); 入れる('cost-insurance', 0.5); 入れる('cost-other', 1.5);
-        eq(d.getElementById('living-cost').value, '12', 'うちわけの合計が、毎月の生活費に自動で入る（万円で）');
+        eq(d.getElementById('living-cost').value, '12', '内訳の合計が、毎月の生活費に自動で入る（万円で）');
         ok(d.getElementById('cost-total').textContent.indexOf('120,000円') > 0, '合計が表示される');
         var 見立て = d.getElementById('cost-advice').textContent;
         ok(d.querySelectorAll('#cost-advice ul.cost-share li').length === 5, '費目ごとの割合が出る');
         ok(見立て.indexOf('通信費') > 0 && 見立て.indexOf('プランや会社を変えて') > 0,
           '通信費が重いときは、見直しの候補として出る（断言はしない）');
         ok(見立て.indexOf('母子世帯の平均') > 0,
-          '母子世帯の平均とくらべた結果が出る');
+          '母子世帯の平均と比べた結果が出る');
         ok(見立て.indexOf('平均より多いからといって、使いすぎということではありません') > 0,
           '平均より多くても責める書き方になっていない');
         ok(見立て.indexOf('必ず') === -1 && 見立て.indexOf('すべきです') === -1,
@@ -680,16 +680,16 @@ server.listen(0, '127.0.0.1', function () {
         入れる('cost-food', 4);
         eq(d.getElementById('living-cost').value, '10', '入れ直すと合計も変わる');
 
-        /* 家計のうちわけ表 */
+        /* 家計の内訳表 */
         var 表 = d.querySelector('#stage2b-body .balance-block');
-        ok(表 !== null, '家計のうちわけ表が出ている');
+        ok(表 !== null, '家計の内訳表が出ている');
         /* グラフの直下（道筋ブロックより上）にあること */
         var 絵 = d.getElementById('curve-chart');
         ok(絵 !== null, 'グラフに入れものがある');
         ok(絵.compareDocumentPosition(表) & 4, '家計の表は、グラフより下にある');
         var カード0 = d.querySelector('#stage2b-body .alert-card');
         if (カード0) {
-          /* 貯金が底をつく知らせは、いちばん大事なので、いちばん上に出す */
+          /* 貯金が底をつく知らせは、一番大事なので、一番上に出す */
           ok(カード0.compareDocumentPosition(絵) & 4, '警告カードは、グラフより上にある');
           var 見出し箱 = d.querySelector('#stage2b-body .headline-box');
           ok(見出し箱 === null || (カード0.compareDocumentPosition(見出し箱) & 4),
@@ -698,33 +698,33 @@ server.listen(0, '127.0.0.1', function () {
         var 道 = d.querySelector('#stage2b-body .path-block');
         ok(道 !== null && (表.compareDocumentPosition(道) & 4), '家計の表は、道筋ブロックより上にある');
         var 年欄 = d.getElementById('balance-year');
-        ok(年欄 !== null, '年を選ぶつまみがある');
-        eq(年欄.type, 'range', '年の選び方が、左右に動かすつまみになっている');
-        eq(年欄.min, '0', 'つまみの左はしは0');
-        ok(Number(年欄.max) > 5, 'つまみの右はしまで年がならんでいる', 年欄.max);
+        ok(年欄 !== null, '年を選ぶスライダーがある');
+        eq(年欄.type, 'range', '年の選び方が、左右に動かすスライダーになっている');
+        eq(年欄.min, '0', 'スライダーの左端は0');
+        ok(Number(年欄.max) > 5, 'スライダーの右端まで年がならんでいる', 年欄.max);
         ok(d.getElementById('balance-year-out') !== null, 'いま選んでいる年が数字で出ている');
         ok(d.getElementById('balance-year-out').textContent.indexOf('歳') > 0,
           'その数字が「◯歳」の形', d.getElementById('balance-year-out').textContent);
         ok(表.querySelector('table.balance') !== null, '表そのものが出ている');
         ok(表.textContent.indexOf('入ってくるお金') > 0, '収入の欄がある');
         ok(表.textContent.indexOf('出ていくお金') > 0, '支出の欄がある');
-        ok(表.textContent.indexOf('ひと月の残り') > 0, '差引の行がある');
+        ok(表.textContent.indexOf('1か月の残り') > 0, '差引の行がある');
         ok(表.textContent.indexOf('保育料') > 0, '保育料の行がある');
-        ok(表.querySelectorAll('button[data-scenario]').length >= 2, 'シナリオを切りかえるボタンがある');
-        /* つまみを動かすと中身が変わる（動かしている最中の input でも変わること） */
+        ok(表.querySelectorAll('button[data-scenario]').length >= 2, 'シナリオを切り替えるボタンがある');
+        /* スライダーを動かすと中身が変わる（動かしている最中の input でも変わること） */
         var 前の表 = 表.querySelector('table.balance').textContent;
         年欄.value = String(Math.min(5, Number(年欄.max)));
         年欄.dispatchEvent(new w.Event('input', { bubbles: true }));
         var 後の表 = d.querySelector('#stage2b-body table.balance').textContent;
-        ok(後の表 !== 前の表, 'つまみを動かすと、表の中身がその場で変わる');
+        ok(後の表 !== 前の表, 'スライダーを動かすと、表の中身がその場で変わる');
         ok(d.getElementById('balance-year-out').textContent.indexOf('歳') > 0,
           '選んでいる年の表示も変わる', d.getElementById('balance-year-out').textContent);
-        /* つまみ自体は消えない（消えると指でのドラッグが途切れる） */
+        /* スライダー自体は消えない（消えると指でのドラッグが途切れる） */
         ok(d.getElementById('balance-year') === 年欄,
-          'つまみを動かしても、つまみ自体は作り直されない（ドラッグが途切れない）');
+          'スライダーを動かしても、スライダー自体は作り直されない（ドラッグが途切れない）');
         /* グラフに、いま見ている年のカーソル線が出る */
         ok(d.querySelector('#curve-chart svg line[stroke="#33414f"]') !== null,
-          'グラフに、いま見ている年のたて線が出る');
+          'グラフに、いま見ている年の縦線が出る');
         /* 横軸は、線を描く範囲までで切ってある */
         (function () {
           var もとの年 = 年欄.value;
@@ -732,7 +732,7 @@ server.listen(0, '127.0.0.1', function () {
             return Number(t.textContent);
           }).filter(function (v) { return v >= 5 && v <= 22; });
           ok(年齢ラベル.length > 0, '横軸に年齢のラベルが出ている');
-          /* いちばん先まで選ぶと、軸の外なのでカーソルは出さない（表は出る） */
+          /* 一番先まで選ぶと、軸の外なのでカーソルは出さない（表は出る） */
           年欄.value = 年欄.max;
           年欄.dispatchEvent(new w.Event('input', { bubbles: true }));
           ok(d.querySelector('#stage2b-body table.balance') !== null,
@@ -747,7 +747,7 @@ server.listen(0, '127.0.0.1', function () {
         }());
         ok(d.querySelector('#stage2b-body .balance-events') !== null,
           'その年に変わることが出ている');
-        /* シナリオを切りかえると変わる */
+        /* シナリオを切り替えると変わる */
         d.querySelector('#stage2b-body button[data-scenario="now"]').click();
         var いまの表 = d.querySelector('#stage2b-body table.balance').textContent;
         ok(いまの表 !== 後の表, 'シナリオを変えると、表の中身が変わる');
@@ -764,12 +764,12 @@ server.listen(0, '127.0.0.1', function () {
               var 表示 = 円を数に((tr.cells[1] || {}).textContent || '');
               var 補足 = tr.querySelector('.why');
               if (!補足) { return; }
-              /* 「もとの額 ◯円 から制度が ◯円 助けたあと」の部分だけを見る */
-              var m2 = /もとの額 ([\d,]+)円 から制度が ([\d,]+)円/.exec(補足.textContent);
+              /* 「元の額 ◯円 から制度が ◯円 助けたあと」の部分だけを見る */
+              var m2 = /元の額 ([\d,]+)円 から制度が ([\d,]+)円/.exec(補足.textContent);
               if (m2) {
                 var もと = Number(m2[1].replace(/,/g, '')), 助け = Number(m2[2].replace(/,/g, ''));
                 eq(もと - 助け, 表示,
-                  '[' + 線 + '] 学費の行「もとの額 − 支援 ＝ 表示額」が画面上で合っている',
+                  '[' + 線 + '] 学費の行「元の額 − 支援 ＝ 表示額」が画面上で合っている',
                   もと + ' − ' + 助け + ' ≠ ' + 表示);
               }
               /* 「学校そのもの ＋ 塾・習いごと ＝ 表示額」も画面上で合っていること */
@@ -840,8 +840,8 @@ server.listen(0, '127.0.0.1', function () {
         ok(前提 !== null, '「このグラフの前提」がグラフの下に常に出ている');
         var 前提文 = 前提.textContent;
         ok(前提文.indexOf('収入は、いまのまま変わらない前提です') > 0, '収入が一定であることが書いてある');
-        ok(前提文.indexOf('生活費は、お子さんの成長にあわせて食費の部分がふえます') > 0,
-          '生活費が成長にあわせてふえることが書いてある');
+        ok(前提文.indexOf('生活費は、お子さんの成長に合わせて食費の部分が増えます') > 0,
+          '生活費が成長に合わせて増えることが書いてある');
         ok(前提文.indexOf('中学生は、保育園児のおよそ2倍') > 0,
           '根拠が1行で書いてある（倍率という言い方はしない）');
         ok(前提文.indexOf('後半の線は少し甘め') > 0,
@@ -867,7 +867,7 @@ server.listen(0, '127.0.0.1', function () {
 
         /* 資格ルート: 働き方の3択 */
         eq(d.querySelectorAll('input[name="training-work"]').length, 4,
-          '通っているあいだの働き方が4つから選べる（働かない・半分・いまのまま・自分で入れる）');
+          '通っている間の働き方が4つから選べる（働かない・半分・いまのまま・自分で入れる）');
         ok(d.querySelector('input[name="training-work"][value="none"]') !== null, '「働かない」が選べる');
         ok(d.getElementById('training-during-row').style.display === 'none',
           '「自分で入れる」以外のときは、金額の欄を出さない');
@@ -878,10 +878,10 @@ server.listen(0, '127.0.0.1', function () {
         })[0];
         ok(網たたみ !== undefined, '借金の上限の説明が、折りたたみになっている');
         ok(!網たたみ.open, 'はじめは閉じている');
-        eq(網たたみ.querySelector('summary').textContent, '借金には、法律で決まった上限があります（くわしく）',
+        eq(網たたみ.querySelector('summary').textContent, '借金には、法律で決まった上限があります（詳しく）',
           '閉じた見出しが1行で分かりやすい');
         ok(網たたみ.querySelector('.explain-body') !== null, '中身が入れものに入っている');
-        ok(網たたみ.textContent.indexOf('うすい赤') > 0 && 網たたみ.textContent.indexOf('濃い赤') > 0,
+        ok(網たたみ.textContent.indexOf('薄い赤') > 0 && 網たたみ.textContent.indexOf('濃い赤') > 0,
           '2段階の赤の意味が中に書いてある');
         /* 長い説明はたたんでも、グラフの中の短いラベルは残っている。
            ここまでの検査で生活費などをいじっているので、いったん見本の
@@ -898,13 +898,13 @@ server.listen(0, '127.0.0.1', function () {
         d.getElementById('calc').click();
         ok(d.querySelector('#curve-chart svg [fill="url(#hatch)"]') === null,
           '網かけはもう使っていない（横軸そのものを短くしている）');
-        /* 2つの折りたたみが、同じ見た目のしくみを使っている */
+        /* 2つの折りたたみが、同じ見た目の仕組みを使っている */
         var たたみ全部 = d.querySelectorAll('#stage2b-body details.explain');
         ok(たたみ全部.length >= 2, '折りたたみが2つある（網かけの説明・生活防衛資金の説明）');
         [].forEach.call(たたみ全部, function (x) {
-          ok(x.classList.contains('explain'), 'どちらも同じ見た目のしくみ（explain）を使っている');
-          ok(x.querySelector('summary').textContent.indexOf('くわしく') > 0,
-            '閉じた見出しに「くわしく」が付いている', x.querySelector('summary').textContent);
+          ok(x.classList.contains('explain'), 'どちらも同じ見た目の仕組み（explain）を使っている');
+          ok(x.querySelector('summary').textContent.indexOf('詳しく') > 0,
+            '閉じた見出しに「詳しく」が付いている', x.querySelector('summary').textContent);
         });
 
         /* 生活防衛資金の長い説明は、折りたたみに入っている */
@@ -918,7 +918,7 @@ server.listen(0, '127.0.0.1', function () {
         ok(d.querySelector('#stage2b-body .band-line') !== null, '生活防衛資金についての1行だけは、いつも見えている');
         ok(d.querySelector('#stage2b-body .band-line').textContent.indexOf('半年分') > 0,
           'その1行も「半年分」で書かれている');
-        ok(帯たたみ.textContent.indexOf('ここにとどくまで、投資のことは考えなくていいです') > 0,
+        ok(帯たたみ.textContent.indexOf('ここに届くまで、投資のことは考えなくていいです') > 0,
           '断言そのものは、折りたたみの中に残っている');
         ok(帯たたみ.textContent.indexOf('生活費の半年分') > 0,
           '生活防衛資金は「半年分」で統一されている');
@@ -976,7 +976,7 @@ server.listen(0, '127.0.0.1', function () {
         高校.value = 'private';
         高校.dispatchEvent(new w.Event('change'));
 
-        /* 離婚のくらべ方の確認はここまで。状態をひとり親に戻す */
+        /* 離婚の比べ方の確認はここまで。状態をひとり親に戻す */
         (function () {
           var el = d.querySelector('input[name="status"][value="single"]');
           el.checked = true;
@@ -1008,14 +1008,14 @@ server.listen(0, '127.0.0.1', function () {
           '投資は生活防衛資金のあと、という項目がある');
         ok(d.getElementById('stage3-body').textContent.indexOf('FX・暗号資産・信用取引はやらない') > 0,
           'FXなどをやらない、という項目がある');
-        /* 「くわしく」を押すと、折りたたみが開く */
+        /* 「詳しく」を押すと、折りたたみが開く */
         var 飛ぶ = d.querySelector('#stage3-body .danger-list a.jump');
         var 先id = 飛ぶ.getAttribute('href').slice(1);
         var 先 = d.getElementById(先id);
         ok(先 !== null, '落とし穴チェックのリンク先が実在する', 先id);
         ok(!先.querySelector('details').open, '飛ぶ前は閉じている');
         飛ぶ.click();
-        ok(先.querySelector('details').open, '「くわしく」を押すと、その説明が開く');
+        ok(先.querySelector('details').open, '「詳しく」を押すと、その説明が開く');
 
         /* 長い解説は折りたたまれている */
         eq(d.querySelectorAll('#stage3-body .pit.red').length, 5, '赤い注意書きが5つ');
@@ -1045,7 +1045,7 @@ server.listen(0, '127.0.0.1', function () {
         return 待つ(300).then(function () {
           var 本文 = d.getElementById('stage2b-body').textContent;
           ok(本文.indexOf('毎月あと') > 0 && 本文.indexOf('足りない状態です') > 0,
-            '赤字のときは、ひと月あたりいくら足りないかを先に出す', 本文.slice(0, 120));
+            '赤字のときは、1か月あたりいくら足りないかを先に出す', 本文.slice(0, 120));
           /* 警告カードになっていること */
           var カード = d.querySelector('#stage2b-body .alert-card');
           ok(カード !== null, '足りないことが、枠付きの警告カードで出る');
@@ -1114,7 +1114,7 @@ server.listen(0, '127.0.0.1', function () {
             '資格ルートを出したあと、その結果がカードに反映される',
             カード2.textContent.replace(/\s+/g, ' ').slice(0, 160));
           ok(カード2.textContent.indexOf('底をつきません') > 0 ||
-             カード2.textContent.indexOf('通っているあいだは苦しくなる') > 0,
+             カード2.textContent.indexOf('通っている間は苦しくなる') > 0,
             '底つきが解消するか、しないかが、はっきり書かれる',
             カード2.textContent.replace(/\s+/g, ' ').slice(0, 160));
           ok(カード2.querySelector('#go-training').textContent.indexOf('見直す') >= 0,
@@ -1164,7 +1164,7 @@ server.listen(0, '127.0.0.1', function () {
           ok(d.querySelector('#stage2b-body ol.gap-list a[href^="#prog-"]') !== null,
             '埋める手から、制度のカードへリンクしている');
           ok(手[0].textContent.indexOf('養育費') >= 0,
-            '養育費が未取り決めなら、いちばん上に出す', 手[0].textContent.slice(0, 40));
+            '養育費が未取り決めなら、一番上に出す', 手[0].textContent.slice(0, 40));
           var 手の文 = d.querySelector('#stage2b-body ol.gap-list').textContent;
           /* 穴が小さいときは、今週から動けるものが上、時間のかかるものが下 */
           var 見出したち = [].map.call(手, function (li) { return li.textContent; });
@@ -1201,7 +1201,7 @@ server.listen(0, '127.0.0.1', function () {
         d.querySelector('input[name="training-work"][value="half"]')
           .dispatchEvent(new w.Event('change', { bubbles: true }));
 
-        /* すでにひとり親なら、離婚のくらべ方は出さない */
+        /* すでにひとり親なら、離婚の比べ方は出さない */
         (function () {
           function 単親にする(単親) {
             var v = 単親 ? 'single' : 'married';
@@ -1214,7 +1214,7 @@ server.listen(0, '127.0.0.1', function () {
           }
           単親にする(true);
           ok(!d.getElementById('stage2').classList.contains('shown'),
-            'すでにひとり親なら、離婚のくらべ方の章は出さない');
+            'すでにひとり親なら、離婚の比べ方の章は出さない');
           eq(d.getElementById('stage2-body').innerHTML, '',
             '出さないときは、中身も作らない');
           var 単親番号 = 番号();
@@ -1223,26 +1223,26 @@ server.listen(0, '127.0.0.1', function () {
           ok(単親番号.some(function (t) { return t === '貯金シミュレーション'; }),
             'メニューから開くものには、番号をふらない（カードの番号とぶつかるため）');
           eq(d.querySelectorAll('#menu-cards .menu-card').length, 4,
-            'ひとり親のときは、カードは4枚（離婚した場合とくらべる、は出さない）');
+            'ひとり親のときは、カードは4枚（離婚した場合と比べる、は出さない）');
 
           単親にする(false);
           ok(d.getElementById('stage2').classList.contains('shown'),
-            '離婚を考えている段階なら、くらべ方の章を出す');
+            '離婚を考えている段階なら、比べ方の章を出す');
           ok(d.querySelectorAll('#stage2-body svg path').length >= 2,
             'そのときはグラフも描かれる');
           var 婚姻番号 = 番号();
-          ok(婚姻番号.some(function (t) { return t === '続けた場合と、離婚した場合のくらべ方'; }),
-            'くらべ方の章にも、番号はふらない', 婚姻番号.join(' / '));
+          ok(婚姻番号.some(function (t) { return t === '続けた場合と、離婚した場合の比べ方'; }),
+            '比べ方の章にも、番号はふらない', 婚姻番号.join(' / '));
           eq(d.querySelectorAll('#menu-cards .menu-card').length, 5,
             '離婚を考えているときは、カードは5枚');
           ok(d.querySelectorAll('#menu-cards .menu-card')[2].querySelector('.name').textContent
-            .indexOf('離婚した場合とくらべる') >= 0, '3枚目が「離婚した場合とくらべる」');
+            .indexOf('離婚した場合と比べる') >= 0, '3枚目が「離婚した場合と比べる」');
 
           /* もとに戻す */
           単親にする(true);
         }());
 
-        /* 6番目の例：親の援助が終わる崖（くらべ方の章なので、離婚を考えている状態で見る） */
+        /* 6番目の例：親の援助が終わる崖（比べ方の章なので、離婚を考えている状態で見る） */
         d.querySelectorAll('#sample-buttons button')[5].click();
         (function () {
           var el = d.querySelector('input[name="status"][value="married"]');
@@ -1253,15 +1253,15 @@ server.listen(0, '127.0.0.1', function () {
       }).then(function () {
         var 崖 = d.querySelector('#stage2-body .cliff-list').textContent;
         ok(崖.indexOf('親からの支援が終わる想定（親75歳）') > 0, '親の援助が終わる崖が画面に出る', 崖);
-        ok(崖.indexOf('11歳') > 0, '親が68歳なら、いちばん下の子が11歳のときに援助が終わる', 崖);
+        ok(崖.indexOf('11歳') > 0, '親が68歳なら、一番下の子が11歳のときに援助が終わる', 崖);
 
-        /* つまみを動かすと崖が動く */
+        /* スライダーを動かすと崖が動く */
         var sl = d.getElementById('parent-end-age');
         sl.value = '80';
         sl.dispatchEvent(new w.Event('input'));
         return 待つ(200).then(function () {
           var 崖2 = d.querySelector('#stage2-body .cliff-list').textContent;
-          ok(崖2.indexOf('16歳') > 0, 'つまみを80歳にすると、崖が5年うしろにずれる', 崖2);
+          ok(崖2.indexOf('16歳') > 0, 'スライダーを80歳にすると、崖が5年うしろにずれる', 崖2);
         });
       }).then(function () {
         ok(エラー.length === 0, '画面を動かしてもエラーが出ない', エラー.join(' / '));

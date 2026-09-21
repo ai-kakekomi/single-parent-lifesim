@@ -75,7 +75,7 @@
       </div>
 
       <div>
-        <label for="take-home">ひと月の手取り（万円）</label>
+        <label for="take-home">1か月の手取り（万円）</label>
         <input type="number" data-money="man" id="take-home" min="0" max="250" step="0.1" inputmode="decimal" placeholder="わからなければ空欄">
         <p class="hint">給与明細の「差引支給額」です。空欄なら、会社の社会保険に入っているものとして自動で見積もります。国民健康保険・国民年金の方や、自営業の方は、入れてもらうと正確になります。ボーナスがある方は、1年の手取りの合計を12で割った額を入れてください。</p>
       </div>
@@ -109,7 +109,7 @@
         <p class="hint">食費・光熱費・通信費・日用品・被服費など。<strong>家賃と、学校にかかるお金（授業料・給食費・教材費・塾代）は入れないでください。</strong>それらは別々に計算します。ぴったりでなくて大丈夫です。</p>
 
         <details class="explain breakdown">
-          <summary>うちわけを入れる（くわしく・任意）</summary>
+          <summary>内訳を入れる（詳しく・任意）</summary>
           <p class="hint">入れなくても大丈夫です。入れると、どこが重いかが見えて、見直しの候補が出ます。入れた合計が、上の「毎月の生活費」に自動で入ります。</p>
           <div class="cost-rows">
             <div class="cost-row"><label for="cost-food">食費</label><input type="number" data-money="man" id="cost-food" class="cost-item" min="0" max="100" step="0.1" inputmode="decimal" placeholder="万円"></div>
@@ -122,7 +122,7 @@
           <div id="cost-advice"></div>
         </details>
 
-        <label for="juku-cost">塾・習いごとにかけるお金（お子さん1人・ひと月・万円）</label>
+        <label for="juku-cost">塾・習いごとにかけるお金（お子さん1人・1か月・万円）</label>
         <div class="inline-choice">
           <label><input type="radio" name="juku-mode" value="average" checked>全国平均を使う</label>
           <label><input type="radio" name="juku-mode" value="custom">自分で決める</label>
@@ -130,11 +130,11 @@
         <div id="juku-row" style="display:none">
           <input type="number" data-money="man" id="juku-cost" min="0" max="20" step="0.1" inputmode="decimal" placeholder="0でもかまいません">
         </div>
-        <p class="hint">学校にかかるお金には、塾や習いごとの費用が入っています。全国平均だと、公立の小学校で年256,489円（ひと月あたり約21,000円）。<strong>この平均は、収入の高い家庭に引っぱられて高めに出ます。</strong>お子さんの実際にあわせて変えてください。0円にもできます。</p>
+        <p class="hint">学校にかかるお金には、塾や習いごとの費用が入っています。全国平均だと、公立の小学校で年256,489円（1か月あたり約21,000円）。<strong>この平均は、収入の高い家庭に引っぱられて高めに出ます。</strong>お子さんの実際に合わせて変えてください。0円にもできます。</p>
 
         <label for="current-savings">いまの貯金額（万円）</label>
         <input type="number" data-money="man" id="current-savings" min="0" max="10000" step="1" inputmode="decimal" placeholder="例 30">
-        <p class="hint">これから貯金がどうふえていくかの、出発点になります。だいたいで大丈夫です。ここに入れた数字も、どこにも送られません。</p>
+        <p class="hint">これから貯金がどう増えていくかの、出発点になります。だいたいで大丈夫です。ここに入れた数字も、どこにも送られません。</p>
 
         <div class="row">
           <div>
@@ -178,7 +178,7 @@
             <option value="4">4年</option>
           </select>
 
-          <label>学校に通っているあいだ、働き方は？</label>
+          <label>学校に通っている間、働き方は？</label>
           <div class="inline-choice" id="training-work">
             <label><input type="radio" name="training-work" value="none">働かない（0円）</label>
             <label><input type="radio" name="training-work" value="half" checked>いまの半分</label>
@@ -186,7 +186,7 @@
             <label><input type="radio" name="training-work" value="custom">自分で入れる</label>
           </div>
           <div id="training-during-row" style="display:none">
-            <label for="training-during">通っているあいだの年収（万円）</label>
+            <label for="training-during">通っている間の年収（万円）</label>
             <input type="number" data-money="man" id="training-during" min="0" max="3000" step="10" inputmode="decimal" placeholder="例 75">
           </div>
           <p class="hint">看護師などのフルタイムの課程は、授業と実習でほぼ毎日うまるため、仕事との両立は簡単ではありません。「働かない」を選んだときに生活が回るかどうかも、グラフで確かめてください。</p>
@@ -239,7 +239,7 @@
     <section class="stage" id="stage2b">
       <h2 data-label="貯金シミュレーション"></h2>
       <p class="lead">
-        ひと月に残るお金を積み上げると、貯金がどうふえていくかが見えます。<br>
+        1か月に残るお金を積み上げると、貯金がどう増えていくかが見えます。<br>
         <strong>制度を申請した場合と、しなかった場合を並べています。</strong>取りこぼしが何年でいくらになるかを見てください。
       </p>
       <p class="hint">
@@ -255,10 +255,10 @@
 
     <!-- ============ Stage 2 ============ -->
     <section class="stage" id="stage2">
-      <h2 data-label="続けた場合と、離婚した場合のくらべ方"></h2>
+      <h2 data-label="続けた場合と、離婚した場合の比べ方"></h2>
       <p class="lead">
-        いちばん下のお子さんが22歳になるまで、ひと月あたりに使えるお金がどう変わるかを並べています。<br>
-        <strong>家族の人数がちがうので、そのまま足した金額では比べられません。ひとりあたりに直した金額で比べています。</strong>
+        一番下のお子さんが22歳になるまで、1か月あたりに使えるお金がどう変わるかを並べています。<br>
+        <strong>家族の人数が違うので、そのまま足した金額では比べられません。1人あたりに直した金額で比べています。</strong>
       </p>
 
       <details class="explain ref">
@@ -269,12 +269,12 @@
           <li>年収は今のまま変わらないものとしています（昇給や転職は入れていません）</li>
           <li>変わるのは、お子さんの年齢で変わる手当と、親御さんからの援助が終わることだけです</li>
           <li>物価の上昇、制度の改正は入れていません</li>
-          <li>手取りの額は、社会保険料と税のおおまかな計算による<strong>めやす</strong>です。会社の社会保険に入っているものとして見積もっているので、国民健康保険・国民年金の方は実際とずれます。「ひと月の手取り」を入れてもらえれば、その額に合わせて計算します</li>
+          <li>手取りの額は、社会保険料と税のおおまかな計算による<strong>目安</strong>です。会社の社会保険に入っているものとして見積もっているので、国民健康保険・国民年金の方は実際とずれます。「1か月の手取り」を入れてもらえれば、その額に合わせて計算します</li>
           <li>世帯の人数は「大人＋お子さんの人数」。結婚を続けた場合は大人2人、離婚した場合は大人1人としています</li>
         </ul>
         <h4>このグラフに入っていない、大事なもの</h4>
         <p style="margin:.3rem 0">
-          <strong>財産分与・年金分割・慰謝料は、このツールでは一切あつかっていません。</strong>
+          <strong>財産分与・年金分割・慰謝料は、このツールでは一切扱っていません。</strong>
           これらは離婚の条件によって大きく変わり、金額の差は数百万円になることもあります。
           お金の話をするなら、必ず法律の専門家に相談してください。費用が心配な方は
           <a href="https://www.houterasu.or.jp/" target="_blank" rel="noopener">法テラス</a>
@@ -284,7 +284,7 @@
           <strong>いま配偶者の扶養に入っている方は、離婚すると扶養から外れます。</strong>
           ご自身で国民健康保険と国民年金に入るか、勤め先の社会保険に入ることになり、保険料をご自身で払うようになります。
           このグラフは、離婚したあとは会社の社会保険に入るものとして見積もっています。
-          国民健康保険の保険料は市区町村ごとにちがい、所得が少ない世帯には軽減があります。国民年金にも、所得が少ない方のための免除があります。
+          国民健康保険の保険料は市区町村ごとに違い、所得が少ない世帯には軽減があります。国民年金にも、所得が少ない方のための免除があります。
           どちらも、市区町村の窓口で聞けます。
         </p>
       </div>
@@ -301,17 +301,17 @@
 
       <div id="stage2-body"></div>
     </section>
-    <!-- ============ つぎにやること（一本道） ============ -->
+    <!-- ============ 次にやること（一本道） ============ -->
     <div id="guide">
 
     <!-- ============ Stage 1 ============ -->
     <section class="stage" id="stage1">
-      <h3 class="step-title">まだ使えるお金をさがす</h3>
+      <h3 class="step-title">まだ使えるお金を探す</h3>
       <p class="lead" id="stage1-summary"></p>
       <div class="notice">
         ここに出しているのは、<strong>全国どこでも共通の制度だけ</strong>です。
         お住まいの市区町村だけの制度（医療費の助成、水道料金の減免、交通機関の割引など）は入っていません。
-        それは「AIに相談する文章をつくる」の4番で調べられます。
+        それは「AIに相談する文章を作る」の4番で調べられます。
       </div>
       <div id="stage1-body"></div>
     </section>
@@ -338,7 +338,7 @@
     <section class="stage" id="stage4">
       <h3 class="step-title">AIに相談する文章を持って帰る</h3>
       <p class="lead">
-        このツールは「こうしなさい」とは言いません。かわりに「こう聞けばいい」という文章を作ります。
+        このツールは「こうしなさい」とは言いません。代わりに「こう聞けばいい」という文章を作ります。
         コピーして、お使いのAI（ChatGPT、Claude、Gemini など）に貼りつけてください。
       </p>
 

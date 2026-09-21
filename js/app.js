@@ -9,7 +9,7 @@
   var 最初の一歩 = '';
   var 最新資産 = null;
   var 資格ルートを出したところ = false;   // 線を伸ばす動きは、出した直後の1回だけ
-  var グラフの見方 = 'perPerson';   // 'perPerson' ひとりあたり ／ 'total' 家ぜんたい
+  var グラフの見方 = 'perPerson';   // 'perPerson' 1人あたり ／ 'total' 家全体
 
   function $(id) { return document.getElementById(id); }
   /** 画面が狭いか（スマートフォンのとき、グラフを縦長にする） */
@@ -33,7 +33,7 @@
      ・欄の下に、円に直した数字を小さく出す（= 65,000円）。けたはそこで確かめられる
      ・上下の矢印のきざみは、年収が10万円、月々の金額が1000円（issue #2）
 
-     計算はぜんぶ円で動いている。境目は 万() だけなので、
+     計算は全部円で動いている。境目は 万() だけなので、
      ここを通さずに 数() で読むと1万分の1になる。 */
 
   /** 万円で入れてもらった欄を、円にして返す */
@@ -46,7 +46,7 @@
     return String(Math.round((v || 0) / 1000) / 10);
   }
 
-  /* うちわけの欄は横に細く並んでいるので、読み替えは出さない */
+  /* 内訳の欄は横に細く並んでいるので、読み替えは出さない */
   function 読み替えを出す(el) {
     var box = document.querySelector('.money-read[data-for="' + el.id + '"]');
     if (!box) { return; }
@@ -54,7 +54,7 @@
     box.textContent = v ? ('= ' + SPS.円(v)) : '';
   }
 
-  /* プログラムから値を入れたあとにも呼ぶ（見本を入れたとき・うちわけの合計） */
+  /* プログラムから値を入れたあとにも呼ぶ（見本を入れたとき・内訳の合計） */
   function 金額欄を整える() {
     Array.prototype.forEach.call(document.querySelectorAll('[data-money]'), 読み替えを出す);
   }
@@ -142,10 +142,10 @@
     return out;
   }
 
-  /* ---------- 生活費のうちわけ（任意） ----------
+  /* ---------- 生活費の内訳（任意） ----------
      入れた合計を「毎月の生活費」に自動で入れます。
      よその家庭の平均と比べることはしません（世帯の人数や地域で大きく変わるため）。
-     かわりに、その方自身の生活費の中で何が重いかを、割合で見せます。 */
+     代わりに、その方自身の生活費の中で何が重いかを、割合で見せます。 */
   var 費目 = [
     { id: 'cost-food', name: '食費' },
     { id: 'cost-utility', name: '水道・光熱費' },
@@ -154,7 +154,7 @@
     { id: 'cost-other', name: 'そのほか' }
   ];
 
-  function うちわけを読む() {
+  function 内訳を読む() {
     var 出 = { items: [], total: 0, 入力あり: false };
     費目.forEach(function (f) {
       var v = 万(f.id);
@@ -165,8 +165,8 @@
     return 出;
   }
 
-  function うちわけを反映() {
-    var u = うちわけを読む();
+  function 内訳を反映() {
+    var u = 内訳を読む();
     if (!u.入力あり) {
       $('cost-total').textContent = '';
       $('cost-advice').innerHTML = '';
@@ -176,15 +176,15 @@
     $('living-cost').value = String(Math.round(u.total / 1000) / 10);
     読み替えを出す($('living-cost'));
     $('cost-total').innerHTML = '合計 <strong>' + SPS.円(u.total) + '</strong>（この金額を、上の「毎月の生活費」に入れました）';
-    $('cost-advice').innerHTML = うちわけの見立て(u);
+    $('cost-advice').innerHTML = 内訳の見立て(u);
     if (最新入力) {
       最新入力.livingCost = u.total;
       資産を描く();
     }
   }
 
-  /** 入れてもらったうちわけから、見直しの候補を出す（断言はしない） */
-  function うちわけの見立て(u) {
+  /** 入れてもらった内訳から、見直しの候補を出す（断言はしない） */
+  function 内訳の見立て(u) {
     var h = ['<p class="cost-share-head">生活費の中での割合</p><ul class="cost-share">'];
     u.items.forEach(function (it) {
       if (it.value <= 0) { return; }
@@ -195,10 +195,10 @@
     });
     h.push('</ul>');
 
-    /* 母子世帯の平均とのくらべ（比べられる費目だけ） */
+    /* 母子世帯の平均との比べ（比べられる費目だけ） */
     var 参 = データ.living_cost_reference;
     if (参) {
-      h.push('<p class="cost-share-head">母子世帯の平均とくらべると</p><ul class="cost-ref">');
+      h.push('<p class="cost-share-head">母子世帯の平均と比べると</p><ul class="cost-ref">');
       u.items.forEach(function (it) {
         if (it.value <= 0) { return; }
         var 目安 = 参.monthly[it.id];
@@ -215,7 +215,7 @@
           '<span class="cost-ref-b">（平均 ' + SPS.円(目安) + '）</span></li>');
       });
       h.push('</ul>');
-      h.push('<p class="hint">くらべているのは、' + esc(参.household) + 'の平均です。' +
+      h.push('<p class="hint">比べているのは、' + esc(参.household) + 'の平均です。' +
         esc(参.caution) + esc(参.not_available_note) + '<br>' +
         '<span class="src">出典: <a href="' + esc(参.source.url_detail) + '" target="_blank" rel="noopener">' +
         esc(参.source.law) + '</a>（' + 日付表示(参.source.last_verified) + '確認）</span></p>');
@@ -478,7 +478,7 @@
     計算する(false);
   }
 
-  /* 値が入った欄を、いったん色づけしてから、ゆっくり元にもどす。
+  /* 値が入った欄を、いったん色づけしてから、ゆっくり元に戻す。
      どこに何が入ったのかを、目で追えるようにするため。
      動きを減らす設定にしている方には、色づけをしない。 */
   function 光らせる() {
@@ -521,7 +521,7 @@
     });
   }
 
-  /** 閉じたカードに出す、いちばん短い言い方。
+  /** 閉じたカードに出す、一番短い言い方。
       1年でいくらか出せるものだけ金額にする。出せないものは推し量らない。 */
   function 短い金額(r) {
     if (r.status === 'unlikely') { return { text: '対象外の見込み', tone: 'none' }; }
@@ -581,8 +581,8 @@
     var 利用中 = 判定.results.filter(function (r) { return 使用中[r.program.id]; }).length;
     $('stage1-summary').innerHTML =
       (利用中 ? 'すでに<strong>' + 利用中 + '件</strong>を使っていると答えていただきました。そのうえで、' : '') +
-      'まだ使っていないもののうち<strong>' + 該当 + '件</strong>が対象になりそうです。あわせて<strong>' + 要確認 + '件</strong>は、' +
-      'お住まいの市区町村によってあつかいが違うため、窓口での確認が必要です。';
+      'まだ使っていないもののうち<strong>' + 該当 + '件</strong>が対象になりそうです。合わせて<strong>' + 要確認 + '件</strong>は、' +
+      'お住まいの市区町村によって扱いが違うため、窓口での確認が必要です。';
   }
 
   /** 返さなくていいお金か、あとで返すお金かを、ひと目で分かるようにする */
@@ -603,7 +603,7 @@
     return Number(p[1]) + '/' + Number(p[2]) + '(' + 曜 + ')';
   }
 
-  /* ---------- Stage 2 くらべるグラフ ---------- */
+  /* ---------- Stage 2 比べるグラフ ---------- */
   function グラフを描く() {
     var 入力 = 最新入力;
     if (!入力.children.length) {
@@ -617,12 +617,12 @@
 
     /* この章は、離婚を考えている段階の方にだけ出す
        （すでにひとり親の方に「結婚を続けた場合」との比較は要らないため） */
-    var 頭 = '<p><strong>いま（お子さん' + y[0].youngestAge + '歳）の時点では、離婚した場合のほうが ひと月あたり ' +
+    var 頭 = '<p><strong>いま（お子さん' + y[0].youngestAge + '歳）の時点では、離婚した場合のほうが 1か月あたり ' +
       (差 >= 0 ? '約' + SPS.円(差) + ' 多く' : '約' + SPS.円(-差) + ' 少なく') + 'なる見込みです。</strong>' +
-      (値 === 'perPerson' ? 'ひとりあたりに直した金額での比較です。' : '家ぜんたいの金額での比較です。') + '</p>';
+      (値 === 'perPerson' ? '1人あたりに直した金額での比較です。' : '家全体の金額での比較です。') + '</p>';
 
     $('stage2-body').innerHTML =
-      頭 + 見方の切りかえ() + 見方の説明() + SPSChart.凡例() +
+      頭 + 見方の切り替え() + 見方の説明() + SPSChart.凡例() +
       '<div class="chart-box">' + SPSChart.描く(y, 最新シミュ.cliffs, グラフの見方, 狭い画面()) + '</div>' +
       崖の説明(最新シミュ.cliffs) +
       '<p class="hint">グラフの上を指でなぞる（マウスを乗せる）と、その年の金額が出ます。' +
@@ -637,26 +637,26 @@
     });
   }
 
-  function 見方の切りかえ() {
+  function 見方の切り替え() {
     function b(v, 名) {
       var 選 = (グラフの見方 === v);
       return '<button type="button" class="' + (選 ? 'primary' : 'ghost') + '" data-view="' + v + '"' +
         (選 ? ' aria-pressed="true"' : ' aria-pressed="false"') +
         ' style="width:auto;margin:0;padding:.45rem .9rem;font-size:.85rem">' + 名 + '</button>';
     }
-    return '<div class="view-switch">' + b('perPerson', 'ひとりあたりに直して見る') + b('total', '家ぜんたいの金額で見る') + '</div>';
+    return '<div class="view-switch">' + b('perPerson', '1人あたりに直して見る') + b('total', '家全体の金額で見る') + '</div>';
   }
 
   function 見方の説明() {
     if (グラフの見方 === 'total') {
-      return '<p class="hint">いま見ているのは <strong>家ぜんたい</strong>の金額です。' +
+      return '<p class="hint">いま見ているのは <strong>家全体</strong>の金額です。' +
         '結婚を続けた場合は大人2人ぶん、離婚した場合は大人1人ぶんの暮らしなので、この数字をそのまま比べると、' +
-        '結婚を続けたほうが実際より豊かに見えます。比べるときは「ひとりあたりに直して見る」に切りかえてください。</p>';
+        '結婚を続けたほうが実際より豊かに見えます。比べるときは「1人あたりに直して見る」に切り替えてください。</p>';
     }
-    return '<p class="hint"><strong>家族の人数がちがうので、そのまま足した金額では比べられません。' +
-      'ひとりあたりに直した金額で比べています。</strong><br>' +
-      'ひと月の合計を、世帯人数の平方根で割っています。人数で単純に割らないのは、家賃や電気代のように' +
-      '「人がふえてもそれほどふえない費用」があるからです。厚生労働省が国民生活基礎調査で貧困の割合を出すときと同じやり方（OECDの作成基準）です。<br>' +
+    return '<p class="hint"><strong>家族の人数が違うので、そのまま足した金額では比べられません。' +
+      '1人あたりに直した金額で比べています。</strong><br>' +
+      '1か月の合計を、世帯人数の平方根で割っています。人数で単純に割らないのは、家賃や電気代のように' +
+      '「人が増えてもそれほど増えない費用」があるからです。厚生労働省が国民生活基礎調査で貧困の割合を出すときと同じやり方（OECDの作成基準）です。<br>' +
       '<a href="https://www.mhlw.go.jp/toukei/list/dl/20-21a-01.pdf" target="_blank" rel="noopener">厚生労働省「国民生活基礎調査（貧困率）よくあるご質問」</a>（最終確認 8/11(火)）</p>';
   }
 
@@ -677,7 +677,7 @@
     if (!入力 || !入力.children.length) { return; }
     if (!入力.livingCost) {
       $('stage2b-body').innerHTML = '<p class="hint">「毎月の生活費」を入れると、貯金シミュレーションのグラフが出ます。' +
-        '食費・光熱費・通信費・日用品などの合計のめやすで大丈夫です（家賃と学校のお金はのぞきます）。</p>';
+        '食費・光熱費・通信費・日用品などの合計の目安で大丈夫です（家賃と学校のお金はのぞきます）。</p>';
       return;
     }
     最新資産 = SPS.資産カーブ(入力, データ);
@@ -690,7 +690,7 @@
 
     var 頭 = 不足の警告カード(c);
 
-    /* いちばん見せたい数字: まだ使っていない制度でいくら変わるか */
+    /* 一番見せたい数字: まだ使っていない制度でいくら変わるか */
     var 伸びしろ = '';
     if (c.gaps.length) {
       var 名 = c.gaps.map(function (g) { return データ.programs_by_id[g.id].name.replace(/（.*$/, ''); }).join('・');
@@ -699,7 +699,7 @@
         '<p class="headline-num">約<strong>' + Math.round(c.diffAtTenYears / 10000).toLocaleString('ja-JP') + '</strong>万円</p>' +
         '<p class="big">変わります</p>' +
         '<p>いま申告されていないのは <strong>' + esc(名) + '</strong> です。' +
-        'ひと月あたり約' + SPS.円(c.gapMonthly) + '。いちばん下のお子さんが22歳になるまでだと、約' +
+        '1か月あたり約' + SPS.円(c.gapMonthly) + '。一番下のお子さんが22歳になるまでだと、約' +
         Math.round(c.finalDiff / 10000).toLocaleString('ja-JP') + '万円の差です。</p>' +
         '<p><a href="#stage1" class="jump-big">この差の中身を見る（使えるかもしれない制度の一覧へ）</a></p>' +
         '</div>';
@@ -711,7 +711,7 @@
       伸びしろ = '<div class="headline-box ok">' +
         '<p class="big">いま使える制度は、もう使えています</p>' +
         '<p><strong>グラフの2本の線の差は、これから先の進学のときの支援です。</strong>' +
-        'お子さんが大学などに進むときの授業料の減免と、返さなくていい奨学金で、あわせて約' +
+        'お子さんが大学などに進むときの授業料の減免と、返さなくていい奨学金で、合わせて約' +
         Math.round(c.tuitionSupportTotal / 10000).toLocaleString('ja-JP') + '万円。' +
         '自動では出ないので、進学のときに申請が要ります。忘れずに申請すれば、太い線のとおりになります。</p>' +
         '<p>ほかに、市区町村ごとの制度が残っています。' +
@@ -733,18 +733,18 @@
         '）は、すでに貯め終えています。</strong>次の段階を考えはじめてもよい段階です。' + 上がる;
     } else if (c.reachMonths !== null) {
       到達 = '生活防衛資金（いまなら生活費の半年分 ' + SPS.円(c.safetyTargetNow) +
-        '）にとどくまで、いまのペースで <strong>約' + SPS.年月表示(c.reachMonths) + '</strong> です。' + 上がる;
+        '）に届くまで、いまのペースで <strong>約' + SPS.年月表示(c.reachMonths) + '</strong> です。' + 上がる;
     } else {
       到達 = '生活防衛資金（いまなら生活費の半年分 ' + SPS.円(c.safetyTargetNow) +
-        '）には、いまのペースではとどきません。' + 上がる;
+        '）には、いまのペースでは届きません。' + 上がる;
     }
     if (c.fallsBelowSafetyAgain) {
       到達 += '<br><strong>いちど届いたあと、' + (月を年齢で(c, c.fallsBelowSafetyAgainAtMonth) || '') +
         'にまた下回ります。</strong>生活費が上がって、必要な額のほうが先に伸びるからです。';
     }
 
-    /* いちばん上は、貯金が底をつくかどうか（いちばん大事な知らせ）。
-       つぎに、制度でいくら変わるか。そのあとにグラフ。
+    /* 一番上は、貯金が底をつくかどうか（一番大事な知らせ）。
+       次に、制度でいくら変わるか。そのあとにグラフ。
        グラフのすぐ下に家計の表を置く。
        グラフを見ながら指で年をなぞって、そのまま内訳を読めるようにするため。 */
     $('stage2b-body').innerHTML =
@@ -754,18 +754,18 @@
       線の本数の注記(c) +
       '<div class="chart-box" id="curve-chart">' + SPSChart.資産を描く(c, 狭い画面(), 選んだ年) + '</div>' +
       打ち切りの注記(c) +
-      うちわけ表を描く(c) +
+      内訳表を描く(c) +
       資格ルートの説明(c) +
       道筋を描く(道筋(入力, データ, c, 最新判定)) +
       '<p class="band-line">' + 到達 + '</p>' +
-      '<details class="explain"><summary>生活防衛資金って？（くわしく）</summary>' + 防衛資金の説明() + '</details>' +
+      '<details class="explain"><summary>生活防衛資金って？（詳しく）</summary>' + 防衛資金の説明() + '</details>' +
       赤字の警告(c) +
       学費の説明(c) +
       奨学金の見取り図(c) +
       前提のボックス(c);
 
-    /* つまみを動かしているあいだ、画面ぜんぶを作り直すと、
-       指でつかんでいるつまみ自体が消えてドラッグが途切れる。
+    /* スライダーを動かしている間、画面全部を作り直すと、
+       指でつかんでいるスライダー自体が消えてドラッグが途切れる。
        だから、表とグラフの中身だけを入れかえる。 */
     function 見ている年を反映(c2) {
       var 並び2 = 選んだ並び(c2);
@@ -773,7 +773,7 @@
       if (出) { 出.textContent = 年の見出し(並び2[選んだ年]); }
       var 体 = $('balance-body');
       if (体) {
-        /* うちわけを開いていたら、年を変えても開いたままにする */
+        /* 内訳を開いていたら、年を変えても開いたままにする */
         var 前 = 体.querySelector('details.balance-detail');
         var 開いていた = !!(前 && 前.open);
         体.innerHTML = 表の中身(c2);
@@ -795,7 +795,7 @@
         見ている年を反映(c);
       });
     }
-    /* グラフを押したら、その年を選ぶ（つまみと同じ動き） */
+    /* グラフを押したら、その年を選ぶ（スライダーと同じ動き） */
     var 絵の箱 = $('curve-chart');
     if (絵の箱 && 年欄) {
       絵の箱.addEventListener('click', function (e) {
@@ -836,7 +836,7 @@
   function 道筋(入力, データ, c, 判定) {
     var 道 = [];
     function 足す(見出し, 本文, リンク, リンク名) {
-      道.push({ head: 見出し, body: 本文, href: リンク || null, linkName: リンク名 || 'くわしく見る' });
+      道.push({ head: 見出し, body: 本文, href: リンク || null, linkName: リンク名 || '詳しく見る' });
     }
     function 別の場合(変える) {
       return SPS.資産カーブ(Object.assign({}, 入力, 変える), データ);
@@ -864,10 +864,10 @@
         var 文 = esc(名) + ' を申請すると、毎月 ' + SPS.円(c.gapMonthly) + ' 入ります。' +
           '10年で約' + Math.round(c.diffAtTenYears / 10000).toLocaleString('ja-JP') + '万円の差です。';
         if (早まる && 早まる > 0) {
-          文 += '<strong>生活防衛資金にとどくのが、' + SPS.年月表示(早まる) + ' 早まります。</strong>';
+          文 += '<strong>生活防衛資金に届くのが、' + SPS.年月表示(早まる) + ' 早まります。</strong>';
         } else if (c.reachMonthsNow === null && c.reachMonths !== null) {
-          文 += '<strong>いまのままでは生活防衛資金（生活費の半年分）にとどきませんが、申請すれば ' +
-            SPS.年月表示(c.reachMonths) + ' でとどきます。</strong>';
+          文 += '<strong>いまのままでは生活防衛資金（生活費の半年分）に届きませんが、申請すれば ' +
+            SPS.年月表示(c.reachMonths) + ' で届きます。</strong>';
         }
         足す('まだ受け取れるお金があります', 文, '#stage1', '申請先を見る');
       }
@@ -878,18 +878,18 @@
     if (t && t.afterIncome > 0) {
       if (t.crossesOver) {
         var いつ = (t.crossoverOffset <= 1)
-          ? '<strong>通いはじめて1年で</strong>'
+          ? '<strong>通い始めて1年で</strong>'
           : '<strong>' + t.crossoverOffset + '年後に</strong>';
         足す('資格を取る道なら、' + (t.crossoverOffset <= 1 ? '1年で追い越します' : t.crossoverOffset + '年後に追い越します'),
-          '学校に通う' + t.years + '年のあいだ、高等職業訓練促進給付金が毎月 ' + SPS.円(t.grantMonthly) +
+          '学校に通う' + t.years + '年の間、高等職業訓練促進給付金が毎月 ' + SPS.円(t.grantMonthly) +
           '（最後の1年はさらに ' + SPS.円(t.grantFinalYearBonus) + '）入ります。' +
           'そのおかげで、' + いつ + '「いまのまま」の線を追い越します。' +
           (t.reachSafetyOffset !== null
-            ? '生活防衛資金にとどくのは、' + (t.reachSafetyOffset === 0 ? 'すぐ' : t.reachSafetyOffset + '年後') + 'です。' : '') +
+            ? '生活防衛資金に届くのは、' + (t.reachSafetyOffset === 0 ? 'すぐ' : t.reachSafetyOffset + '年後') + 'です。' : '') +
           '22歳のときの貯金は、約' + Math.round(t.finalAll / 10000).toLocaleString('ja-JP') + '万円になります。' +
           '<strong>令和5年度は、この給付金で2,988人が資格を取り、2,105人が就職しています。</strong>' +
           '窓口は、市・区にお住まいならその市・区、町村にお住まいなら都道府県です。',
-          '#prog-koutou_shokugyo_kunren', 'この給付金のくわしい説明を見る');
+          '#prog-koutou_shokugyo_kunren', 'この給付金の詳しい説明を見る');
       } else {
         足す('資格を取る道は、この見込みでは追い越しません',
           '入れていただいた「資格を取ったあとの年収 ' + SPS.円(t.afterIncome) + '」だと、' +
@@ -899,22 +899,22 @@
           '#stage4', 'AIに聞く文章を見る');
       }
       if (t.hitsBorrowFloor) {
-        足す('ただし、通っているあいだの生活が持ちません',
+        足す('ただし、通っている間の生活が持ちません',
           '学校に通う期間中に、借りられる上限にぶつかる計算です。' +
           'この期間は、母子父子寡婦福祉資金の技能習得資金・生活資金の貸付や、' +
-          '生活保護との併用が使えることがあります。通いはじめる前に、必ず窓口で相談してください。',
-          '#prog-fukushi_shikin_kashitsuke', '貸付のくわしい説明を見る');
+          '生活保護との併用が使えることがあります。通い始める前に、必ず窓口で相談してください。',
+          '#prog-fukushi_shikin_kashitsuke', '貸付の詳しい説明を見る');
       }
     } else if (!t || !t.enabled) {
       var 現年収 = 入力.myIncome;
       if (現年収 > 0 && 現年収 < 2500000) {
         足す('資格を取って抜ける道も、数字で見られます',
-          '学校に通うあいだ、高等職業訓練促進給付金が毎月 ' +
+          '学校に通う間、高等職業訓練促進給付金が毎月 ' +
           SPS.円((データ.training || {}).monthly_non_taxable || 100000) +
           '（住民税が非課税の世帯の場合）入ります。' +
           '上の入力欄の「資格を取って収入を上げる道も見てみる」にチェックを入れると、' +
           'この道を選んだ場合の線がグラフに増えます。',
-          '#prog-koutou_shokugyo_kunren', 'この給付金のくわしい説明を見る');
+          '#prog-koutou_shokugyo_kunren', 'この給付金の詳しい説明を見る');
       }
     }
 
@@ -932,11 +932,11 @@
         差 = 養.finalAll - c.finalAll;
       }
       if (差 > 0) {
-        足す('養育費を取り決めると、22歳までで約' + Math.round(差 / 10000).toLocaleString('ja-JP') + '万円ちがいます',
+        足す('養育費を取り決めると、22歳までで約' + Math.round(差 / 10000).toLocaleString('ja-JP') + '万円違います',
           '月 ' + SPS.円(見込み) + ' を受け取れた場合の計算です。' +
           '児童扶養手当は養育費の8割が所得に入るので、手当が少し減ります。それを差し引いても、この額が残ります。' +
           '公正証書にしておけば、あとから差し押さえもできます。費用は数万円です。',
-          '#prog-youikuhi', '手続きのくわしい説明を見る');
+          '#prog-youikuhi', '手続きの詳しい説明を見る');
       }
     }
 
@@ -947,13 +947,13 @@
       if (j.status === 'full' && 余裕 >= 0 && 余裕 < 300000) {
         var 増 = 別の場合({ myIncome: 入力.myIncome + 200000 });
         var 手取り差 = 増.points[0].monthlyAll - c.points[0].monthlyAll;
-        足す('あと ' + SPS.円(余裕) + ' 稼ぐと、手当が減りはじめます',
+        足す('あと ' + SPS.円(余裕) + ' 稼ぐと、手当が減り始めます',
           'いまは全部支給のぎりぎりの内側です。年収を20万円ふやすと、' +
           (手取り差 >= 0
-            ? '手当は減りますが、<strong>手元に残るお金は月 ' + SPS.円(手取り差) + ' ふえます。働き控えをする必要はありません。</strong>'
+            ? '手当は減りますが、<strong>手元に残るお金は月 ' + SPS.円(手取り差) + ' 増えます。働き控えをする必要はありません。</strong>'
             : '<strong>手元に残るお金は月 ' + SPS.円(-手取り差) + ' 減ります。この範囲で増やすなら、いまのままのほうが得です。</strong>') +
           '「働きすぎると損」ではなく、どこを越えると損かを知っておくのが大事です。',
-          '#pit-shunyu_no_gake', 'くわしい説明を見る');
+          '#pit-shunyu_no_gake', '詳しい説明を見る');
       }
     }
 
@@ -977,7 +977,7 @@
       if (終わり > 0) {
         足す('援助があるうちに、やっておけることがあります',
           '親御さんからの月 ' + SPS.円(入力.parentSupportMonthly) + ' の援助は、あと ' + 終わり + '年ほどの想定です。' +
-          'この間は、ふつうより毎月それだけ多く残せます。' +
+          'この間は、普通より毎月それだけ多く残せます。' +
           '<strong>この' + 終わり + '年で、生活防衛資金をためきることと、資格を取ることの両方ができます。</strong>' +
           '援助が止まってからでは、どちらも難しくなります。',
           '#prog-koutou_shokugyo_kunren', '資格の給付金を見る');
@@ -1023,11 +1023,11 @@
     if (!t || !(t.afterIncome > 0)) { return ''; }
     var 訓 = データ.training;
     /* 見出しで、制度の名前と中身を言い切る。長い説明は置かない。
-       くわしい条件は、制度の一覧のカードと、出典のページにある。 */
-    var h = ['<details class="explain"><summary>高等職業訓練促進給付金とは（資格を取るあいだ、月 ' +
+       詳しい条件は、制度の一覧のカードと、出典のページにある。 */
+    var h = ['<details class="explain"><summary>高等職業訓練促進給付金とは（資格を取る間、月 ' +
       SPS.円(t.grantMonthly) + ' が出る制度）</summary>' +
-      '<div class="explain-body notice"><h4>むらさきの線は、この給付金を使って資格を取った場合です</h4>'];
-    h.push('<p style="margin:.3rem 0">「高等職業訓練促進給付金」は、ひとり親が、看護師や保育士などの資格を取るために学校に通うあいだ、' +
+      '<div class="explain-body notice"><h4>紫の線は、この給付金を使って資格を取った場合です</h4>'];
+    h.push('<p style="margin:.3rem 0">「高等職業訓練促進給付金」は、ひとり親が、看護師や保育士などの資格を取るために学校に通う間、' +
       '<strong>毎月 ' + SPS.円(t.grantMonthly) + '</strong>（最後の1年は ＋' + SPS.円(t.grantFinalYearBonus) +
       '）、修了したときに ' + SPS.円(t.completionGrant) + ' が出ます。' +
       '返さなくていいお金で、税金はかからず、児童扶養手当も減りません。' +
@@ -1052,7 +1052,7 @@
 
   /* ---------- 足りないことのお知らせカード ----------
      数字を言いっぱなしにせず、その場から次の一手に進めるようにする。 */
-  /** 何か月後かを「◯歳◯か月ごろ」に直す（いちばん下のお子さんの年齢で言う） */
+  /** 何か月後かを「◯歳◯か月ごろ」に直す（一番下のお子さんの年齢で言う） */
   function 月を年齢で(c, 月番号) {
     if (月番号 == null || !c.points.length) { return null; }
     var 年 = Math.floor(月番号 / 12), か月 = 月番号 % 12;
@@ -1069,7 +1069,7 @@
       var 入口 = (t && t.afterIncome > 0) ? ''
         : '<p class="quiet-cta"><button type="button" class="ghost" id="go-training">' +
           '収入を上げるルートも見てみる</button></p>';
-      return '<p><strong>制度を活用すると、ひと月に約' + SPS.円(c.monthlyBalance) + ' 残る計算です。</strong></p>' + 入口;
+      return '<p><strong>制度を活用すると、1か月に約' + SPS.円(c.monthlyBalance) + ' 残る計算です。</strong></p>' + 入口;
     }
 
     /* 「いまのまま」と「制度活用」を、2段で言い分ける。
@@ -1081,20 +1081,20 @@
     if (c.monthlyBalance < 0) {
       見出し = 'いま、毎月あと ' + SPS.円(-c.monthlyBalance) + ' 足りない状態です';
       説明 = '<strong>制度を活用しても、足りません。</strong>' +
-        (全部底 ? 'このままだと、いちばん下のお子さんが' + 全部底 + 'に貯金が底をつきます。' : '') +
+        (全部底 ? 'このままだと、一番下のお子さんが' + 全部底 + 'に貯金が底をつきます。' : '') +
         'ただし、ここからできることがあります。';
     } else if (c.goesNegativeNow && !c.goesNegative) {
-      見出し = 'いまのままだと、いちばん下のお子さんが' + いま底 + 'に貯金が底をつきます';
+      見出し = 'いまのままだと、一番下のお子さんが' + いま底 + 'に貯金が底をつきます';
       説明 = '<strong>でも、制度を活用すれば、底をつきません。</strong>' +
         'グラフのひし形の印が、いまのままの線が0円を割るところです。' +
         'まだ申請していない制度を出すだけで、この危機はなくなります。';
     } else if (c.goesNegativeNow && c.goesNegative) {
-      見出し = 'いまのままだと、いちばん下のお子さんが' + いま底 + 'に貯金が底をつきます';
+      見出し = 'いまのままだと、一番下のお子さんが' + いま底 + 'に貯金が底をつきます';
       説明 = '制度を活用すると' +
         (全部底 ? '、' + 全部底 + 'まで延びます' : '、底をつかなくなります') +
         '。それでも足りない分は、下の手で埋めていきます。';
     } else {
-      見出し = 'いちばん下のお子さんが' + (全部底 || '') + '、貯金が底をつく計算です';
+      見出し = '一番下のお子さんが' + (全部底 || '') + '、貯金が底をつく計算です';
       説明 = 'いまは足りています。その時期に、毎月あと ' + SPS.円(c.shortfallMonthly) +
         ' 足りなくなる見込みです。いまのうちに手を打てば、変えられます。';
     }
@@ -1105,12 +1105,12 @@
     var 資格で解決 = !!(t && t.afterIncome > 0 && !t.goesNegative &&
       (c.goesNegativeNow || c.goesNegative || c.monthlyBalance < 0));
     var h = ['<div class="alert-card' + (資格で解決 ? ' solved' : '') + '">'];
-    /* 見出しは、ふつうの文字だけなのでエスケープする。
+    /* 見出しは、普通の文字だけなのでエスケープする。
        説明のほうは、こちらが書いた <strong> を含むので、そのままHTMLとして出す。
        （エスケープすると、タグが文字として画面に出てしまう） */
     if (資格で解決) {
-      h.push('<p class="alert-head">むらさきの線（資格を取った場合）なら、貯金は底をつきません</p>');
-      h.push('<p class="alert-body alert-good">学校に通うあいだ、「高等職業訓練促進給付金」が月 ' +
+      h.push('<p class="alert-head">紫の線（資格を取った場合）なら、貯金は底をつきません</p>');
+      h.push('<p class="alert-body alert-good">学校に通う間、「高等職業訓練促進給付金」が月 ' +
         SPS.円(t.grantMonthly) + ' 出るためです。' +
         (t.crossesOver
           ? (t.crossoverOffset === 0 ? '1年で' : t.crossoverOffset + '年後には') + '、いまのままの線を上回ります。'
@@ -1125,13 +1125,13 @@
     if (t && t.afterIncome > 0 && !資格で解決) {
       var 文;
       if (t.goesNegative) {
-        文 = '資格を取るルートでも、通っているあいだは苦しくなる計算です' +
+        文 = '資格を取るルートでも、通っている間は苦しくなる計算です' +
           (t.negativeFromOffset !== null && t.negativeFromOffset < t.years
             ? '（学校に通っている' + t.years + '年のうちに底をつきます）' : '') +
           '。この期間は、母子父子寡婦福祉資金の貸付や、生活保護との併用が使えることがあります。' +
-          '通いはじめる前に、必ず窓口で相談してください。';
+          '通い始める前に、必ず窓口で相談してください。';
         h.push('<p class="alert-warn-more">' + 文 +
-          ' <a href="#prog-fukushi_shikin_kashitsuke">貸付のくわしい説明を見る</a></p>');
+          ' <a href="#prog-fukushi_shikin_kashitsuke">貸付の詳しい説明を見る</a></p>');
       }
     }
 
@@ -1168,16 +1168,16 @@
      甘く出るところ・厳しく出るところを、どちらも正直に書きます。 */
   function 前提のボックス(c) {
     /* 常に置いてはあるが、たたんでおく。読む人は少なく、読みたい人には全部見せる */
-    var h = ['<details class="explain ref"><summary>このグラフの前提。収入・生活費・学費をどう置いたか（くわしく）</summary>' +
+    var h = ['<details class="explain ref"><summary>このグラフの前提。収入・生活費・学費をどう置いたか（詳しく）</summary>' +
       '<div class="assumption-box"><h4>このグラフの前提</h4>'];
     h.push('<ul>');
     h.push('<li><strong>収入は、いまのまま変わらない前提です。</strong>昇給も、転職も、働く時間をふやすことも入れていません。' +
       '（資格を取るルートだけは別で、そこだけ収入が変わります）</li>');
-    h.push('<li><strong>生活費は、お子さんの成長にあわせて食費の部分がふえます。</strong>' +
+    h.push('<li><strong>生活費は、お子さんの成長に合わせて食費の部分が増えます。</strong>' +
       '中学生は、保育園児のおよそ2倍の量を食べます' +
       '（<a href="' + esc((データ.living_cost_growth || {}).source_energy ? データ.living_cost_growth.source_energy.url : '#') +
       '" target="_blank" rel="noopener">厚生労働省「日本人の食事摂取基準」</a>より）。' +
-      'ふえるのは食費の部分だけで、それ以外の費目は一定です。' +
+      '増えるのは食費の部分だけで、それ以外の費目は一定です。' +
       '<span class="warn-inline">食費以外の値上がりは入れていないので、後半の線は少し甘めに出ます。</span></li>');
     h.push('<li><strong>学校にかかるお金は、全国の平均値です。</strong>まん中の人の金額ではありません。' +
       'しかも、この金額には<strong>塾・習いごとの費用が入っています</strong>。' +
@@ -1190,7 +1190,7 @@
       '入学の月の落ち込みは実際よりゆるやかに出ます。</li>');
     h.push('<li><strong>グラフに入れているのは、返さなくていいお金だけです。</strong>' +
       '貸付（あとで返すお金）は、収入として数えていません。' +
-      '借りれば一時的に貯金はふえますが、あとで返すぶん、実際には楽になっていないからです。</li>');
+      '借りれば一時的に貯金は増えますが、あとで返すぶん、実際には楽になっていないからです。</li>');
     h.push('<li><strong>高校の学費は、就学支援金を引いたあとの金額です。</strong>' +
       'もとにしている調査の金額が、保護者が実際に払った額だからです。二重には引いていません。' +
       '大学の学費からは、修学支援新制度の減免と給付型奨学金を引いています（申請した場合の線のみ）。</li>');
@@ -1223,7 +1223,7 @@
   }
 
   /* ============================================================
-   * 家計のうちわけ表
+   * 家計の内訳表
    *   グラフの「なぜこの年に落ちるのか」を、その年の月ごとの収支で確かめる。
    * ============================================================ */
   var 選んだ年 = 0;
@@ -1248,7 +1248,7 @@
     return (選んだ線 === 'training') ? 資格.points : c.points;
   }
 
-  function うちわけ表を描く(c) {
+  function 内訳表を描く(c) {
     var 並び = 選んだ並び(c);
     if (選んだ年 >= 並び.length) { 選んだ年 = 並び.length - 1; }
     if (選んだ年 < 0) { 選んだ年 = 0; }
@@ -1256,12 +1256,12 @@
 
     var h = ['<div class="balance-block">'];
     h.push('<h3>その年の家計を見る</h3>');
-    h.push('<p class="hint">つまみを左右に動かすか、上のグラフを押すと、その年に何にお金が出ていくのかが分かります。' +
-      'グラフのたて線が、いま見ている年です。</p>');
+    h.push('<p class="hint">スライダーを左右に動かすか、上のグラフを押すと、その年に何にお金が出ていくのかが分かります。' +
+      'グラフの縦線が、いま見ている年です。</p>');
 
-    /* 年を選ぶつまみ */
+    /* 年を選ぶスライダー */
     h.push('<div class="balance-controls">');
-    h.push('<label for="balance-year">いちばん下のお子さんが</label>');
+    h.push('<label for="balance-year">一番下のお子さんが</label>');
     h.push('<output id="balance-year-out" class="balance-age">' + 年の見出し(並び[選んだ年]) + '</output>');
     h.push('<input type="range" id="balance-year" min="0" max="' + (並び.length - 1) +
       '" step="1" value="' + 選んだ年 + '" aria-label="見たい年を選ぶ">');
@@ -1288,7 +1288,7 @@
     return pt.youngestAge + '歳' + (pt.fiscalYear ? '（' + pt.fiscalYear + '年度）' : '');
   }
 
-  /** つまみを動かしたときに入れかえる部分だけ */
+  /** スライダーを動かしたときに入れかえる部分だけ */
   function 表の中身(c) {
     var 並び = 選んだ並び(c);
     var pt = 並び[選んだ年];
@@ -1303,8 +1303,8 @@
 
     var h = [];
 
-    /* 大事な3つの数字を、うちわけより先に出す。
-       いままでは表のいちばん下にあり、スクロールしないと残りが見えなかった（issue #3）。
+    /* 大事な3つの数字を、内訳より先に出す。
+       いままでは表の一番下にあり、スクロールしないと残りが見えなかった（issue #3）。
        この年度の終わりの貯金は、グラフの線が持っている数字をそのまま使う。
        表のために計算し直すと、線と表がずれる（過去に実際にずれた）。 */
     var 年末 = (選んだ線 === 'now') ? pt.endOfYearNow : pt.endOfYear;
@@ -1314,7 +1314,7 @@
     h.push('<div class="bs-cell"><span class="bs-label">出ていくお金</span>' +
       '<span class="bs-num">' + SPS.円(支出計) + '</span></div>');
     h.push('<div class="bs-cell bs-main ' + (差引 < 0 ? 'minus' : 'plus') + '">' +
-      '<span class="bs-label">ひと月の残り</span><span class="bs-num">' +
+      '<span class="bs-label">1か月の残り</span><span class="bs-num">' +
       (差引 < 0 ? '−' + SPS.円(-差引) : SPS.円(差引)) + '</span></div>');
     if (年末 != null) {
       h.push('<div class="bs-cell ' + (年末 < 0 ? 'minus' : 'plus') + '">' +
@@ -1324,20 +1324,20 @@
     }
     h.push('</div>');
     if (差引 < 0) {
-      h.push('<p class="hint balance-minus">この年は、ひと月に ' + SPS.円(-差引) +
+      h.push('<p class="hint balance-minus">この年は、1か月に ' + SPS.円(-差引) +
         ' ずつ貯金が減っていきます。</p>');
     }
 
-    h.push('<details class="balance-detail"><summary>何にいくらか、うちわけを見る</summary>');
+    h.push('<details class="balance-detail"><summary>何にいくらか、内訳を見る</summary>');
     h.push('<table class="balance"><tbody>');
-    h.push('<tr class="sec"><th colspan="2">入ってくるお金（ひと月）</th></tr>');
+    h.push('<tr class="sec"><th colspan="2">入ってくるお金（1か月）</th></tr>');
     b.income.forEach(function (r) {
       h.push('<tr' + (r.amount === 0 ? ' class="zero"' : '') + '><td>' + esc(r.name) +
         (r.amount === 0 && r.reason ? '<span class="why">' + esc(r.reason) + '</span>' : '') +
         '</td><td class="num">' + SPS.円(r.amount) + '</td></tr>');
     });
     h.push('<tr class="sum"><td>入ってくるお金の合計</td><td class="num">' + SPS.円(収入計) + '</td></tr>');
-    h.push('<tr class="sec"><th colspan="2">出ていくお金（ひと月）</th></tr>');
+    h.push('<tr class="sec"><th colspan="2">出ていくお金（1か月）</th></tr>');
     b.expense.forEach(function (r) {
       /* 補足の数字は、その行が持っている数字だけから作る。
          別のところから持ってくると、行の金額と合わなくなる（実際に合わなくなっていた）。 */
@@ -1362,7 +1362,7 @@
             ((最新入力.juku && 最新入力.juku.useAverage === false) ? '（自分で決めた額）' : '（全国平均）'));
         }
         if (r.support > 0) {
-          内.push('もとの額 ' + SPS.円(r.gross) + ' から制度が ' + SPS.円(r.support) + ' 助けたあと');
+          内.push('元の額 ' + SPS.円(r.gross) + ' から制度が ' + SPS.円(r.support) + ' 助けたあと');
         }
         if (内.length) { 追記 = '<span class="why">' + 内.join(' ／ ') + '</span>'; }
       }
@@ -1378,10 +1378,10 @@
           if (ch.school != null && ch.extra != null && (ch.school > 0 || ch.extra > 0)) {
             補 = '<span class="why">学校そのもの ' + SPS.円(ch.school) +
               ' ／ 塾・習いごと ' + SPS.円(ch.extra) +
-              (ch.support > 0 ? '（もとの額 ' + SPS.円(ch.gross) + ' から制度が ' + SPS.円(ch.support) + ' 助けたあと）' : '') +
+              (ch.support > 0 ? '（元の額 ' + SPS.円(ch.gross) + ' から制度が ' + SPS.円(ch.support) + ' 助けたあと）' : '') +
               '</span>';
           } else if (ch.support > 0) {
-            補 = '<span class="why">もとの額 ' + SPS.円(ch.gross) + ' − 制度の助け ' + SPS.円(ch.support) + '</span>';
+            補 = '<span class="why">元の額 ' + SPS.円(ch.gross) + ' − 制度の助け ' + SPS.円(ch.support) + '</span>';
           } else if (ch.discount > 0) {
             補 = '<span class="why">きょうだいの軽減で ' + SPS.円(ch.discount) + ' 安く（軽減前 ' + SPS.円(ch.gross) + '）</span>';
           }
@@ -1397,9 +1397,9 @@
       'の終わりの貯金」は、グラフの線がこの時点で通っている金額です。</p>');
     h.push('</details>');
 
-    /* 「この年に変わること」は、いちばん下に置く。
+    /* 「この年に変わること」は、一番下に置く。
        上に置くと、ある年とない年で数字の位置が上下にずれて、
-       つまみを動かしながら数字を見比べにくくなるため。 */
+       スライダーを動かしながら数字を見比べにくくなるため。 */
     var できごと = その年のできごと(c, 並び, 選んだ年);
     if (できごと.length) {
       h.push('<div class="balance-events"><p class="balance-events-head">この年に変わること</p><ul>' +
@@ -1425,14 +1425,14 @@
         出.push('<strong>' + esc(r.name) + 'が始まります</strong>（月 ' + SPS.円(r.amount) + ' 増）');
       } else if (前額 > 0 && r.amount > 0 && Math.abs(r.amount - 前額) >= 3000) {
         出.push(esc(r.name) + 'が 月 ' + SPS.円(Math.abs(r.amount - 前額)) +
-          (r.amount < 前額 ? ' 減ります' : ' ふえます'));
+          (r.amount < 前額 ? ' 減ります' : ' 増えます'));
       }
     });
     b2.expense.forEach(function (r, k) {
       var 前額 = b1.expense[k] ? b1.expense[k].amount : 0;
       if (Math.abs(r.amount - 前額) >= 3000) {
         出.push(esc(r.name) + 'が 月 ' + SPS.円(Math.abs(r.amount - 前額)) +
-          (r.amount > 前額 ? ' ふえます' : ' 減ります'));
+          (r.amount > 前額 ? ' 増えます' : ' 減ります'));
       }
     });
     /* 学校の段階が変わる年は、名前で言う */
@@ -1460,14 +1460,14 @@
     var h = '<p class="hint floor-note">お金が足りなくなっても、貸金業者（消費者金融や、クレジットカードのキャッシング）から借りられるのは、' +
       '<strong>' + esc(c.borrowFloorLabel || '年収の3分の1') + 'まで</strong>と法律で決まっています。' +
       'あなたの場合は <strong>' + SPS.円(-c.borrowFloor) + '</strong> です。</p>' +
-      '<p class="hint red-zone-note">グラフの赤い線が、その上限です。<strong>うすい赤</strong>は借金でしのいでいる状態、' +
+      '<p class="hint red-zone-note">グラフの赤い線が、その上限です。<strong>薄い赤</strong>は借金でしのいでいる状態、' +
       '<strong>濃い赤</strong>は借りることもできない金額です。だから線は、上限に当たったところで止めています。</p>' +
       '<p class="hint floor-note"><strong>上限にぶつかると、そこから先は本当に打つ手がなくなります。その前に相談窓口へ。</strong>' +
       '<a href="#gap-block">下の「足りないぶんをどこから持ってくるか」を見る</a><br>' +
       '<span class="src">根拠: 貸金業法第13条の2（総量規制）／' +
       '<a href="https://www.fsa.go.jp/policy/kashikin/kihon.html" target="_blank" rel="noopener">金融庁「貸金業法のキホン」</a>' +
       '（最終確認 8/11(火)）。銀行からの借入れや住宅ローンなど、対象外のものもあります。</span></p>';
-    return '<details class="explain"><summary>借金には、法律で決まった上限があります（くわしく）</summary>' +
+    return '<details class="explain"><summary>借金には、法律で決まった上限があります（詳しく）</summary>' +
       '<div class="explain-body">' + h + '</div></details>';
   }
 
@@ -1480,7 +1480,7 @@
     if (c.tuitionSupportTotal > 0) {
       要点 += '、制度を使うと実際の負担は 約' + Math.round(c.tuitionTotal / 10000).toLocaleString('ja-JP') + '万円';
     }
-    var h = ['<details class="explain ref"><summary>' + 要点 + '（くわしく）</summary><div class="panel tight">'];
+    var h = ['<details class="explain ref"><summary>' + 要点 + '（詳しく）</summary><div class="panel tight">'];
     h.push('<h3 style="margin-top:0">学校にかかるお金</h3>');
     if (c.tuitionSupportTotal > 0) {
       h.push('<p>いまの進路の見込みだと、学校にかかるお金は これから合計およそ <strong>' +
@@ -1490,7 +1490,7 @@
         '実際の負担は <strong>およそ ' + Math.round(c.tuitionTotal / 10000).toLocaleString('ja-JP') + '万円</strong> です。</p>');
       h.push('<p class="hint">助けてくれるのは、高校生等奨学給付金と、高等教育の修学支援新制度（授業料・入学金の減免＋返さなくてよい給付型奨学金）です。' +
         '<strong>どちらも自分で申し込む必要があります。</strong>収入が低い世帯ほど手厚くなります。' +
-        '<a href="#prog-koutou_kyoiku_shugaku_shien">修学支援新制度のくわしい説明を見る</a></p>');
+        '<a href="#prog-koutou_kyoiku_shugaku_shien">修学支援新制度の詳しい説明を見る</a></p>');
     } else {
       h.push('<p>いまの進路の見込みだと、これから <strong>合計およそ ' +
         Math.round(c.tuitionTotal / 10000).toLocaleString('ja-JP') + '万円</strong> かかる計算です。</p>');
@@ -1531,7 +1531,7 @@
     var 修学 = データ.programs_by_id.koutou_kyoiku_shugaku_shien;
     var 給付金 = データ.programs_by_id.koukou_shugaku_shienkin;
 
-    var h = ['<details class="explain ref"><summary>奨学金の見取り図。返さなくていいもの・返すもの・借りた場合の返し方（くわしく）</summary><div class="panel scholarship-map">'];
+    var h = ['<details class="explain ref"><summary>奨学金の見取り図。返さなくていいもの・返すもの・借りた場合の返し方（詳しく）</summary><div class="panel scholarship-map">'];
     h.push('<h3 style="margin-top:0">奨学金の見取り図</h3>');
     h.push('<p class="hint">お金の助けには「返さなくていいもの」と「あとで返すもの」があります。' +
       '<strong>返さなくていいものから使い切る</strong>のが順番です。</p>');
@@ -1551,7 +1551,7 @@
       '<br><strong>大学独自・民間の給付型</strong><br><span class="why">数千種類あるのでこのツールには入れられません。' +
       '<a href="#stage4">AIに探してもらう文章</a>を用意しました</span></td>' +
       '<td><strong>貸与型奨学金（第一種・第二種）</strong><br><span class="why">お子さん名義の借金です。' +
-      '社会人になってから返します。下に返済のめやすを出します</span></td></tr>');
+      '社会人になってから返します。下に返済の目安を出します</span></td></tr>');
     h.push('</tbody></table>');
 
     /* 学力のレバー */
@@ -1627,7 +1627,7 @@
 
     if (入力.childSupportState.indexOf('取り決めている') === -1) {
       足す('養育費を取り決める・請求する',
-        '口約束や、取り決めなしのままになっています。ここがいちばん大きく動く可能性があります。' +
+        '口約束や、取り決めなしのままになっています。ここが一番大きく動く可能性があります。' +
         '公正証書にしておけば、あとから給料や預金を差し押さえられます。' +
         '令和8年4月からは、取り決めがない場合でも一定額を請求できる仕組みが始まっています。',
         'youikuhi', true, true);
@@ -1635,7 +1635,7 @@
     c.gaps.forEach(function (g) {
       var p = データ.programs_by_id[g.id];
       足す('「' + p.name.replace(/（.*$/, '') + '」を申請する',
-        'まだ受け取っていないと答えていただきました。ひと月あたり約' + SPS.円(g.monthly) + 'です。',
+        'まだ受け取っていないと答えていただきました。1か月あたり約' + SPS.円(g.monthly) + 'です。',
         g.id, g.monthly >= 不足, true);
     });
     if (入力.children.some(function (a) { return a >= 6 && a <= 15; })) {
@@ -1647,7 +1647,7 @@
     足す('食べるものを助けてもらう',
       'こども食堂・フードパントリー・こども宅食など、食事や食材を無料か安く受け取れる場所があります。' +
       '申請も審査もいらないところがほとんどで、行けばその日から使えます。' +
-      '市区町村の子育て担当課か社会福祉協議会に「近くのこども食堂を教えてください」と聞くのがいちばん早いです。',
+      '市区町村の子育て担当課か社会福祉協議会に「近くのこども食堂を教えてください」と聞くのが一番早いです。',
       'shoku_shien', false, true);
     if (入力.housingType === '賃貸' && 入力.housingAfter > 0) {
       足す('住まいの費用を見直す',
@@ -1658,7 +1658,7 @@
     if (判定表.koutou_shokugyo_kunren) {
       足す('資格を取って、収入を上げる',
         '学校に通う間、住民税が非課税の世帯なら月10万円（課税世帯は月70,500円）を受け取れます。' +
-        '最後の1年はさらに月4万円。通いはじめる前に相談することが必要です。時間はかかりますが、いちばん大きく変わる手です。',
+        '最後の1年はさらに月4万円。通い始める前に相談することが必要です。時間はかかりますが、一番大きく変わる手です。',
         'koutou_shokugyo_kunren', false, false);
     }
     if (不足 >= 50000) {
@@ -1680,7 +1680,7 @@
     var h = ['<div class="pit red gap-block" id="gap-block">'];
     h.push('<h4>🔴 足りないぶんを、どこから持ってくるか</h4>');
     if (不足 > 0) {
-      h.push('<p class="gap-amount">埋めたいのは <strong>ひと月あたり ' + SPS.円(不足) + '</strong> です。</p>');
+      h.push('<p class="gap-amount">埋めたいのは <strong>1か月あたり ' + SPS.円(不足) + '</strong> です。</p>');
       if (小さい穴) {
         h.push('<p>この大きさなら、<strong>今週から動けることで埋まる見込みです。</strong>' +
           '大きな決断をする前に、上から順に試してみてください。</p>');
@@ -1697,7 +1697,7 @@
         '<strong>' + esc(o.head) + '</strong>' + (制度 ? 返済バッジ(制度) : '') +
         (o.strong ? ' <span class="badge info">大きく効きます</span>' : '') +
         '<br>' + o.body +
-        (o.prog ? '<br><a href="#prog-' + esc(o.prog) + '">この制度のくわしい説明を見る</a>' : '') + '</li>');
+        (o.prog ? '<br><a href="#prog-' + esc(o.prog) + '">この制度の詳しい説明を見る</a>' : '') + '</li>');
     });
     h.push('</ol>');
     if (隠す) {
@@ -1709,11 +1709,11 @@
     if (c.universityDeficit) {
       var 修学 = データ.programs_by_id.koutou_kyoiku_shugaku_shien;
       h.push('<div class="pit red"><h4>🔴 進学を決める前に、必ず確認してほしい制度があります</h4>' +
-        '<p>いちばん下のお子さんが' + c.universityDeficit.youngestAge + '歳のころ、大学のお金で貯金が底をつく計算です。</p>' +
+        '<p>一番下のお子さんが' + c.universityDeficit.youngestAge + '歳のころ、大学のお金で貯金が底をつく計算です。</p>' +
         '<p><strong>' + esc(修学.name) + '</strong> を使うと、住民税が非課税の世帯なら、私立・自宅外で' +
-        '返さなくてよい奨学金が年91万円、あわせて授業料が年70万円まで免除されます。' +
+        '返さなくてよい奨学金が年91万円、合わせて授業料が年70万円まで免除されます。' +
         'ひとり親家庭は満額の対象になることが多い制度です。</p>' +
-        '<p><a href="#prog-koutou_kyoiku_shugaku_shien">この制度のくわしい説明を見る</a>／' +
+        '<p><a href="#prog-koutou_kyoiku_shugaku_shien">この制度の詳しい説明を見る</a>／' +
         '<a href="' + esc(修学.source.url) + '" target="_blank" rel="noopener">文部科学省のページを開く</a></p>' +
         '<p class="hint">このグラフの学費には、この制度による減額を入れていません。使えれば、線はこれより上がります。</p>' +
         '</div>');
@@ -1724,10 +1724,10 @@
   function 防衛資金の説明() {
     return '<div class="notice">' +
       '<h4>「生活防衛資金」は、生活費の半年分の貯金です</h4>' +
-      '<p style="margin:.3rem 0"><strong>まずはこの額にとどくまで貯めることだけ考えれば大丈夫です。' +
-      'ここにとどくまで、投資のことは考えなくていいです。</strong></p>' +
+      '<p style="margin:.3rem 0"><strong>まずはこの額に届くまで貯めることだけ考えれば大丈夫です。' +
+      'ここに届くまで、投資のことは考えなくていいです。</strong></p>' +
       '<p style="margin:.3rem 0">仕事を失ったとき、体をこわしたとき、家電がこわれたとき。' +
-      'このお金があれば、借金をせずに乗りきれます。ひとり親家庭は収入が一人分なので、ここがいちばん効きます。</p>' +
+      'このお金があれば、借金をせずに乗りきれます。ひとり親家庭は収入が一人分なので、ここが一番効きます。</p>' +
       '<p class="hint" style="margin:.4rem 0 0">' +
       '<strong>事実:</strong> 金融庁は「家計管理の基本は、収入と支出をきちんと把握・管理すること、収支を黒字にすること、' +
       'そして黒字分を貯蓄することです」としています（' +
@@ -1738,15 +1738,15 @@
       '<div class="stance" style="background:#fff"><span class="stance-tag">ここからは、私たちの立場の表明です（事実ではありません）</span>' +
       '私たちAIかけこみ寺は、ひとり親家庭にとっては生活費の半年分を手元に置くことが、' +
       'どんな資産運用よりも先に来ると考えます。半年分に届く前でも、貯まっているぶんだけ確実に効きます。' +
-      'この線にとどくまでは、投資のことは考えなくていい、というのが私たちの立場です。</div>' +
+      'この線に届くまでは、投資のことは考えなくていい、というのが私たちの立場です。</div>' +
       '</div>';
   }
 
   function 崖の説明(cliffs) {
     if (!cliffs.length) { return ''; }
-    return '<div class="cliff-list"><p class="cliff-head">グラフのたて線（金額が変わるところ）</p><ol>' +
+    return '<div class="cliff-list"><p class="cliff-head">グラフの縦線（金額が変わるところ）</p><ol>' +
       cliffs.map(function (c) {
-        return '<li><span class="cliff-no">' + '</span>いちばん下のお子さんが <strong>' +
+        return '<li><span class="cliff-no">' + '</span>一番下のお子さんが <strong>' +
           c.youngestAge + '歳</strong> のとき: ' + esc(c.label) + '</li>';
       }).join('') + '</ol></div>';
   }
@@ -1781,7 +1781,7 @@
      チェックの状態は保存しません。持ち歩けるように、コピーだけできるようにしてあります。 */
   function まずやること(入力, 判定) {
     var 一覧 = [];
-    /* いちばん最後の「窓口へ行く」は必ず残したいので、条件つきの項目は6個までにする */
+    /* 一番最後の「窓口へ行く」は必ず残したいので、条件つきの項目は6個までにする */
     function 足す(文, 制度id) { if (一覧.length < 6) { 一覧.push({ text: 文, prog: 制度id || null }); } }
 
     var 判定表 = {};
@@ -1833,7 +1833,7 @@
       var 制度2 = it.prog ? データ.programs_by_id[it.prog] : null;
       h.push('<li><label><input type="checkbox" id="todo-' + i + '"><span>' + esc(it.text) + '</span></label>' +
         (制度2 ? 返済バッジ(制度2) : '') +
-        (it.prog ? ' <a class="jump" href="#prog-' + esc(it.prog) + '">くわしく</a>' : '') + '</li>');
+        (it.prog ? ' <a class="jump" href="#prog-' + esc(it.prog) + '">詳しく</a>' : '') + '</li>');
     });
     h.push('</ul>',
       '<div class="copy-row"><button type="button" class="ghost" id="copy-todo">このリストをコピーする</button>',
@@ -1854,7 +1854,7 @@
       '<ul>'];
     行動.forEach(function (r, i) {
       h.push('<li><label><input type="checkbox" id="rule-' + i + '"><span>' + esc(r.text) + '</span></label>' +
-        (r.pit ? ' <a class="jump" href="#pit-' + esc(r.pit) + '">くわしく</a>' : '') + '</li>');
+        (r.pit ? ' <a class="jump" href="#pit-' + esc(r.pit) + '">詳しく</a>' : '') + '</li>');
     });
     h.push('</ul>',
       '<div class="copy-row"><button type="button" class="ghost" id="copy-rule">このチェックをコピーする</button>',
@@ -1864,7 +1864,7 @@
     return h.join('');
   }
 
-  /** 「くわしく」で飛んだ先の折りたたみを開く */
+  /** 「詳しく」で飛んだ先の折りたたみを開く */
   function 飛び先を開く() {
     document.addEventListener('click', function (e) {
       var a = e.target.closest('a.jump');
@@ -1914,7 +1914,7 @@
     function 一件(it) {
       return '<div class="pit ' + it.tone + '" id="pit-' + esc(it.id) + '">' +
         '<h4>' + (it.tone === 'red' ? '🔴 ' : '🟡 ') + esc(it.headline || it.title) + '</h4>' +
-        '<details><summary>くわしく読む</summary><div class="pit-detail">' + 中身(it) + '</div></details>' +
+        '<details><summary>詳しく読む</summary><div class="pit-detail">' + 中身(it) + '</div></details>' +
         '</div>';
     }
 
@@ -1923,7 +1923,7 @@
     var 行動 = (落とし穴.action_checklist || []).filter(function (r) { return !r.pit || 出ている[r.pit]; });
 
     /* 「まずやること」と「気をつけてほしいこと」は、別の章に分けて置く。
-       一度にぜんぶ出すと、どれから手をつければいいのか分からなくなるため。 */
+       一度に全部出すと、どれから手をつければいいのか分からなくなるため。 */
     最初の一歩 = やること.length ? やること[0].text : '';
     $('stage3a-body').innerHTML = チェックリストを描く(やること);
 
@@ -1962,7 +1962,7 @@
         '<h4>' + esc(p.title) + '</h4>' +
         '<p class="hint">' + esc(p.desc) + '</p>' +
         /* 文章そのものは長いのでたたむ。コピーは読まなくても押せるように、外に出しておく */
-        '<details class="explain prompt-fold"><summary>文章を読む（くわしく）</summary>' +
+        '<details class="explain prompt-fold"><summary>文章を読む（詳しく）</summary>' +
         '<textarea readonly id="pr-' + i + '">' + esc(p.text) + '</textarea></details>' +
         '<div class="copy-row"><button type="button" class="ghost" data-copy="pr-' + i + '">この文章をコピーする</button>' +
         '<span class="copy-msg" id="msg-pr-' + i + '"></span></div>' +
@@ -2045,15 +2045,15 @@
   }
 
   /* ---------- メニュー ----------
-     結果を全部ならべると、どこを読めばいいか分からなくなる。
+     結果を全部並べると、どこを読めばいいか分からなくなる。
      入力のあとにカードを出して、選んだものだけを下に開く。
      カードには、その人の数字を1つだけ載せる（押す理由になるため）。 */
   var メニューの項目 = [
     { id: 'savings', 絵: '💰', 名: '貯金シミュレーション', 章: ['stage2b'] },
     { id: 'programs', 絵: '🔍', 名: 'ひとり親支援制度を探す', 章: ['stage1', 'stage3a'] },
-    { id: 'divorce', 絵: '⚖️', 名: '離婚した場合とくらべる', 章: ['stage2'], 婚姻中だけ: true },
+    { id: 'divorce', 絵: '⚖️', 名: '離婚した場合と比べる', 章: ['stage2'], 婚姻中だけ: true },
     { id: 'pitfalls', 絵: '⚠️', 名: 'はまりやすい落とし穴', 章: ['stage3'] },
-    { id: 'ai', 絵: '🤖', 名: 'AIに相談する文章をつくる', 章: ['stage4', 'finish'] }
+    { id: 'ai', 絵: '🤖', 名: 'AIに相談する文章を作る', 章: ['stage4', 'finish'] }
   ];
   var 見ているもの = 'savings';
 
@@ -2068,12 +2068,12 @@
     if (id === 'savings' && c) {
       if (c.monthlyBalance < 0) { return 'いま、毎月あと <strong>' + SPS.円(-c.monthlyBalance) + '</strong> 足りない状態です'; }
       if (c.goesNegativeNow) {
-        return 'いまのままだと、いちばん下のお子さんが <strong>' + esc(月を年齢で(c, c.negativeFromMonthNow)) + '</strong> に貯金が底をつきます';
+        return 'いまのままだと、一番下のお子さんが <strong>' + esc(月を年齢で(c, c.negativeFromMonthNow)) + '</strong> に貯金が底をつきます';
       }
       if (c.goesNegative) {
-        return 'いちばん下のお子さんが <strong>' + esc(月を年齢で(c, c.negativeFromMonth) || '') + '</strong>、貯金が底をつく計算です';
+        return '一番下のお子さんが <strong>' + esc(月を年齢で(c, c.negativeFromMonth) || '') + '</strong>、貯金が底をつく計算です';
       }
-      return '制度を活用すると、ひと月に約 <strong>' + SPS.円(c.monthlyBalance) + '</strong> 残る計算です';
+      return '制度を活用すると、1か月に約 <strong>' + SPS.円(c.monthlyBalance) + '</strong> 残る計算です';
     }
     if (id === 'programs' && c) {
       /* 開いた先の要約（制度を描く）と、同じ数え方をする。数字が食い違わないように */
@@ -2091,7 +2091,7 @@
       }
       return 窓口 ? 窓口 + ' あります' : '使える制度を、条件と申請先つきで一覧にしています';
     }
-    if (id === 'divorce') { return '結婚を続けた場合と、ひとりあたりのお金でくらべます'; }
+    if (id === 'divorce') { return '結婚を続けた場合と、1人あたりのお金で比べます'; }
     if (id === 'pitfalls') {
       var n = 当てはまる落とし穴(最新入力, 最新判定).length;
       return n ? 'あなたに当てはまりそうなものが <strong>' + n + '件</strong> あります' : '先に知っておくと、あとで困らないこと';
@@ -2125,14 +2125,14 @@
       var いま = b.getAttribute('data-view') === id;
       b.setAttribute('aria-current', いま ? 'true' : 'false');
     });
-    /* 開いたものの最後に、「つぎ」と「もどる」を置く */
+    /* 開いたものの最後に、「次」と「戻る」を置く */
     [].forEach.call(document.querySelectorAll('.view-next'), function (el) { el.parentNode.removeChild(el); });
     var いまの = 項目.filter(function (m) { return m.id === id; })[0];
     if (いまの) {
-      var つぎ = 項目[項目.indexOf(いまの) + 1];
+      var 次 = 項目[項目.indexOf(いまの) + 1];
       var 足 = document.createElement('div');
       足.className = 'view-next';
-      足.innerHTML = (つぎ ? '<button type="button" class="primary" data-view="' + つぎ.id + '">つぎ：' + esc(つぎ.名) + '</button>' : '') +
+      足.innerHTML = (次 ? '<button type="button" class="primary" data-view="' + 次.id + '">次：' + esc(次.名) + '</button>' : '') +
         '<a href="#menu">ほかのものを選ぶ</a>';
       $(いまの.章[いまの.章.length - 1]).appendChild(足);
     }
@@ -2154,7 +2154,7 @@
 
   /* ---------- 見出しの番号 ----------
      出している章だけに、上から順に番号をふる。
-     離婚のくらべ方をしまうと番号が飛ぶので、そのつど数え直す。 */
+     離婚の比べ方をしまうと番号が飛ぶので、そのつど数え直す。 */
   function 見出しの番号をふり直す() {
     var n = 0;
     document.querySelectorAll('h2[data-label]').forEach(function (h) {
@@ -2227,7 +2227,7 @@
       });
       $('children-box').addEventListener('change', function () { 進路欄を作る(子どもの年齢たち()); });
       document.querySelectorAll('.cost-item').forEach(function (el) {
-        el.addEventListener('input', うちわけを反映);
+        el.addEventListener('input', 内訳を反映);
       });
       document.querySelectorAll('input[name="juku-mode"]').forEach(function (el) {
         el.addEventListener('change', 塾欄を反映);
