@@ -633,7 +633,7 @@ details.prog[open] > summary::before { transform: rotate(90deg); }
 /* 「その年の家計を見る」の、大事な3つの数字。
    前は表のいちばん下にあって、スクロールしないと残りが見えなかった（issue #3）。 */
 .balance-summary {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  display: grid; grid-template-columns: 1fr 1fr;   /* いつも2列×2段。幅で3と1に割れると読みにくい */
   gap: .5rem; margin: .6rem 0;
 }
 .bs-cell {
@@ -677,3 +677,11 @@ details.prog[open] > summary::before { transform: rotate(90deg); }
 
 /* 貯金のグラフは、押すとその年の家計が出る */
 #curve-chart svg { cursor: pointer; }
+
+/* ---------- 用語の辞典 ---------- */
+.gloss-group { margin: 1.2rem 0 .4rem; font-size: 1rem; }
+.gloss { margin: 0; }
+.gloss dt { font-weight: 700; margin-top: .8rem; }
+.gloss dt .yomi { font-weight: 400; font-size: .78rem; color: var(--ink-sub); margin-left: .5rem; }
+.gloss dd { margin: .15rem 0 0; font-size: .92rem; line-height: 1.75; }
+.gloss dd a { font-size: .86rem; white-space: nowrap; }

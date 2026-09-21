@@ -1216,8 +1216,8 @@ server.listen(0, '127.0.0.1', function () {
             '番号は、入力とメニューの2つにふる', 単親番号.join(' / '));
           ok(単親番号.some(function (t) { return t === '貯金シミュレーション'; }),
             'メニューから開くものには、番号をふらない（カードの番号とぶつかるため）');
-          eq(d.querySelectorAll('#menu-cards .menu-card').length, 4,
-            'ひとり親のときは、カードは4枚（離婚した場合と比べる、は出さない）');
+          eq(d.querySelectorAll('#menu-cards .menu-card').length, 5,
+            'ひとり親のときは、カードは5枚（離婚した場合と比べる、は出さない）');
 
           単親にする(false);
           ok(d.getElementById('stage2').classList.contains('shown'),
@@ -1227,8 +1227,12 @@ server.listen(0, '127.0.0.1', function () {
           var 婚姻番号 = 番号();
           ok(婚姻番号.some(function (t) { return t === '続けた場合と、離婚した場合の比べ方'; }),
             '比べ方の章にも、番号はふらない', 婚姻番号.join(' / '));
-          eq(d.querySelectorAll('#menu-cards .menu-card').length, 5,
-            '離婚を考えているときは、カードは5枚');
+          eq(d.querySelectorAll('#menu-cards .menu-card').length, 6,
+            '離婚を考えているときは、カードは6枚');
+          ok(d.querySelectorAll('#stage5-body dt').length >= 25, '用語の辞典に、言葉が並んでいる');
+          ok([].every.call(d.querySelectorAll('#stage5-body dd a'), function (x) {
+            return d.getElementById(x.getAttribute('href').slice(1)) !== null;
+          }), '辞典から制度のカードへのリンクは、すべて行き先がある');
           ok(d.querySelectorAll('#menu-cards .menu-card')[2].querySelector('.name').textContent
             .indexOf('離婚した場合と比べる') >= 0, '3枚目が「離婚した場合と比べる」');
 

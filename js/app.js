@@ -2036,7 +2036,8 @@
     { id: 'programs', 絵: '🔍', 名: 'ひとり親支援制度を探す', 章: ['stage1', 'stage3a'] },
     { id: 'divorce', 絵: '⚖️', 名: '離婚した場合と比べる', 章: ['stage2'], 婚姻中だけ: true },
     { id: 'pitfalls', 絵: '⚠️', 名: 'はまりやすい落とし穴', 章: ['stage3'] },
-    { id: 'ai', 絵: '🤖', 名: 'AIに相談する文章を作る', 章: ['stage4', 'finish'] }
+    { id: 'ai', 絵: '🤖', 名: 'AIに相談する文章を作る', 章: ['stage4', 'finish'] },
+    { id: 'glossary', 絵: '📖', 名: '用語の辞典', 章: ['stage5'] }
   ];
   var 見ているもの = 'savings';
 
@@ -2080,7 +2081,28 @@
       return n ? 'あなたに当てはまりそうなものが <strong>' + n + '件</strong> あります' : '先に知っておくと、あとで困らないこと';
     }
     if (id === 'ai') { return 'コピーして貼るだけの文章ができています。ここまで来れば、今日は十分です'; }
+    if (id === 'glossary') {
+      var 語数 = 0;
+      ((window.SPS_DATA_GLOSSARY || {}).groups || []).forEach(function (g) { 語数 += g.terms.length; });
+      return '制度の言葉を、短く説明しています（<strong>' + 語数 + '語</strong>）';
+    }
     return '';
+  }
+
+  /* ---------- 用語の辞典 ----------
+     画面の文章は自然な日本語で書き、難しい制度の言葉はここで説明する。 */
+  function 辞典を描く() {
+    var 辞典 = window.SPS_DATA_GLOSSARY;
+    if (!辞典 || !辞典.groups) { $('stage5-body').innerHTML = ''; return; }
+    $('stage5-body').innerHTML = 辞典.groups.map(function (g) {
+      return '<h4 class="gloss-group">' + esc(g.name) + '</h4><dl class="gloss">' +
+        g.terms.map(function (t) {
+          return '<dt>' + esc(t.term) + (t.yomi ? '<span class="yomi">' + esc(t.yomi) + '</span>' : '') + '</dt>' +
+            '<dd>' + esc(t.text) +
+            (t.prog && データ.programs_by_id[t.prog]
+              ? ' <a href="#prog-' + esc(t.prog) + '">この制度のカードを見る</a>' : '') + '</dd>';
+        }).join('') + '</dl>';
+    }).join('');
   }
 
   function メニューを描く() {
@@ -2174,6 +2196,8 @@
     $('guide').classList.add('shown');
     $('finish').classList.add('shown');
     $('menu').classList.add('shown');
+    辞典を描く();
+    $('stage5').classList.add('shown');
     まとめを描く();
     メニューを描く();
     /* 記入例を入れたときは、画面を動かさない。
