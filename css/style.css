@@ -719,3 +719,6 @@ details.explain .lever-example, details.explain .loan-order {
 }
 /* 借金の上限の説明だけ、字が小さく薄かった。ほかの折りたたみと同じ大きさ・濃さにする */
 details.explain > .explain-body > p.hint { font-size: .9rem; color: var(--ink); }
+
+/* 項目の中の小見出し */
+.sub-title { font-size: 1.02rem; margin: 1.4rem 0 .4rem; padding-left: .6rem; border-left: 4px solid var(--accent); }

@@ -164,7 +164,7 @@ function 章の並びのチェック() {
       d.querySelectorAll('#sample-buttons button')[0].click();
       return 待つ(250);
     }).then(function () {
-      var 並び = ['stage1', 'stage3a', 'stage3', 'stage4'];
+      var 並び = ['stage3a', 'stage1', 'stage3', 'stage4'];
       並び.forEach(function (id, i) {
         ok(d.getElementById(id).classList.contains('shown'), id + ' が出ている');
         eq(d.getElementById(id).classList.contains('folded'), false, id + ' は畳まれていない');
@@ -1159,8 +1159,10 @@ server.listen(0, '127.0.0.1', function () {
              中身は、制度の一覧・道筋・落とし穴・学費の説明と重なっていたため。 */
           ok(d.getElementById('gap-block') === null && d.querySelector('#stage1 .pit.red') === null,
             '制度を探す項目に、赤い箱はない');
-          eq(d.querySelector('#stage1 .step-title').textContent, 'ひとり親支援制度を探す',
+          eq(d.querySelector('#stage3a .step-title').textContent, 'ひとり親支援制度を探す',
             '見出しは、カードの名前と同じ');
+          ok(d.getElementById('stage3a').compareDocumentPosition(d.getElementById('stage1')) & 4,
+            'まずやることリストが先、制度の詳しい一覧はそのあと');
           var やること = d.getElementById('stage3a-body').textContent;
           ok(やること.indexOf('こども食堂') > 0, 'お金が足りない人のやることリストに、食の支援が入っている');
           ok(d.querySelector('#stage3a-body a[href="#prog-shoku_shien"]') !== null ||
