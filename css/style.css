@@ -698,3 +698,30 @@ details.prog[open] > summary::before { transform: rotate(90deg); }
 }
 .gloss dd:last-child { border-bottom: none; }
 .gloss dd a { font-size: .86rem; white-space: nowrap; }
+
+/* ---------- 折りたたみを開いた中身 ----------
+   開いた中身が、青い箱・灰色の箱・白いカード・箱なし、とばらばらだった。
+   どれも同じ見た目にそろえる: 箱にはせず、左に細い線を引いて一段下げるだけ。 */
+details.explain > .explain-body,
+details.explain > .notice,
+details.explain > .assumption-box,
+details.explain > .panel,
+details.explain > .explain-body.notice {
+  background: none; border: none; box-shadow: none; border-radius: 0;
+  border-left: 3px solid var(--line);
+  margin: .5rem 0 1.2rem .5rem; padding: .1rem 0 .1rem .9rem;
+  font-size: .9rem;
+}
+details.explain > div > :first-child { margin-top: 0; }
+details.explain > div > h3, details.explain > div > h4 { font-size: .98rem; }
+/* 折りたたみの中に、色つきの箱は置かない（緑の箱・黄色の箱・その中の白い箱）。
+   小見出しと文だけにして、区切りは上の細い線で付ける。 */
+details.explain .lever, details.explain .loan-sim {
+  background: none; border: none; border-radius: 0; padding: 0;
+  margin: 1.1rem 0 0; padding-top: .9rem; border-top: 1px solid var(--line);
+}
+details.explain .lever-example, details.explain .loan-order {
+  background: none; border-radius: 0; padding: 0;
+}
+/* 借金の上限の説明だけ、字が小さく薄かった。ほかの折りたたみと同じ大きさ・濃さにする */
+details.explain > .explain-body > p.hint { font-size: .9rem; color: var(--ink); }

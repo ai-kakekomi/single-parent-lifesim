@@ -1699,8 +1699,8 @@ ok(Chart.表(simA.years).indexOf('<table') === 0, '数字だけの表も出せ�
 /* 見方の切り替え（1人あたり／家全体） */
 var 絵1 = Chart.描く(simE.years, simE.cliffs);
 var 絵2 = Chart.描く(simE.years, simE.cliffs, 'total');
-ok(絵1.indexOf('1人あたりに直した、1か月のお金') > 0, 'ふだんは、1人あたりに直した金額を出す');
-ok(絵2.indexOf('家全体で、1か月に使えるお金') > 0, '切り替えると、家全体の金額を出す');
+ok(絵1.indexOf('1か月に残るお金（1人あたり）') > 0, 'ふだんは、1人あたりに直した金額を出す');
+ok(絵2.indexOf('1か月に残るお金（家全体）') > 0, '切り替えると、家全体の金額を出す');
 ok(絵1 !== 絵2, '切り替えると絵が変わる');
 ok(Chart.表(simE.years).indexOf('1人あたりに直した金額') > 0, '表の見出しも、1人あたりであることを書く');
 ok(Chart.表(simE.years, 'total').indexOf('家全体の金額') > 0, '表も切り替えられる');

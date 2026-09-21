@@ -519,7 +519,7 @@ server.listen(0, '127.0.0.1', function () {
         ok(d.querySelector('#stage2-notes details').open === false, 'その説明は、はじめは閉じている');
         ok(d.getElementById('stage2-body').compareDocumentPosition(d.getElementById('stage2-notes')) & 4,
           '細かい説明は、グラフと表のあとにまとめてある');
-        ok(d.querySelector('#stage2-body svg').textContent.indexOf('1人あたりに直した、1か月のお金') >= 0,
+        ok(d.querySelector('#stage2-body svg').textContent.indexOf('1か月に残るお金（1人あたり）') >= 0,
           'グラフの縦軸が、1人あたりの金額になっている');
         var 切替 = d.querySelectorAll('#stage2-body button[data-view]');
         eq(切替.length, 2, '見方の切り替えボタンが2つある');
