@@ -1464,7 +1464,7 @@ ok(データ.programs_by_id.jido_fuyo_teate.repayment === 'none', '児童扶養�
 var 赤 = 落とし穴.items.filter(function (i) { return i.tone === 'red'; });
 var 黄 = 落とし穴.items.filter(function (i) { return i.tone === 'yellow'; });
 eq(赤.length, 5, '赤（とくに気をつけてほしいこと）は5件');
-eq(黄.length, 6, '黄（確かめてほしいこと）は6件');
+eq(黄.length, 7, '黄（確かめてほしいこと）は7件');
 落とし穴.items.forEach(function (it) {
   ok(!!it.title, '注意書きに見出しがある');
   ok(it.tone === 'red' || it.tone === 'yellow', '色は赤か黄');

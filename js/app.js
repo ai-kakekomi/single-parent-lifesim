@@ -724,24 +724,6 @@
         '<a href="#stage1">確認したい制度の一覧を見る</a></p></div>';
     }
 
-    var 上がる = (c.safetyTargetEnd > c.safetyTargetNow)
-      ? 'この金額は、お子さんが大きくなって生活費が上がるにつれて、末子22歳のころには ' +
-        SPS.円(c.safetyTargetEnd) + ' まで上がります。' : '';
-    var 到達;
-    if (c.alreadyReachedSafety) {
-      到達 = '<strong>生活防衛資金（いまなら生活費の半年分 ' + SPS.円(c.safetyTargetNow) +
-        '）は、すでに貯め終えています。</strong>次の段階を考えはじめてもよい段階です。' + 上がる;
-    } else if (c.reachMonths !== null) {
-      到達 = '生活防衛資金（いまなら生活費の半年分 ' + SPS.円(c.safetyTargetNow) +
-        '）に届くまで、いまのペースで <strong>約' + SPS.年月表示(c.reachMonths) + '</strong> です。' + 上がる;
-    } else {
-      到達 = '生活防衛資金（いまなら生活費の半年分 ' + SPS.円(c.safetyTargetNow) +
-        '）には、いまのペースでは届きません。' + 上がる;
-    }
-    if (c.fallsBelowSafetyAgain) {
-      到達 += '<br><strong>いちど届いたあと、' + (月を年齢で(c, c.fallsBelowSafetyAgainAtMonth) || '') +
-        'にまた下回ります。</strong>生活費が上がって、必要な額のほうが先に伸びるからです。';
-    }
 
     /* 一番上は、貯金が底をつくかどうか（一番大事な知らせ）。
        次に、制度でいくら変わるか。そのあとにグラフ。
@@ -757,8 +739,6 @@
       内訳表を描く(c) +
       資格ルートの説明(c) +
       道筋を描く(道筋(入力, データ, c, 最新判定)) +
-      '<p class="band-line">' + 到達 + '</p>' +
-      '<details class="explain"><summary>生活防衛資金って？（詳しく）</summary>' + 防衛資金の説明() + '</details>' +
       赤字の警告(c) +
       学費の説明(c) +
       奨学金の見取り図(c) +
@@ -864,9 +844,9 @@
         var 文 = esc(名) + ' を申請すると、毎月 ' + SPS.円(c.gapMonthly) + ' 入ります。' +
           '10年で約' + Math.round(c.diffAtTenYears / 10000).toLocaleString('ja-JP') + '万円の差です。';
         if (早まる && 早まる > 0) {
-          文 += '<strong>生活防衛資金に届くのが、' + SPS.年月表示(早まる) + ' 早まります。</strong>';
+          文 += '<strong>生活費の半年分の貯金に届くのが、' + SPS.年月表示(早まる) + ' 早まります。</strong>';
         } else if (c.reachMonthsNow === null && c.reachMonths !== null) {
-          文 += '<strong>いまのままでは生活防衛資金（生活費の半年分）に届きませんが、申請すれば ' +
+          文 += '<strong>いまのままでは生活費の半年分の貯金に届きませんが、申請すれば ' +
             SPS.年月表示(c.reachMonths) + ' で届きます。</strong>';
         }
         足す('まだ受け取れるお金があります', 文, '#stage1', '申請先を見る');
@@ -885,7 +865,7 @@
           '（最後の1年はさらに ' + SPS.円(t.grantFinalYearBonus) + '）入ります。' +
           'そのおかげで、' + いつ + '「いまのまま」の線を追い越します。' +
           (t.reachSafetyOffset !== null
-            ? '生活防衛資金に届くのは、' + (t.reachSafetyOffset === 0 ? 'すぐ' : t.reachSafetyOffset + '年後') + 'です。' : '') +
+            ? '生活費の半年分の貯金に届くのは、' + (t.reachSafetyOffset === 0 ? 'すぐ' : t.reachSafetyOffset + '年後') + 'です。' : '') +
           '22歳のときの貯金は、約' + Math.round(t.finalAll / 10000).toLocaleString('ja-JP') + '万円になります。' +
           '<strong>令和5年度は、この給付金で2,988人が資格を取り、2,105人が就職しています。</strong>' +
           '窓口は、市・区にお住まいならその市・区、町村にお住まいなら都道府県です。',
@@ -978,7 +958,7 @@
         足す('援助があるうちに、やっておけることがあります',
           '親御さんからの月 ' + SPS.円(入力.parentSupportMonthly) + ' の援助は、あと ' + 終わり + '年ほどの想定です。' +
           'この間は、普通より毎月それだけ多く残せます。' +
-          '<strong>この' + 終わり + '年で、生活防衛資金をためきることと、資格を取ることの両方ができます。</strong>' +
+          '<strong>この' + 終わり + '年で、生活費の半年分を貯めきることと、資格を取ることの両方ができます。</strong>' +
           '援助が止まってからでは、どちらも難しくなります。',
           '#prog-koutou_shokugyo_kunren', '資格の給付金を見る');
       }
@@ -1197,8 +1177,6 @@
     h.push('<li><strong>小学校・中学校の就学援助は、差し引いていません。</strong>' +
       '市区町村ごとに金額が違い、国の目安を確かめられなかったためです。' +
       '実際の負担は、ここに出る金額より軽くなります。</li>');
-    h.push('<li><strong>生活防衛資金の目標も、少しずつ上がります。</strong>' +
-      '生活費の半年分なので、お子さんが大きくなって生活費が上がると、目標の額も上がります。グラフには描いていません。</li>');
     h.push('<li><strong>手当は、毎年その年のお子さんの年齢で計算し直しています。</strong>' +
       '児童扶養手当も児童手当も、年齢で切れるところがあります。そこがグラフの段差になります。</li>');
     h.push('<li><strong>物価の上昇と、これから先の制度改正は入れていません。</strong></li>');
@@ -1721,25 +1699,27 @@
     return h.join('');
   }
 
-  function 防衛資金の説明() {
-    return '<div class="notice">' +
-      '<h4>「生活防衛資金」は、生活費の半年分の貯金です</h4>' +
-      '<p style="margin:.3rem 0"><strong>まずはこの額に届くまで貯めることだけ考えれば大丈夫です。' +
-      'ここに届くまで、投資のことは考えなくていいです。</strong></p>' +
-      '<p style="margin:.3rem 0">仕事を失ったとき、体をこわしたとき、家電がこわれたとき。' +
-      'このお金があれば、借金をせずに乗りきれます。ひとり親家庭は収入が一人分なので、ここが一番効きます。</p>' +
-      '<p class="hint" style="margin:.4rem 0 0">' +
-      '<strong>事実:</strong> 金融庁は「家計管理の基本は、収入と支出をきちんと把握・管理すること、収支を黒字にすること、' +
-      'そして黒字分を貯蓄することです」としています（' +
-      '<a href="https://www.fsa.go.jp/policy/nisa2/invest/" target="_blank" rel="noopener">金融庁「資産形成の基本」</a>）。' +
-      'また金融広報中央委員会は、緊急時の予備資金について「金額は生活費の半年分が目安です」としています（' +
-      '<a href="https://www.shiruporuto.jp/public/document/container/shinkon/" target="_blank" rel="noopener">知るぽると</a>' +
-      '／アーカイブ。最終確認 8/11(火)）。</p>' +
-      '<div class="stance" style="background:#fff"><span class="stance-tag">ここからは、私たちの立場の表明です（事実ではありません）</span>' +
-      '私たちAIかけこみ寺は、ひとり親家庭にとっては生活費の半年分を手元に置くことが、' +
-      'どんな資産運用よりも先に来ると考えます。半年分に届く前でも、貯まっているぶんだけ確実に効きます。' +
-      'この線に届くまでは、投資のことは考えなくていい、というのが私たちの立場です。</div>' +
-      '</div>';
+  /** 生活防衛資金（生活費の半年分）に、いつ届くか。落とし穴の「投資より先に」で使う */
+  function 防衛資金の到達文(c) {
+    var 上がる = (c.safetyTargetEnd > c.safetyTargetNow)
+      ? 'この金額は、お子さんが大きくなって生活費が上がるにつれて、末子22歳のころには ' +
+        SPS.円(c.safetyTargetEnd) + ' まで上がります。' : '';
+    var 到達;
+    if (c.alreadyReachedSafety) {
+      到達 = '<strong>生活防衛資金（いまなら生活費の半年分 ' + SPS.円(c.safetyTargetNow) +
+        '）は、すでに貯め終えています。</strong>次の段階を考えはじめてもよい段階です。' + 上がる;
+    } else if (c.reachMonths !== null) {
+      到達 = '生活防衛資金（いまなら生活費の半年分 ' + SPS.円(c.safetyTargetNow) +
+        '）に届くまで、いまのペースで <strong>約' + SPS.年月表示(c.reachMonths) + '</strong> です。' + 上がる;
+    } else {
+      到達 = '生活防衛資金（いまなら生活費の半年分 ' + SPS.円(c.safetyTargetNow) +
+        '）には、いまのペースでは届きません。' + 上がる;
+    }
+    if (c.fallsBelowSafetyAgain) {
+      到達 += '<br><strong>いちど届いたあと、' + (月を年齢で(c, c.fallsBelowSafetyAgainAtMonth) || '') +
+        'にまた下回ります。</strong>生活費が上がって、必要な額のほうが先に伸びるからです。';
+    }
+    return 到達;
   }
 
   function 崖の説明(cliffs) {
@@ -1901,6 +1881,9 @@
         h.push('<p><strong>いま使える相談先</strong></p><ul>' + it.exit_support.map(function (e) {
           return '<li><a href="' + esc(e.url) + '" target="_blank" rel="noopener">' + esc(e.label) + '</a>：' + esc(e.detail) + '</li>';
         }).join('') + '</ul>');
+      }
+      if (it.id === 'toushi_yori_chokin' && 最新資産) {
+        h.push('<p class="band-line"><strong>あなたの場合: </strong>' + 防衛資金の到達文(最新資産) + '</p>');
       }
       if (it.action) { h.push('<p><strong>できること: </strong>' + esc(it.action) + '</p>'); }
       if (it.sources && it.sources.length) {

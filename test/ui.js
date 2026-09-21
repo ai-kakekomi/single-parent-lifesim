@@ -592,20 +592,22 @@ server.listen(0, '127.0.0.1', function () {
         ok(d.querySelector('#stage2b-body .support-amount') !== null, '助けてくれる額が目立つ形で出る');
         ok(d.querySelector('#stage2b-body a[href*="mext.go.jp"]') !== null, '文部科学省の出典リンクがある');
         ok(d.querySelector('#stage2b-body a[href*="jasso.go.jp"]') !== null, '日本学生支援機構の出典リンクがある');
-        ok(d.getElementById('stage2b-body').textContent.indexOf('生活防衛資金') > 0,
-          '生活防衛資金の説明が出る');
-        ok(d.getElementById('stage2b-body').textContent.indexOf('ここに届くまで、投資のことは考えなくていいです') > 0,
-          '帯の説明が、断言の形で書かれている');
-        var 帯文 = d.getElementById('stage2b-body').textContent;
+        /* 生活防衛資金は、貯金の項目ではなく「はまりやすい落とし穴」に置く。
+           「投資で増やせば」という考えに、先に答えるためのものだから。 */
+        ok(d.getElementById('stage2b-body').textContent.indexOf('生活防衛資金') === -1,
+          '貯金シミュレーションには、生活防衛資金の話を出さない');
+        var 防衛 = d.getElementById('pit-toushi_yori_chokin');
+        ok(防衛 !== null, '落とし穴に「投資より先に、生活費の半年分の貯金」がある');
+        var 帯文 = 防衛.textContent;
+        ok(帯文.indexOf('投資のことは考えなくていい') > 0, '「投資のことは考えなくていい」と書いてある');
         ok(帯文.indexOf('に届くまで、いまのペースで') > 0 ||
            帯文.indexOf('すでに貯め終えています') > 0 ||
            帯文.indexOf('届きません') > 0,
-          '生活防衛資金に届くまでの時期、または もう貯まっていることが出る', 帯文.slice(0, 160));
+          'その人が生活防衛資金に届くまでの時期、または もう貯まっていることが出る', 帯文.slice(0, 160));
         ok(帯文.indexOf('生活費の半年分') > 0, '生活防衛資金は半年分で書かれている');
-        ok(d.querySelector('#stage2b-body .stance') !== null,
-          '3〜6か月分という幅が、私たちの立場の表明として分けて書かれている');
-        ok(d.querySelector('#stage2b-body a[href*="fsa.go.jp"]') !== null, '金融庁の出典リンクがある');
-        ok(d.querySelector('#stage2b-body a[href*="shiruporuto.jp"]') !== null, '金融広報中央委員会の出典リンクがある');
+        ok(防衛.querySelector('.stance') !== null, '私たちの立場の表明として分けて書かれている');
+        ok(防衛.querySelector('a[href*="fsa.go.jp"]') !== null, '金融庁の出典リンクがある');
+        ok(防衛.querySelector('a[href*="shiruporuto.jp"]') !== null, '金融広報中央委員会の出典リンクがある');
 
         /* 金額の欄の見え方（原田さんからの指摘・2026/9/6）*/
         function 打つ(id, v) {
@@ -900,28 +902,20 @@ server.listen(0, '127.0.0.1', function () {
           '網かけはもう使っていない（横軸そのものを短くしている）');
         /* 2つの折りたたみが、同じ見た目の仕組みを使っている */
         var たたみ全部 = d.querySelectorAll('#stage2b-body details.explain');
-        ok(たたみ全部.length >= 2, '折りたたみが2つある（網かけの説明・生活防衛資金の説明）');
+        ok(たたみ全部.length >= 1, '折りたたみがある（借金の上限の説明）');
         [].forEach.call(たたみ全部, function (x) {
           ok(x.classList.contains('explain'), 'どちらも同じ見た目の仕組み（explain）を使っている');
           ok(x.querySelector('summary').textContent.indexOf('詳しく') > 0,
             '閉じた見出しに「詳しく」が付いている', x.querySelector('summary').textContent);
         });
 
-        /* 生活防衛資金の長い説明は、折りたたみに入っている */
-        var 帯たたみ = [].filter.call(d.querySelectorAll('#stage2b-body details.explain'), function (x) {
-          return x.querySelector('summary').textContent.indexOf('生活防衛資金') >= 0;
-        })[0];
-        ok(帯たたみ !== null, '生活防衛資金の説明が折りたたみになっている');
-        ok(!帯たたみ.open, 'はじめは閉じている');
-        ok(帯たたみ.querySelector('summary').textContent.indexOf('生活防衛資金って？') >= 0,
-          '閉じた状態の見出しが分かりやすい', 帯たたみ.querySelector('summary').textContent);
-        ok(d.querySelector('#stage2b-body .band-line') !== null, '生活防衛資金についての1行だけは、いつも見えている');
-        ok(d.querySelector('#stage2b-body .band-line').textContent.indexOf('半年分') > 0,
+        /* 生活防衛資金は、落とし穴の側に移した */
+        var 帯たたみ = d.getElementById('pit-toushi_yori_chokin');
+        ok(帯たたみ !== null && 帯たたみ.querySelector('details') !== null,
+          '生活防衛資金の説明は、落とし穴の中で折りたたみになっている');
+        ok(帯たたみ.querySelector('.band-line') !== null, 'その人の金額と時期が、中に出ている');
+        ok(帯たたみ.querySelector('.band-line').textContent.indexOf('半年分') > 0,
           'その1行も「半年分」で書かれている');
-        ok(帯たたみ.textContent.indexOf('ここに届くまで、投資のことは考えなくていいです') > 0,
-          '断言そのものは、折りたたみの中に残っている');
-        ok(帯たたみ.textContent.indexOf('生活費の半年分') > 0,
-          '生活防衛資金は「半年分」で統一されている');
         ok(帯たたみ.textContent.indexOf('3か月分から6か月分') === -1, '古い「3〜6か月」の表現が残っていない');
         ok(帯たたみ.querySelector('a[href*="fsa.go.jp"]') !== null, '出典も折りたたみの中にある');
         ok(帯たたみ.querySelector('.stance') !== null, '立場表明も折りたたみの中にある');
