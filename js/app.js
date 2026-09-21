@@ -703,6 +703,19 @@
         Math.round(c.finalDiff / 10000).toLocaleString('ja-JP') + '万円の差です。</p>' +
         '<p><a href="#stage1" class="jump-big">この差の中身を見る（使えるかもしれない制度の一覧へ）</a></p>' +
         '</div>';
+    } else if (c.tuitionSupportTotal > 0 && c.finalDiff > 0) {
+      /* いま使える制度は全部使えていても、2本の線には差が出る。
+         進学のときの支援（大学などの授業料の減免と給付型奨学金）は、その時が来てから
+         申請するもので、「いまのまま」の線には入れていないため。
+         ここで「取りこぼしなし」とだけ言うと、グラフの差の説明がつかない。 */
+      伸びしろ = '<div class="headline-box ok">' +
+        '<p class="big">いま使える制度は、もう使えています</p>' +
+        '<p><strong>グラフの2本の線の差は、これから先の進学のときの支援です。</strong>' +
+        'お子さんが大学などに進むときの授業料の減免と、返さなくていい奨学金で、あわせて約' +
+        Math.round(c.tuitionSupportTotal / 10000).toLocaleString('ja-JP') + '万円。' +
+        '自動では出ないので、進学のときに申請が要ります。忘れずに申請すれば、太い線のとおりになります。</p>' +
+        '<p>ほかに、市区町村ごとの制度が残っています。' +
+        '<a href="#stage1">確認したい制度の一覧を見る</a></p></div>';
     } else {
       伸びしろ = '<div class="headline-box ok">' +
         '<p class="big">使えるお金の取りこぼしは、見あたりません</p>' +
@@ -730,16 +743,19 @@
         'にまた下回ります。</strong>生活費が上がって、必要な額のほうが先に伸びるからです。';
     }
 
-    /* グラフのすぐ下に家計の表を置く。
+    /* いちばん上は、貯金が底をつくかどうか（いちばん大事な知らせ）。
+       つぎに、制度でいくら変わるか。そのあとにグラフ。
+       グラフのすぐ下に家計の表を置く。
        グラフを見ながら指で年をなぞって、そのまま内訳を読めるようにするため。 */
     $('stage2b-body').innerHTML =
+      頭 +
       伸びしろ +
       SPSChart.資産の凡例(!!(c.training && c.training.afterIncome > 0), SPSChart.一本にまとめるか(c)) +
       線の本数の注記(c) +
       '<div class="chart-box" id="curve-chart">' + SPSChart.資産を描く(c, 狭い画面(), 選んだ年) + '</div>' +
       打ち切りの注記(c) +
       うちわけ表を描く(c) +
-      頭 + 資格ルートの説明(c) +
+      資格ルートの説明(c) +
       道筋を描く(道筋(入力, データ, c, 最新判定)) +
       '<p class="band-line">' + 到達 + '</p>' +
       '<details class="explain"><summary>生活防衛資金って？（くわしく）</summary>' + 防衛資金の説明() + '</details>' +
@@ -756,7 +772,14 @@
       var 出 = $('balance-year-out');
       if (出) { 出.textContent = 年の見出し(並び2[選んだ年]); }
       var 体 = $('balance-body');
-      if (体) { 体.innerHTML = 表の中身(c2); }
+      if (体) {
+        /* うちわけを開いていたら、年を変えても開いたままにする */
+        var 前 = 体.querySelector('details.balance-detail');
+        var 開いていた = !!(前 && 前.open);
+        体.innerHTML = 表の中身(c2);
+        var 後 = 体.querySelector('details.balance-detail');
+        if (後 && 開いていた) { 後.open = true; }
+      }
       var 絵 = $('curve-chart');
       if (絵) { 絵.innerHTML = SPSChart.資産を描く(c2, 狭い画面(), 選んだ年); }
     }
@@ -769,6 +792,26 @@
       });
       年欄.addEventListener('change', function () {
         選んだ年 = parseInt(this.value, 10) || 0;
+        見ている年を反映(c);
+      });
+    }
+    /* グラフを押したら、その年を選ぶ（つまみと同じ動き） */
+    var 絵の箱 = $('curve-chart');
+    if (絵の箱 && 年欄) {
+      絵の箱.addEventListener('click', function (e) {
+        var svg = 絵の箱.querySelector('svg');
+        if (!svg || !svg.getBoundingClientRect) { return; }
+        var 枠 = svg.getBoundingClientRect();
+        var W = parseFloat((svg.getAttribute('viewBox') || '').split(' ')[2]);
+        var 左 = parseFloat(svg.getAttribute('data-plot-left'));
+        var 幅 = parseFloat(svg.getAttribute('data-plot-width'));
+        var 軸年数 = parseFloat(svg.getAttribute('data-axis-years'));
+        if (!(枠.width > 0) || !(W > 0) || !(幅 > 0) || !(軸年数 > 0)) { return; }
+        var x = (e.clientX - 枠.left) * (W / 枠.width);
+        var 年 = Math.round((x - 左) / 幅 * 軸年数);
+        年 = Math.max(0, Math.min(parseInt(年欄.max, 10) || 0, 年));
+        選んだ年 = 年;
+        年欄.value = 年;
         見ている年を反映(c);
       });
     }
@@ -979,24 +1022,25 @@
     var t = c.training;
     if (!t || !(t.afterIncome > 0)) { return ''; }
     var 訓 = データ.training;
-    var h = ['<details class="explain"><summary>この制度のくわしい説明（給付金の金額・実績）</summary>' +
-      '<div class="explain-body notice"><h4>むらさきの線「資格を取るルート」について</h4>'];
-    var 働き方の文 = (t.duringIncome === 0)
-      ? '学校に通う' + t.years + '年間は<strong>働かない</strong>ものとして計算しています。'
-      : '学校に通う' + t.years + '年間の収入を、年 ' + SPS.円(t.duringIncome) + ' として計算しています。';
-    h.push('<p style="margin:.3rem 0">' + 働き方の文 +
-      '（この金額は上の入力欄で変えられます。制度で決まった数字ではありません）' +
-      'そのあいだ、高等職業訓練促進給付金が毎月 ' + SPS.円(t.grantMonthly) +
-      '（最後の1年はさらに ' + SPS.円(t.grantFinalYearBonus) + '）入り、修了したときに ' +
-      SPS.円(t.completionGrant) + ' 入ります。修了後は、入れていただいた見込みの年収 ' +
-      SPS.円(t.afterIncome) + ' にうつるものとしています。</p>');
-    h.push('<p class="hint" style="margin:.3rem 0">' + esc(訓.resident_tax_free_note) + '</p>');
-    h.push('<p class="hint" style="margin:.3rem 0"><strong>' + esc(訓.assumption_note) + '</strong>' +
-      esc(訓.after_income_note) + '</p>');
-    h.push('<p class="hint" style="margin:.3rem 0">' + esc(訓.target_qualifications) + '</p>');
-    h.push('<p class="track-record"><strong>この橋は、実際に渡れます。</strong>' + esc(訓.track_record) + '</p>');
-    h.push('<p class="hint" style="margin:.3rem 0">' + esc(訓.window_note) + '</p>');
-    h.push('<p class="hint" style="margin:.3rem 0">' + esc(訓.non_taxable_note) + '</p>');
+    /* 見出しで、制度の名前と中身を言い切る。長い説明は置かない。
+       くわしい条件は、制度の一覧のカードと、出典のページにある。 */
+    var h = ['<details class="explain"><summary>高等職業訓練促進給付金とは（資格を取るあいだ、月 ' +
+      SPS.円(t.grantMonthly) + ' が出る制度）</summary>' +
+      '<div class="explain-body notice"><h4>むらさきの線は、この給付金を使って資格を取った場合です</h4>'];
+    h.push('<p style="margin:.3rem 0">「高等職業訓練促進給付金」は、ひとり親が、看護師や保育士などの資格を取るために学校に通うあいだ、' +
+      '<strong>毎月 ' + SPS.円(t.grantMonthly) + '</strong>（最後の1年は ＋' + SPS.円(t.grantFinalYearBonus) +
+      '）、修了したときに ' + SPS.円(t.completionGrant) + ' が出ます。' +
+      '返さなくていいお金で、税金はかからず、児童扶養手当も減りません。' +
+      '<span class="hint">金額は、住民税が非課税の世帯かどうかで変わります（月 ' + SPS.円(訓.monthly_non_taxable) +
+      ' か、月 ' + SPS.円(訓.monthly_taxable) + '）。</span></p>');
+    h.push('<p class="track-record"><strong>この橋は、実際に渡れます。</strong>' + esc(訓.track_record_short) + '</p>');
+    h.push('<p class="hint" style="margin:.3rem 0"><strong>計算の前提:</strong> ' +
+      (t.duringIncome === 0 ? '通う' + t.years + '年間は<strong>働かない</strong>' : '通う' + t.years + '年間の年収 ' + SPS.円(t.duringIncome)) +
+      '、修了後の年収 ' + SPS.円(t.afterIncome) + '。どちらも上の入力欄で変えられます。' +
+      'この線は予測ではなく、「この道を選ぶと、数字の上ではこう動く」という見取り図です。</p>');
+    h.push('<p class="hint" style="margin:.3rem 0"><strong>対象の資格:</strong> ' + esc(訓.target_qualifications) + '</p>');
+    h.push('<p class="hint" style="margin:.3rem 0"><strong>窓口:</strong> お住まいの市・区（町村の方は、都道府県の福祉事務所）。' +
+      '分からないときは、市区町村のひとり親相談窓口で聞けば案内してもらえます。</p>');
     h.push('<p class="src">根拠: ' + esc(訓.source.law) + '／<a href="' + esc(訓.source.url) +
       '" target="_blank" rel="noopener">' + esc(訓.source.publisher) + 'のページを開く</a>（最終確認 ' +
       日付表示(訓.source.last_verified) + '）<br>実績の出典: <a href="' + esc(訓.track_record_source.url) +
@@ -1055,26 +1099,32 @@
         ' 足りなくなる見込みです。いまのうちに手を打てば、変えられます。';
     }
 
-    var h = ['<div class="alert-card">'];
+    /* 箱の中に、別の色の箱は入れない（どこを見ればいいか分からなくなるため）。
+       資格ルートで底をつかなくなるときは、カードごと緑に変えて、その知らせを見出しにする。
+       「いまのまま」の知らせは、その下に小さく残す。 */
+    var 資格で解決 = !!(t && t.afterIncome > 0 && !t.goesNegative &&
+      (c.goesNegativeNow || c.goesNegative || c.monthlyBalance < 0));
+    var h = ['<div class="alert-card' + (資格で解決 ? ' solved' : '') + '">'];
     /* 見出しは、ふつうの文字だけなのでエスケープする。
        説明のほうは、こちらが書いた <strong> を含むので、そのままHTMLとして出す。
        （エスケープすると、タグが文字として画面に出てしまう） */
-    h.push('<p class="alert-head">' + esc(見出し) + '</p>');
-    h.push('<p class="alert-body">' + 説明 + '</p>');
+    if (資格で解決) {
+      h.push('<p class="alert-head">むらさきの線（資格を取った場合）なら、貯金は底をつきません</p>');
+      h.push('<p class="alert-body alert-good">学校に通うあいだ、「高等職業訓練促進給付金」が月 ' +
+        SPS.円(t.grantMonthly) + ' 出るためです。' +
+        (t.crossesOver
+          ? (t.crossoverOffset === 0 ? '1年で' : t.crossoverOffset + '年後には') + '、いまのままの線を上回ります。'
+          : '') + '</p>');
+      h.push('<p class="alert-before">資格を取らない場合: ' + esc(見出し) + '。</p>');
+    } else {
+      h.push('<p class="alert-head">' + esc(見出し) + '</p>');
+      h.push('<p class="alert-body">' + 説明 + '</p>');
+    }
 
     /* 資格ルートを出したあとの結果を、このカードに反映する */
-    if (t && t.afterIncome > 0) {
+    if (t && t.afterIncome > 0 && !資格で解決) {
       var 文;
-      if (!t.goesNegative && (c.goesNegativeNow || c.goesNegative || c.monthlyBalance < 0)) {
-        文 = '<strong>資格を取るルートなら、貯金が底をつきません。</strong>' +
-          (いま底 ? 'いまのままだと' + いま底 + 'に底をつくところが、そうならなくなります。' : '') +
-          (t.crossesOver
-            ? (t.crossoverOffset === 0
-              ? '通いはじめて1年で、いまのままの線を追い越します。'
-              : t.crossoverOffset + '年後に、いまのままの線を追い越します。')
-            : '');
-        h.push('<p class="alert-good">' + 文 + '</p>');
-      } else if (t.goesNegative) {
+      if (t.goesNegative) {
         文 = '資格を取るルートでも、通っているあいだは苦しくなる計算です' +
           (t.negativeFromOffset !== null && t.negativeFromOffset < t.years
             ? '（学校に通っている' + t.years + '年のうちに底をつきます）' : '') +
@@ -1206,7 +1256,7 @@
 
     var h = ['<div class="balance-block">'];
     h.push('<h3>その年の家計を見る</h3>');
-    h.push('<p class="hint">つまみを左右に動かすと、その年に何にお金が出ていくのかが分かります。' +
+    h.push('<p class="hint">つまみを左右に動かすか、上のグラフを押すと、その年に何にお金が出ていくのかが分かります。' +
       'グラフのたて線が、いま見ている年です。</p>');
 
     /* 年を選ぶつまみ */
@@ -1252,11 +1302,6 @@
     var 差引 = 収入計 - 支出計;
 
     var h = [];
-    var できごと = その年のできごと(c, 並び, 選んだ年);
-    if (できごと.length) {
-      h.push('<div class="balance-events"><p class="balance-events-head">この年に変わること</p><ul>' +
-        できごと.map(function (e) { return '<li>' + e + '</li>'; }).join('') + '</ul></div>');
-    }
 
     /* 大事な3つの数字を、うちわけより先に出す。
        いままでは表のいちばん下にあり、スクロールしないと残りが見えなかった（issue #3）。
@@ -1351,6 +1396,15 @@
     h.push('<p class="hint">上の「' + (pt.fiscalYear ? pt.fiscalYear + '年度' : 'この年') +
       'の終わりの貯金」は、グラフの線がこの時点で通っている金額です。</p>');
     h.push('</details>');
+
+    /* 「この年に変わること」は、いちばん下に置く。
+       上に置くと、ある年とない年で数字の位置が上下にずれて、
+       つまみを動かしながら数字を見比べにくくなるため。 */
+    var できごと = その年のできごと(c, 並び, 選んだ年);
+    if (できごと.length) {
+      h.push('<div class="balance-events"><p class="balance-events-head">この年に変わること</p><ul>' +
+        できごと.map(function (e) { return '<li>' + e + '</li>'; }).join('') + '</ul></div>');
+    }
     return h.join('');
   }
 
@@ -1399,30 +1453,21 @@
   /* グラフの網かけと赤い領域の説明。
      一目で分かる最低限はグラフの中のラベルに残し、長い説明だけをたたんでおく。 */
   function 打ち切りの注記(c) {
-    var h = '';
-    if (c.truncated) {
-      h += '<p class="hint cutoff">グラフの右はしで線が終わっているのは、' +
-        'その先を描いていないからです。<strong>このままの前提では成り立たない領域だからです。</strong>' +
-        '借金をずっと積み増していくことは実際にはできませんし、' +
-        'その前に、支出・収入・受けられる支援のどれかを変えることになります。' +
-        'ここから先を数字で見せると、かえって嘘になります。' +
-        'そのぶん横軸も短くして、読みたいところを大きく出しています。' +
-        '資格を取るルートを出すと線が先まで伸びるので、横軸もそのぶん広がります。</p>';
-    }
-    h += '<p class="hint red-zone-note">0円より下は、赤の濃さで2つに分けています。' +
-      '<strong>うすい赤</strong>は0円から借りられる上限までで、ここから下は<strong>借金</strong>になります。' +
-      '<strong>濃い赤</strong>は借りられる上限より下で、ここは<strong>借りることもできない</strong>金額です。</p>';
-    if (c.hitsBorrowFloor && c.borrowFloor != null) {
-      h += '<p class="hint floor-note">赤い線は、<strong>貸金業者から借りられる上限（' +
-        esc(c.borrowFloorLabel || '年収の3分の1') + ' ＝ ' + SPS.円(-c.borrowFloor) + '）</strong>です。' +
-        'グラフがこれより下に行かないのは、そこから先は実際には借りられないからです。' +
-        '<strong>借りられる上限に先にぶつかる場合、そこから先は本当に打つ手がなくなります。その前に相談窓口へ。</strong>' +
-        '<a href="#gap-block">下の「足りないぶんをどこから持ってくるか」を見る</a><br>' +
-        '<span class="src">根拠: 貸金業法第13条の2（総量規制）／' +
-        '<a href="https://www.fsa.go.jp/policy/kashikin/kihon.html" target="_blank" rel="noopener">金融庁「貸金業法のキホン」</a>' +
-        '（最終確認 8/11(火)）。銀行からの借入れや住宅ローンなど、対象外のものもあります。</span></p>';
-    }
-    return '<details class="explain"><summary>グラフの線の終わりと、赤い領域の意味（くわしく）</summary>' +
+    /* 解説が要るのは「借金には法律で決まった上限がある」ことだけ。
+       線がどこで終わるかは、印と名前で絵から読めるので、文章では説明しない。
+       貯金が0円を割らない人には、関係のない話なので出さない。 */
+    if (c.borrowFloor == null || !(c.goesNegativeNow || c.goesNegative)) { return ''; }
+    var h = '<p class="hint floor-note">お金が足りなくなっても、貸金業者（消費者金融や、クレジットカードのキャッシング）から借りられるのは、' +
+      '<strong>' + esc(c.borrowFloorLabel || '年収の3分の1') + 'まで</strong>と法律で決まっています。' +
+      'あなたの場合は <strong>' + SPS.円(-c.borrowFloor) + '</strong> です。</p>' +
+      '<p class="hint red-zone-note">グラフの赤い線が、その上限です。<strong>うすい赤</strong>は借金でしのいでいる状態、' +
+      '<strong>濃い赤</strong>は借りることもできない金額です。だから線は、上限に当たったところで止めています。</p>' +
+      '<p class="hint floor-note"><strong>上限にぶつかると、そこから先は本当に打つ手がなくなります。その前に相談窓口へ。</strong>' +
+      '<a href="#gap-block">下の「足りないぶんをどこから持ってくるか」を見る</a><br>' +
+      '<span class="src">根拠: 貸金業法第13条の2（総量規制）／' +
+      '<a href="https://www.fsa.go.jp/policy/kashikin/kihon.html" target="_blank" rel="noopener">金融庁「貸金業法のキホン」</a>' +
+      '（最終確認 8/11(火)）。銀行からの借入れや住宅ローンなど、対象外のものもあります。</span></p>';
+    return '<details class="explain"><summary>借金には、法律で決まった上限があります（くわしく）</summary>' +
       '<div class="explain-body">' + h + '</div></details>';
   }
 

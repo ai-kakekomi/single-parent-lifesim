@@ -381,8 +381,7 @@ ul.cost-ref .cost-ref-b { color: var(--ink-sub); }
 .path-link { margin: 0; font-size: .85rem; }
 .path-link a { color: var(--accent-dark); font-weight: 700; }
 #training-box { margin-top: .6rem; }
-.track-record { background: var(--ok-soft); border-left: 4px solid var(--ok); border-radius: 0 6px 6px 0;
-  padding: .55rem .75rem; font-size: .86rem; line-height: 1.75; margin: .5rem 0; }
+.track-record { font-size: .89rem; line-height: 1.75; margin: .4rem 0; }
 
 /* ---- このグラフの前提 ---- */
 .assumption-box { background: #f6f8fa; border: 1px solid var(--line); border-radius: var(--radius); padding: .8rem 1rem; margin: 1rem 0; }
@@ -425,14 +424,13 @@ ul.cost-ref .cost-ref-b { color: var(--ink-sub); }
 }
 .alert-head::before { content: '！ '; }
 .alert-body { margin: 0 0 .5rem; font-size: .9rem; line-height: 1.75; }
-.alert-good {
-  background: var(--ok-soft); border-left: 4px solid var(--ok); border-radius: 0 6px 6px 0;
-  padding: .5rem .7rem; margin: .5rem 0; font-size: .89rem; line-height: 1.75; color: var(--ok);
-}
-.alert-warn-more {
-  background: var(--warn-soft); border-left: 4px solid #e0b860; border-radius: 0 6px 6px 0;
-  padding: .5rem .7rem; margin: .5rem 0; font-size: .87rem; line-height: 1.75;
-}
+/* 箱の中に、別の色の箱は入れない。カードの中は、ふつうの文だけにする */
+.alert-warn-more { margin: .5rem 0; font-size: .87rem; line-height: 1.75; }
+.alert-before { margin: 0 0 .5rem; font-size: .84rem; color: var(--ink-sub); }
+/* 資格ルートで底をつかなくなるときは、カードごと緑にする */
+.alert-card.solved { background: var(--ok-soft); border-color: #9fcfb3; }
+.alert-card.solved .alert-head { color: var(--ok); }
+.alert-card.solved .alert-head::before { content: '✓ '; }
 .alert-actions { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; margin-top: .6rem; }
 .alert-actions .alert-cta { width: auto; margin: 0; padding: .7rem 1.1rem; font-size: .95rem; }
 .alert-actions .alert-sub { font-size: .86rem; color: var(--accent-dark); font-weight: 700; }
@@ -676,3 +674,6 @@ details.prog[open] > summary::before { transform: rotate(90deg); }
 .menu-card[aria-current="true"] { border: 2px solid var(--accent); background: var(--accent-soft); }
 .view-next { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin: 1.6rem 0 0; padding-top: 1rem; border-top: 1px solid var(--line); }
 .view-next a { font-size: .9rem; }
+
+/* 貯金のグラフは、押すとその年の家計が出る */
+#curve-chart svg { cursor: pointer; }

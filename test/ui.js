@@ -683,13 +683,17 @@ server.listen(0, '127.0.0.1', function () {
         /* 家計のうちわけ表 */
         var 表 = d.querySelector('#stage2b-body .balance-block');
         ok(表 !== null, '家計のうちわけ表が出ている');
-        /* グラフの直下（警告カードや道筋ブロックより上）にあること */
+        /* グラフの直下（道筋ブロックより上）にあること */
         var 絵 = d.getElementById('curve-chart');
         ok(絵 !== null, 'グラフに入れものがある');
         ok(絵.compareDocumentPosition(表) & 4, '家計の表は、グラフより下にある');
         var カード0 = d.querySelector('#stage2b-body .alert-card');
         if (カード0) {
-          ok(表.compareDocumentPosition(カード0) & 4, '家計の表は、警告カードより上にある');
+          /* 貯金が底をつく知らせは、いちばん大事なので、いちばん上に出す */
+          ok(カード0.compareDocumentPosition(絵) & 4, '警告カードは、グラフより上にある');
+          var 見出し箱 = d.querySelector('#stage2b-body .headline-box');
+          ok(見出し箱 === null || (カード0.compareDocumentPosition(見出し箱) & 4),
+            '警告カードは、「制度でいくら変わるか」の箱より上にある');
         }
         var 道 = d.querySelector('#stage2b-body .path-block');
         ok(道 !== null && (表.compareDocumentPosition(道) & 4), '家計の表は、道筋ブロックより上にある');
@@ -870,11 +874,11 @@ server.listen(0, '127.0.0.1', function () {
 
         /* グラフの網かけと赤い線の説明も、折りたたみに入っている */
         var 網たたみ = [].filter.call(d.querySelectorAll('#stage2b-body details.explain'), function (x) {
-          return x.querySelector('summary').textContent.indexOf('線の終わり') >= 0;
+          return x.querySelector('summary').textContent.indexOf('法律で決まった上限') >= 0;
         })[0];
-        ok(網たたみ !== undefined, 'グラフの線の終わりと赤い領域の説明が、折りたたみになっている');
+        ok(網たたみ !== undefined, '借金の上限の説明が、折りたたみになっている');
         ok(!網たたみ.open, 'はじめは閉じている');
-        eq(網たたみ.querySelector('summary').textContent, 'グラフの線の終わりと、赤い領域の意味（くわしく）',
+        eq(網たたみ.querySelector('summary').textContent, '借金には、法律で決まった上限があります（くわしく）',
           '閉じた見出しが1行で分かりやすい');
         ok(網たたみ.querySelector('.explain-body') !== null, '中身が入れものに入っている');
         ok(網たたみ.textContent.indexOf('うすい赤') > 0 && 網たたみ.textContent.indexOf('濃い赤') > 0,
@@ -1072,12 +1076,16 @@ server.listen(0, '127.0.0.1', function () {
             '押した瞬間、線が伸びる動きで描かれる');
           /* 制度の長い説明は、たたんである（設定と結果は出したまま） */
           var 資格たたみ = [].filter.call(d.querySelectorAll('#stage2b-body details.explain'), function (x) {
-            return x.querySelector('summary').textContent.indexOf('この制度のくわしい説明') >= 0;
+            return x.querySelector('summary').textContent.indexOf('高等職業訓練促進給付金とは') >= 0;
           })[0];
           ok(資格たたみ !== undefined, '資格ルートの制度説明が、折りたたみになっている');
           ok(!資格たたみ.open, 'はじめは閉じている');
+          ok(/月 [\d,]+円 が出る制度/.test(資格たたみ.querySelector('summary').textContent),
+            '閉じた見出しだけで、何の制度か（名前と金額）が分かる');
+          ok(資格たたみ.textContent.length < 900, '説明は短くまとめてある', 資格たたみ.textContent.length + '字');
           ok(資格たたみ.textContent.indexOf('2,988人') > 0, '実績は折りたたみの中にある');
-          ok(資格たたみ.textContent.indexOf('高等職業訓練促進給付金') > 0, '給付金の説明も中にある');
+          ok(資格たたみ.querySelector('.explain-body').textContent.indexOf('高等職業訓練促進給付金') >= 0,
+            '給付金の説明も中にある');
           /* 設定と結果は、たたまずに出したまま */
           ok(d.getElementById('training-years') !== null, '通う年数の設定は、常に見えている');
           ok(d.getElementById('training-after') !== null, '修了後の年収の欄も、常に見えている');
@@ -1113,8 +1121,12 @@ server.listen(0, '127.0.0.1', function () {
             'ONのあとは、ボタンが「設定を見直す」に変わる');
           d.getElementById('training-on').checked = false;
           d.getElementById('training-on').dispatchEvent(new w.Event('change', { bubbles: true }));
-          ok(本文.indexOf('その先を描いていないからです') > 0,
-            'このままの前提では成り立たない領域を、描いていないと明記している');
+          /* 線の終わりは、印と名前で絵から読めるので、文章では説明しない。
+             解説するのは、借金に法律上の上限があることだけ。 */
+          ok(本文.indexOf('その先を描いていないからです') === -1,
+            '線の終わりについての長い説明は、もう出さない');
+          ok(本文.indexOf('と法律で決まっています') > 0,
+            '借金には法律で決まった上限があることを説明している');
           ok(d.querySelector('#stage2b-body svg [fill="url(#hatch)"]') === null,
             '網かけは使わず、横軸を短くして見やすくしている');
           /* 2段の言い分け（いまのまま／制度活用） */
@@ -1138,7 +1150,7 @@ server.listen(0, '127.0.0.1', function () {
           /* 借りられる上限が、グラフの床になっている */
           ok(d.querySelector('#stage2b-body svg').textContent.indexOf('法律上、これ以上は借りられません') > 0,
             '借りられる上限の線に、説明が付いている');
-          ok(本文.indexOf('借りられる上限に先にぶつかる場合、そこから先は本当に打つ手がなくなります') > 0,
+          ok(本文.indexOf('上限にぶつかると、そこから先は本当に打つ手がなくなります') > 0,
             '上限にぶつかる場合の注記が出ている');
           ok(d.querySelector('#stage2b-body .floor-note a[href*="fsa.go.jp"]') !== null,
             '金融庁の出典リンクがある');
@@ -1182,8 +1194,7 @@ server.listen(0, '127.0.0.1', function () {
           .dispatchEvent(new w.Event('change', { bubbles: true }));
         ok(d.querySelector('#stage2b-body svg').outerHTML !== 前の絵,
           '働き方を変えると、その場でグラフが引き直される');
-        ok(d.getElementById('stage2b-body').textContent.indexOf('働かない</strong>ものとして') > 0 ||
-           d.getElementById('stage2b-body').innerHTML.indexOf('働かない</strong>ものとして') > 0,
+        ok(d.getElementById('stage2b-body').innerHTML.indexOf('年間は<strong>働かない</strong>') > 0,
           '「働かない」を選んだことが説明に出る');
         ok(d.querySelector('input[name="training-work"][value="custom"]') !== null, '自由入力も選べる');
         d.querySelector('input[name="training-work"][value="half"]').checked = true;

@@ -363,6 +363,7 @@
     }
     var 一本 = 一本にまとめるか(curve);
     s.push('<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H +
+      '" data-plot-left="' + 左 + '" data-plot-width="' + 幅 + '" data-axis-years="' + 軸年数 +
       '" role="img" aria-label="貯金のたまり方の見通し。借りられる上限つき">');
 
     /* 生活防衛資金の線は、グラフには描かない。

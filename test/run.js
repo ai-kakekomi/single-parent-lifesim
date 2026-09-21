@@ -2084,7 +2084,7 @@ ok(css.indexOf('cta-pulse 1.8s') > 0, '脈打つ周期は1.8秒（1.5〜2秒の�
 var appソース = fs.readFileSync(path.join(ROOT, 'js', 'app.js'), 'utf8');
 ok(/打ち切りの注記[\s\S]{0,2600}details class="explain"/.test(appソース),
   '網かけと赤い線の説明が、折りたたみに入っている');
-ok(appソース.indexOf('グラフの線の終わりと、赤い領域の意味（くわしく）') > 0,
+ok(appソース.indexOf('借金には、法律で決まった上限があります（くわしく）') > 0,
   '閉じたときの見出しが1行で用意されている');
 ok(!/打ち切りの注記[\s\S]{0,2600}details class="explain" open/.test(appソース),
   'その折りたたみは、はじめから開いてはいない');
