@@ -1789,6 +1789,9 @@
           return '<li><a href="' + esc(e.url) + '" target="_blank" rel="noopener">' + esc(e.label) + '</a>：' + esc(e.detail) + '</li>';
         }).join('') + '</ul>');
       }
+      if (it.id === 'mi_no_anzen') {
+        h.push('<p>証拠（けがの写真、診断書、録音、メッセージ）は、安全な場所に残しておいてください。</p>');
+      }
       if (it.id === 'toushi_yori_chokin' && 最新資産) {
         h.push('<p class="band-line"><strong>あなたの場合: </strong>' + 防衛資金の到達文(最新資産) + '</p>');
       }
@@ -2125,6 +2128,14 @@
         /* ページ内リンクの行き先が、しまってある項目の中なら、先にそれを開く */
         var a = e.target.closest && e.target.closest('a[href^="#"]');
         var 先 = a && document.getElementById(a.getAttribute('href').slice(1));
+        if (a && a.getAttribute('href') === '#safety' && 最新入力 && $('pit-mi_no_anzen')) {
+          e.preventDefault();
+          見る('pitfalls', false);
+          var 箱 = $('pit-mi_no_anzen'), 折 = 箱.querySelector('details');
+          if (折) { 折.open = true; }
+          if (箱.scrollIntoView) { 箱.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+          return;
+        }
         var m = 先 && 最新入力 && 入っている項目(先);
         if (m && m.id !== 見ているもの) { 見る(m.id, false); }
         /* 身の安全は、計算の前でも読めなければならない。まだ何も入力していないときは、その欄だけを出す */

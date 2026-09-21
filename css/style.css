@@ -725,3 +725,8 @@ details.explain > .explain-body > p.hint { font-size: .9rem; color: var(--ink); 
    計算の前に上のリンクから来たときは、この欄だけを出す（ほかはまだ中身がない）。 */
 .stage.safety-only { display: block; }
 .stage.safety-only > *:not(.safety) { display: none; }
+
+/* 身の安全の欄（#safety）は、何も入力していないときに上のリンクから読むためのもの。
+   計算のあとは、同じ内容が落とし穴の赤い注意の先頭に出るので、こちらは出さない。 */
+.stage:not(.safety-only) > .safety { display: none; }
+#pit-mi_no_anzen { scroll-margin-top: 4rem; }

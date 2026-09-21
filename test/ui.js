@@ -201,6 +201,12 @@ function 章の並びのチェック() {
       /* 身の安全と「すぐ閉じる」 */
       var 安全 = d.getElementById('safety');
       eq(安全.closest('.stage').id, 'stage3', '身の安全の欄は、「はまりやすい落とし穴」の中にある');
+      /* 計算のあとは、落とし穴と同じ形式で出す: チェックの先頭と、赤い注意の先頭 */
+      var 赤の先頭 = d.querySelector('#stage3-body .pit.red');
+      eq(赤の先頭.id, 'pit-mi_no_anzen', '赤い注意の先頭は、身の安全');
+      ok(赤の先頭.textContent.indexOf('#8008') > 0, '相談先の番号が、赤い注意の中に書いてある');
+      ok(d.querySelector('#stage3-body .checklist li').textContent.indexOf('お金より先に相談する') > 0,
+        '落とし穴チェックの先頭も、身の安全');
       ok(安全.compareDocumentPosition(d.getElementById('stage3-body')) & 4, '落とし穴の一番上に置いてある');
       ok(安全.textContent.indexOf('#8008') > 0, '相談先の番号が書いてある');
       ok(d.querySelectorAll('.escape-btn').length >= 2,
@@ -1022,12 +1028,12 @@ server.listen(0, '127.0.0.1', function () {
         ok(先.querySelector('details').open, '「詳しく」を押すと、その説明が開く');
 
         /* 長い解説は折りたたまれている */
-        eq(d.querySelectorAll('#stage3-body .pit.red').length, 5, '赤い注意書きが5つ');
+        eq(d.querySelectorAll('#stage3-body .pit.red').length, 6, '赤い注意書きが6つ（先頭は身の安全）');
         ok(d.querySelectorAll('#stage3-body .pit.yellow').length >= 1, '黄色い注意書きが出る');
         eq(d.querySelectorAll('#stage3-body .pit details').length,
           d.querySelectorAll('#stage3-body .pit').length, 'どの注意書きも折りたたまれている');
-        ok(d.querySelector('#stage3-body .pit h4').textContent.indexOf('闇バイト') > 0,
-          '閉じたままでも、結論の1行が読める', d.querySelector('#stage3-body .pit h4').textContent);
+        ok(d.querySelector('#pit-yami_baito h4').textContent.indexOf('闇バイト') > 0,
+          '閉じたままでも、結論の1行が読める', d.querySelector('#pit-yami_baito h4').textContent);
         ok(d.querySelectorAll('#stage3-body .stance').length >= 4, '立場表明の枠が、事実と分けて表示される');
         ok(d.querySelector('#stage3-body .roi a.roi-link[href="#stage2b"]') !== null,
           '即金の話から、積み上げルートのグラフへ行けるリンクがある');
