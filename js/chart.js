@@ -189,7 +189,10 @@
     s.push('<line x1="' + 左 + '" y1="' + (上 + 高) + '" x2="' + (左 + 幅) + '" y2="' + (上 + 高) + '" stroke="' + 色.axis + '" stroke-width="1"/>');
     var 間引き = 縦長 ? Math.max(1, Math.ceil(years.length / 6)) : (years.length > 14 ? 2 : 1);
     years.forEach(function (y, i) {
-      if (i % 間引き !== 0 && i !== years.length - 1) { return; }
+      var 最後 = years.length - 1;
+      if (i % 間引き !== 0 && i !== 最後) { return; }
+      /* 最後の年のすぐ手前の目盛りは出さない（スマホの幅だと「21」と「22」が重なるため） */
+      if (i !== 最後 && (最後 - i) * 2 < 間引き) { return; }
       s.push('<text x="' + X(i).toFixed(1) + '" y="' + (上 + 高 + 17) + '" text-anchor="middle" font-size="12" fill="' + 色.sub + '">' + y.youngestAge + '</text>');
     });
     s.push('<text x="' + (左 + 幅 / 2) + '" y="' + (H - 18) + '" text-anchor="middle" font-size="12" fill="' + 色.sub + '">いちばん下のお子さんの年齢（歳）</text>');

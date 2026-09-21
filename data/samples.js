@@ -114,13 +114,13 @@
     {
       "id": "considering_divorce",
       "label": "離婚を考えている段階・パート勤務のおかあさん",
-      "story": "いまは婚姻中。ご自身はパートで年110万円、配偶者は年500万円。3歳と6歳のお子さん。離婚したら家賃6万5千円のところへ移ることを考えています。養育費は月4万円で話がまとまりそうです。離婚後の生活費95,000円は、かなり切り詰めた場合のめやすです（親子3人・住居費と学校のお金をのぞく）。",
+      "story": "いまは婚姻中。ご自身はパートで年110万円、配偶者は年500万円。1歳と4歳のお子さん。離婚したら家賃6万5千円のところへ移ることを考えています。養育費は月4万円で話がまとまりそうです。離婚後の生活費95,000円は、かなり切り詰めた場合のめやすです（親子3人・住居費と学校のお金をのぞく）。",
       "input": {
         "isSingleParent": false,
         "myAge": 33,
         "myIncome": 1100000,
         "spouseIncome": 5000000,
-        "children": [3, 6],
+        "children": [1, 4],
         "childMonths": [7, 3],
         "area": "神奈川県横浜市",
         "housingType": "賃貸",
@@ -138,9 +138,9 @@
       },
       "expect": {
         "jidoFuyoTeate": { "status": "notApplicableNow" },
-        "jidoTeateMonthly": 20000,
+        "jidoTeateMonthly": 25000,
         "divorcedJidoFuyoTeateAtStart": { "status": "full", "monthly": 59400 },
-        "pitfalls": ["youikuhi_nashi", "gakushi_minogashi"]
+        "pitfalls": ["youikuhi_nashi"]
       }
     },
     {

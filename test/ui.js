@@ -882,11 +882,15 @@ server.listen(0, '127.0.0.1', function () {
            ここまでの検査で生活費などをいじっているので、いったん見本の
            そのままの状態に戻してから見る。借りられる上限の線は、
            家計がその高さまで下がるときにだけ描くので、少しでも
-           家計が軽くなると線ごと画面から外れてしまう。 */
-        d.querySelectorAll('#sample-buttons button')[1].click();
+           家計が軽くなると線ごと画面から外れてしまう。
+           1つ目の見本（パート勤務）は、どちらの線も上限まで下がるので、これで見る。
+           見たあとは、このあとの検査が前提にしている2つ目の見本に戻す。 */
+        d.querySelectorAll('#sample-buttons button')[0].click();
         d.getElementById('calc').click();
         var 絵の字 = d.querySelector('#curve-chart svg').textContent;
         ok(絵の字.indexOf('借りられません') > 0, 'グラフの中の「借りられません」のラベルは残っている');
+        d.querySelectorAll('#sample-buttons button')[1].click();
+        d.getElementById('calc').click();
         ok(d.querySelector('#curve-chart svg [fill="url(#hatch)"]') === null,
           '網かけはもう使っていない（横軸そのものを短くしている）');
         /* 2つの折りたたみが、同じ見た目のしくみを使っている */

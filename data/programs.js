@@ -471,8 +471,8 @@
       "eligibility": {
         "income_ceiling": 5000000,
         "income_ceiling_note": "合計所得金額が500万円以下（給与だけの方なら、額面でおよそ677万円以下）",
-        "child_income_ceiling": 580000,
-        "child_income_ceiling_note": "生計を一にするお子さんの総所得金額等が58万円以下（令和7年12月1日以降）",
+        "child_income_ceiling": 620000,
+        "child_income_ceiling_note": "生計を一にするお子さんの総所得金額等が62万円以下（令和8年分以後。令和7年分は58万円以下）",
         "deduction_income_tax": 350000,
         "deduction_resident_tax": 300000,
         "widow_deduction_income_tax": 270000,
