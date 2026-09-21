@@ -732,11 +732,6 @@
        次に、制度でいくら変わるか。そのあとにグラフ。
        グラフのすぐ下に家計の表を置く。
        グラフを見ながら指で年をなぞって、そのまま内訳を読めるようにするため。 */
-    /* 「今週から動けること」は、制度を探す項目に置く。
-       道筋（数字つきの次の一手）は、貯金の見通しを見た直後に読むものなので、その年の家計の下に置く。
-       同じ手を2か所に並べない（道筋に出ている手は、今週から動けることには入れていない）。 */
-    $('stage1-path').innerHTML = 赤字の警告(c);
-
     $('stage2b-body').innerHTML =
       頭 +
       伸びしろ +
@@ -1131,7 +1126,7 @@
       h.push('<button type="button" class="ghost alert-cta" id="go-training">' +
         '資格を取るルートの設定を見直す</button>');
     }
-    h.push('<a class="alert-sub" href="#gap-block">いますぐ月の穴を塞ぐ手を見る</a>');
+    h.push('<a class="alert-sub" href="#stage3a">まずやることリストを見る</a>');
     h.push('</div>');
     h.push('</div>');
     return h.join('');
@@ -1454,7 +1449,7 @@
       '<p class="hint red-zone-note">グラフの赤い線が、その上限です。<strong>薄い赤</strong>は借金でしのいでいる状態、' +
       '<strong>濃い赤</strong>は借りることもできない金額です。だから線は、上限に当たったところで止めています。</p>' +
       '<p class="hint floor-note"><strong>上限にぶつかると、そこから先は本当に打つ手がなくなります。その前に相談窓口へ。</strong>' +
-      '<a href="#gap-block">不足分を埋めるために、今週から動けることを見る</a><br>' +
+      '<a href="#stage3a">まずやることリストを見る</a><br>' +
       '<span class="src">根拠: 貸金業法第13条の2（総量規制）／' +
       '<a href="https://www.fsa.go.jp/policy/kashikin/kihon.html" target="_blank" rel="noopener">金融庁「貸金業法のキホン」</a>' +
       '（最終確認 8/11(火)）。銀行からの借入れや住宅ローンなど、対象外のものもあります。</span></p>';
@@ -1598,98 +1593,6 @@
     return h.join('');
   }
 
-  function 赤字の警告(c) {
-    if (!c.goesNegative && !c.universityDeficit) { return ''; }
-    var 入力 = 最新入力, 判定 = 最新判定;
-    var 不足 = c.shortfallMonthly || (c.monthlyBalance < 0 ? -c.monthlyBalance : 0);
-    var 判定表 = {};
-    判定.results.forEach(function (r) { 判定表[r.program.id] = r.status; });
-    var 使用中 = {};
-    (入力.usedPrograms || []).forEach(function (id) { 使用中[id] = true; });
-
-    /* 手は「今週から動けるもの（すぐ）」と「時間のかかるもの（あと）」に分ける。
-       穴が小さいのに「資格を取って収入を上げる」から始めさせるのは、釣り合いが悪い。
-       穴が小さいときは、すぐ動けるものを上に。大きいときは、金額の大きい制度を上に。 */
-    var 小さい穴 = (不足 > 0 && 不足 < 10000);
-    var 手 = [];
-    function 足す(見出し, 説明, 制度id, 強調, すぐ) {
-      手.push({ head: 見出し, body: 説明, prog: 制度id, strong: !!強調, quick: !!すぐ });
-    }
-
-    /* 養育費・まだ申請していない制度・資格・生活保護は、貯金シミュレーションの「あなたの場合の道筋」に
-       数字つきで出ているので、ここには並べない（同じ話を2回しない）。
-       ここに並べるのは、道筋には出てこない、今週から動けることだけ。 */
-    if (入力.children.some(function (a) { return a >= 6 && a <= 15; })) {
-      足す('学校のお金を助けてもらう',
-        '就学援助は、学用品費や給食費が対象です。児童扶養手当を受けていることを基準のひとつにしている市町村が約4分の3あり、' +
-        '年度の途中でも受け付けているところがほとんどです。学校か教育委員会に聞くだけで始められます。',
-        'shugaku_enjo', false, true);
-    }
-    足す('食べるものを助けてもらう',
-      'こども食堂・フードパントリー・こども宅食など、食事や食材を無料か安く受け取れる場所があります。' +
-      '申請も審査もいらないところがほとんどで、行けばその日から使えます。' +
-      '市区町村の子育て担当課か社会福祉協議会に「近くのこども食堂を教えてください」と聞くのが一番早いです。',
-      'shoku_shien', false, true);
-    if (入力.housingType === '賃貸' && 入力.housingAfter > 0) {
-      足す('住まいの費用を見直す',
-        'いまの住居費は月' + SPS.円(入力.housingAfter) + 'です。公営住宅は収入に応じて家賃が決まるので、' +
-        '民間の賃貸との差が月に数万円になることがあります。募集の時期を調べてみてください。',
-        'koei_jutaku', false, true);
-    }
-    足す('お住まいの地域の相談窓口に行く',
-      '自立相談支援機関では、家計の立て直しを一緒に考えてくれます。' +
-      '<a href="https://minna-tunagaru.jp/ichiran/" target="_blank" rel="noopener">全国の窓口一覧</a>から探せます。',
-      null, false, true);
-
-    /* 穴が小さいときだけ、今週から動けるものを上に持ってくる */
-    if (小さい穴) {
-      手.sort(function (a, b) { return (b.quick ? 1 : 0) - (a.quick ? 1 : 0); });
-    }
-
-    var h = ['<div class="pit red gap-block" id="gap-block">'];
-    h.push('<h4>🔴 不足分を埋めるために、今週から動けること</h4>');
-    if (不足 > 0) {
-      h.push('<p class="gap-amount">埋めたいのは <strong>1か月あたり ' + SPS.円(不足) + '</strong> です。</p>');
-      if (小さい穴) {
-        h.push('<p>この大きさなら、<strong>今週から動けることで埋まる見込みです。</strong>' +
-          '大きな決断をする前に、上から順に試してみてください。</p>');
-      }
-    }
-    h.push('<p><strong>借金では埋められません。</strong>カードローンやリボ払いで不足分を埋めると、' +
-      '来月からは返済も足されて、もっと足りなくなります。「貯金シミュレーション」の道筋に加えて、下のことも試してください。</p>');
-    /* 上から順に試すものなので、まず3つだけ見せる。残りはボタンで開く（ol は1本のまま。番号を通すため） */
-    var 隠す = 手.length > 4;
-    h.push('<ol class="gap-list' + (隠す ? ' folded' : '') + '">');
-    手.forEach(function (o) {
-      var 制度 = o.prog ? データ.programs_by_id[o.prog] : null;
-      h.push('<li' + (o.strong ? ' class="strong"' : '') + '>' +
-        '<strong>' + esc(o.head) + '</strong>' + (制度 ? 返済バッジ(制度) : '') +
-        (o.strong ? ' <span class="badge info">大きく効きます</span>' : '') +
-        '<br>' + o.body +
-        (o.prog ? '<br><a href="#prog-' + esc(o.prog) + '">この制度の詳しい説明を見る</a>' : '') + '</li>');
-    });
-    h.push('</ol>');
-    if (隠す) {
-      h.push('<button type="button" class="ghost gap-more">残りの ' + (手.length - 3) + ' つの手も見る</button>');
-    }
-    h.push('<p>全部やらなくて大丈夫です。上から1つずつで十分です。ひとりで抱えないでください。</p>');
-    h.push('</div>');
-
-    if (c.universityDeficit) {
-      var 修学 = データ.programs_by_id.koutou_kyoiku_shugaku_shien;
-      h.push('<div class="pit red"><h4>🔴 進学を決める前に、必ず確認してほしい制度があります</h4>' +
-        '<p>一番下のお子さんが' + c.universityDeficit.youngestAge + '歳のころ、大学のお金で貯金が底をつく計算です。</p>' +
-        '<p><strong>' + esc(修学.name) + '</strong> を使うと、住民税が非課税の世帯なら、私立・自宅外で' +
-        '返さなくてよい奨学金が年91万円、合わせて授業料が年70万円まで免除されます。' +
-        'ひとり親家庭は満額の対象になることが多い制度です。</p>' +
-        '<p><a href="#prog-koutou_kyoiku_shugaku_shien">この制度の詳しい説明を見る</a>／' +
-        '<a href="' + esc(修学.source.url) + '" target="_blank" rel="noopener">文部科学省のページを開く</a></p>' +
-        '<p class="hint">このグラフの学費には、この制度による減額を入れていません。使えれば、線はこれより上がります。</p>' +
-        '</div>');
-    }
-    return h.join('');
-  }
-
   /** 生活防衛資金（生活費の半年分）に、いつ届くか。落とし穴の「投資より先に」で使う */
   function 防衛資金の到達文(c) {
     var 上がる = (c.safetyTargetEnd > c.safetyTargetNow)
@@ -1789,6 +1692,11 @@
     }
     if (入力.housingType === '賃貸') {
       足す('公営住宅の募集の時期を調べる', 'koei_jutaku');
+    }
+    /* お金が足りない見込みの人には、申請も審査もいらず、今週から使えるものを先頭に足す */
+    var 足りない = !!(最新資産 && (最新資産.goesNegative || 最新資産.monthlyBalance < 0));
+    if (足りない) {
+      一覧.unshift({ text: '近くのこども食堂・フードパントリーを、市区町村か社会福祉協議会に聞く（申請も審査もいりません）', prog: 'shoku_shien' });
     }
     /* これだけは、どんなときも最後に置く */
     一覧.push({ text: '聞きたいことをメモして、市区町村のひとり親相談の窓口へ行く', prog: null });
@@ -1962,13 +1870,6 @@
 
   function コピー設定() {
     document.addEventListener('click', function (e) {
-      var more = e.target.closest('button.gap-more');
-      if (more) {
-        var ol = more.parentNode.querySelector('ol.gap-list');
-        if (ol) { ol.classList.remove('folded'); }
-        more.remove();
-        return;
-      }
       var b = e.target.closest('button[data-copy]');
       if (!b) { return; }
       /* 文章の欄はたたんであることが多く、隠れた欄を select() してもコピーできない。

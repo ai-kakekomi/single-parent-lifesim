@@ -1050,8 +1050,8 @@ server.listen(0, '127.0.0.1', function () {
           ok(カード !== null, '足りないことが、枠付きの警告カードで出る');
           ok(カード.querySelector('.alert-head').textContent.indexOf('毎月あと') >= 0,
             'カードの見出しに、足りない額が出ている', カード.querySelector('.alert-head').textContent);
-          ok(カード.querySelector('.alert-sub[href="#gap-block"]') !== null,
-            'いますぐ穴を塞ぐ手への副リンクがある');
+          ok(カード.querySelector('.alert-sub[href="#stage3a"]') !== null,
+            'まずやることリストへの副リンクがある');
           var ボタン = カード.querySelector('#go-training');
           ok(ボタン !== null, '資格ルートへ誘導する主ボタンがある');
           ok(ボタン.classList.contains('pulse'), '主ボタンが、目を引く形（脈打つ）になっている');
@@ -1153,32 +1153,19 @@ server.listen(0, '127.0.0.1', function () {
             '上限にぶつかる場合の注記が出ている');
           ok(d.querySelector('#stage2b-body .floor-note a[href*="fsa.go.jp"]') !== null,
             '金融庁の出典リンクがある');
-          ok(d.querySelector('#stage2b-body .floor-note a[href="#gap-block"]') !== null,
-            '埋める手のリストへのリンクがある');
-          ok(d.getElementById('gap-block') !== null, 'リンク先の埋める手のリストが実在する');
-          /* 打つ手は、貯金の項目ではなく「ひとり親支援制度を探す」にまとめてある */
-          ok(d.querySelector('#stage2b-body .gap-block') === null,
-            '「今週から動けること」は、貯金シミュレーションではなく制度を探す項目に置く');
-          var 手 = d.querySelectorAll('#stage1-path ol.gap-list li');
-          ok(手.length >= 2, '今週から動けることが並んでいる', 手.length + '個');
-          var 道の文 = d.getElementById('stage1-path').textContent;
-          ok(道の文.indexOf('借金では埋められません') > 0, '借金では埋められないと書いてある');
-          ok(道の文.indexOf('カードローンやリボ払い') > 0, 'カードローン・リボ払いに触れている');
-          ok(d.querySelector('#stage1-path ol.gap-list a[href^="#prog-"]') !== null,
-            '今週から動けることから、制度のカードへリンクしている');
-          var 手の文 = d.querySelector('#stage1-path ol.gap-list').textContent;
-          /* 養育費・申請・資格・生活保護は、道筋のほうに数字つきで出すので、ここには重ねない */
-          ok(手の文.indexOf('養育費を取り決める') === -1 && 手の文.indexOf('資格を取って') === -1 &&
-             手の文.indexOf('生活保護') === -1, '道筋に出ている手は、こちらには重ねて並べない');
-          var 家計 = d.querySelector('#stage2b-body .balance-block');
-          var 道筋の箱 = d.querySelector('#stage2b-body .path-block');
-          ok(道筋の箱 !== null && (家計.compareDocumentPosition(道筋の箱) & 4), '道筋は、その年の家計のすぐ下にある');
-          var 折りたたみ = d.querySelectorAll('#stage2b-body details.explain');
-          ok([].every.call(折りたたみ, function (x) { return 道筋の箱.compareDocumentPosition(x) & 4; }),
-            '詳しい説明の折りたたみは、道筋より下（一番下）にまとめてある');
-          ok(手の文.indexOf('食べるものを助けてもらう') > 0, '食の支援が入っている');
-          ok(d.querySelector('#stage1-path ol.gap-list a[href="#prog-shoku_shien"]') !== null,
-            '食の支援のカードへリンクしている');
+          ok(d.querySelector('#stage2b-body .floor-note a[href="#stage3a"]') !== null,
+            'まずやることリストへのリンクがある');
+          /* 制度を探す項目には、赤い箱（不足分を埋める手・進学の前に）を置かない。
+             中身は、制度の一覧・道筋・落とし穴・学費の説明と重なっていたため。 */
+          ok(d.getElementById('gap-block') === null && d.querySelector('#stage1 .pit.red') === null,
+            '制度を探す項目に、赤い箱はない');
+          eq(d.querySelector('#stage1 .step-title').textContent, 'ひとり親支援制度を探す',
+            '見出しは、カードの名前と同じ');
+          var やること = d.getElementById('stage3a-body').textContent;
+          ok(やること.indexOf('こども食堂') > 0, 'お金が足りない人のやることリストに、食の支援が入っている');
+          ok(d.querySelector('#stage3a-body a[href="#prog-shoku_shien"]') !== null ||
+             d.getElementById('stage3a-body').innerHTML.indexOf('shoku_shien') > 0,
+            '食の支援の制度カードにつながっている');
           ok(d.getElementById('stage3-body').textContent.indexOf('カードローンやリボ払いで埋めない') > 0,
             '落とし穴チェックにも、借金で埋めない項目がある');
         }).then(function () {

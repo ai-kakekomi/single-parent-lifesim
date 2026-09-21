@@ -326,12 +326,6 @@ details.explain.prompt-fold > textarea { margin-top: .4rem; }
 
 /* ---- 足りないぶんを埋める手 ---- */
 .gap-amount { font-size: 1.02rem; }
-ol.gap-list { padding-left: 1.3rem; margin: .6rem 0; }
-ol.gap-list li { margin-bottom: .7rem; font-size: .89rem; line-height: 1.7; }
-ol.gap-list li.strong { background: rgba(255,255,255,.8); border-radius: 6px; padding: .5rem .6rem; }
-ol.gap-list a { color: var(--accent-dark); }
-ol.gap-list.folded li:nth-child(n+4) { display: none; }
-button.gap-more { margin: .2rem 0 .6rem; }
 
 @media (max-width: 420px) {
   .legend { font-size: .78rem; gap: .5rem; }
