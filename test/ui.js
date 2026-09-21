@@ -429,10 +429,10 @@ function 道筋のチェック() {
       var 数え = [];
       見本.forEach(function (sm, i) {
         d.querySelectorAll('#sample-buttons button')[i].click();
-        var 塊 = d.querySelector('#stage1-path .path-block');
+        var 塊 = d.querySelector('#stage2b-body .path-block');
         ok(塊 !== null, '[' + sm.id + '] 「あなたの場合の道筋」が出る');
         if (!塊) { return; }
-        var 項目 = d.querySelectorAll('#stage1-path .path-item');
+        var 項目 = d.querySelectorAll('#stage2b-body .path-item');
         ok(項目.length >= 2,
           '[' + sm.id + '] 最後の受け皿だけでなく、その人に固有の道筋が出ている', 項目.length + '個');
         var 文 = 塊.textContent;
@@ -457,7 +457,7 @@ function 道筋のチェック() {
       d.getElementById('housing-now').value = '6';
       d.getElementById('training-on').checked = false;
       d.getElementById('calc').click();
-      var 極 = d.querySelector('#stage1-path .path-block');
+      var 極 = d.querySelector('#stage2b-body .path-block');
       ok(極 !== null, '収入0でも、道筋が空にならない');
       if (極) {
         ok(極.textContent.indexOf('生活保護は、負けではありません') > 0,
@@ -697,7 +697,7 @@ server.listen(0, '127.0.0.1', function () {
           ok(見出し箱 === null || (カード0.compareDocumentPosition(見出し箱) & 4),
             '警告カードは、「制度でいくら変わるか」の箱より上にある');
         }
-        var 道 = d.querySelector('#stage1-path .path-block');
+        var 道 = d.querySelector('#stage2b-body .path-block');
         ok(道 !== null && (表.compareDocumentPosition(道) & 4), '家計の表は、道筋ブロックより上にある');
         var 年欄 = d.getElementById('balance-year');
         ok(年欄 !== null, '年を選ぶスライダーがある');
@@ -1085,7 +1085,7 @@ server.listen(0, '127.0.0.1', function () {
           ok(d.getElementById('training-after') !== null, '修了後の年収の欄も、常に見えている');
           ok(d.querySelectorAll('input[name="training-work"]').length === 4, '働き方の選択も常に見えている');
           ok(d.querySelector('#stage2b-body .alert-card') !== null ||
-             d.querySelector('#stage1-path .path-block') !== null,
+             d.querySelector('#stage2b-body .path-block') !== null,
             '結果（追い越す年など）は、たたまずに出ている');
           /* 資格ルートの線に、説明のない印がない */
           var 絵2 = d.querySelector('#curve-chart svg').innerHTML;
@@ -1152,8 +1152,8 @@ server.listen(0, '127.0.0.1', function () {
             '埋める手のリストへのリンクがある');
           ok(d.getElementById('gap-block') !== null, 'リンク先の埋める手のリストが実在する');
           /* 打つ手は、貯金の項目ではなく「ひとり親支援制度を探す」にまとめてある */
-          ok(d.querySelector('#stage2b-body .gap-block') === null && d.querySelector('#stage2b-body .path-block') === null,
-            '貯金シミュレーションには、打つ手のリストを置かない');
+          ok(d.querySelector('#stage2b-body .gap-block') === null,
+            '「今週から動けること」は、貯金シミュレーションではなく制度を探す項目に置く');
           var 手 = d.querySelectorAll('#stage1-path ol.gap-list li');
           ok(手.length >= 2, '今週から動けることが並んでいる', 手.length + '個');
           var 道の文 = d.getElementById('stage1-path').textContent;
@@ -1165,7 +1165,12 @@ server.listen(0, '127.0.0.1', function () {
           /* 養育費・申請・資格・生活保護は、道筋のほうに数字つきで出すので、ここには重ねない */
           ok(手の文.indexOf('養育費を取り決める') === -1 && 手の文.indexOf('資格を取って') === -1 &&
              手の文.indexOf('生活保護') === -1, '道筋に出ている手は、こちらには重ねて並べない');
-          ok(d.querySelector('#stage1-path .path-block') !== null, '道筋は、制度を探す項目の一番上にある');
+          var 家計 = d.querySelector('#stage2b-body .balance-block');
+          var 道筋の箱 = d.querySelector('#stage2b-body .path-block');
+          ok(道筋の箱 !== null && (家計.compareDocumentPosition(道筋の箱) & 4), '道筋は、その年の家計のすぐ下にある');
+          var 折りたたみ = d.querySelectorAll('#stage2b-body details.explain');
+          ok([].every.call(折りたたみ, function (x) { return 道筋の箱.compareDocumentPosition(x) & 4; }),
+            '詳しい説明の折りたたみは、道筋より下（一番下）にまとめてある');
           ok(手の文.indexOf('食べるものを助けてもらう') > 0, '食の支援が入っている');
           ok(d.querySelector('#stage1-path ol.gap-list a[href="#prog-shoku_shien"]') !== null,
             '食の支援のカードへリンクしている');
