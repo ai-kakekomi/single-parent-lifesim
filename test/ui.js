@@ -838,7 +838,7 @@ server.listen(0, '127.0.0.1', function () {
         eq(見取り図.querySelectorAll('table.map-table .badge.grant').length, 1, '「返さなくていい」の列がある');
         eq(見取り図.querySelectorAll('table.map-table .badge.loan').length, 1, '「あとで返す」の列がある');
         ok(見取り図.textContent.indexOf('修学支援新制度') > 0, '大学の給付型が載っている');
-        ok(見取り図.textContent.indexOf('このツールで計算ずみ') > 0, '計算ずみのものが分かる');
+        ok(見取り図.textContent.indexOf('このアプリで計算ずみ') > 0, '計算ずみのものが分かる');
         ok(見取り図.querySelector('a[href="#stage4"]') !== null, '給付型を探す文章への導線がある');
         /* 学力のレバー */
         ok(見取り図.querySelector('.lever') !== null, '学力のレバーの説明がある');

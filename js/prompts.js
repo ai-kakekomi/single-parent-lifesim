@@ -1,7 +1,7 @@
 /* ============================================================
  * prompts.js  AIに相談するための文章を組み立てる部分
  *
- *  このツールは「何をすべきか」の答えは出しません。
+ *  このアプリは「何をすべきか」の答えは出しません。
  *  代わりに「こう聞けばいい」という質問文を作ります。
  *
  *  作る文章には、お名前・住所の番地・勤め先・学校名は入れません。
@@ -38,14 +38,14 @@
     return L.join('\n');
   }
 
-  /** ツールが出した判定を、AIに渡せる形にする */
+  /** アプリが出した判定を、AIに渡せる形にする */
   function 判定まとめ(結果) {
     if (!結果 || !結果.results) { return ''; }
     var 対象 = 結果.results.filter(function (r) { return r.status === 'likely'; })
       .map(function (r) { return '  - ' + r.program.name + (r.amountText ? '（' + r.amountText + '）' : ''); });
     var 要確認 = 結果.results.filter(function (r) { return r.status === 'check'; })
       .map(function (r) { return '  - ' + r.program.name; });
-    var L = ['', '# 手元のツールでの見立て（概算なので、正しさの確認もお願いします）'];
+    var L = ['', '# 手元のアプリでの見立て（概算なので、正しさの確認もお願いします）'];
     if (対象.length) { L.push('- 対象になりそうな制度:'); L = L.concat(対象); }
     if (要確認.length) { L.push('- 窓口で確認が必要な制度:'); L = L.concat(要確認); }
     return L.join('\n');
@@ -124,7 +124,7 @@
     {
       id: 'programs',
       title: '4. 住んでいる地域の制度を調べる',
-      desc: 'このツールは全国共通の制度しか見ていません。お住まいの地域だけの制度を掘るための文章です。',
+      desc: 'このアプリは全国共通の制度しか見ていません。お住まいの地域だけの制度を掘るための文章です。',
       body: function (入力, 結果) {
         return [
           'あなたは、日本の social welfare（社会保障・福祉）制度に詳しい相談員です。',
@@ -147,7 +147,7 @@
     {
       id: 'scholarship',
       title: '5. 返さなくていい奨学金を探す',
-      desc: '大学や民間団体の給付型奨学金は数千種類あり、このツールには入れられません。お住まいや志望に合うものを探すための文章です。',
+      desc: '大学や民間団体の給付型奨学金は数千種類あり、このアプリには入れられません。お住まいや志望に合うものを探すための文章です。',
       body: function (入力) {
         var 子 = (入力.children || []).map(function (a) { return a + '歳'; }).join('・') || 'なし';
         return [
