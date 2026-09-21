@@ -514,8 +514,11 @@ server.listen(0, '127.0.0.1', function () {
         ok(d.querySelectorAll('#stage2-body table.compare tr').length > 2, '数字だけの表も出る');
 
         /* 1人あたりに直した金額が既定で、切り替えもできる */
-        ok(d.getElementById('stage2-body').textContent.indexOf('1人あたりに直した金額で比べています') > 0,
-          '人数が違うから比べられない、という説明が出ている');
+        ok(d.getElementById('stage2-notes').textContent.indexOf('1人あたりに直した金額で比べています') > 0,
+          '人数が違うから比べられない、という説明が、最後の折りたたみに入っている');
+        ok(d.querySelector('#stage2-notes details').open === false, 'その説明は、はじめは閉じている');
+        ok(d.getElementById('stage2-body').compareDocumentPosition(d.getElementById('stage2-notes')) & 4,
+          '細かい説明は、グラフと表のあとにまとめてある');
         ok(d.querySelector('#stage2-body svg').textContent.indexOf('1人あたりに直した、1か月のお金') >= 0,
           'グラフの縦軸が、1人あたりの金額になっている');
         var 切替 = d.querySelectorAll('#stage2-body button[data-view]');
@@ -524,8 +527,10 @@ server.listen(0, '127.0.0.1', function () {
         切替[1].click();
         ok(d.getElementById('stage2-body').textContent.indexOf('家全体') > 0,
           '切り替えると、家全体の金額が見られる');
+        ok(!d.getElementById('stage2').classList.contains('view-off') || !d.getElementById('stage2b').classList.contains('view-off'),
+          '切り替えのボタンを押しても、開いている項目が消えない（メニューの処理と混ざらない）');
         d.querySelectorAll('#stage2-body button[data-view]')[0].click();
-        ok(d.getElementById('stage2-body').textContent.indexOf('1人あたりに直した金額で比べています') > 0,
+        ok(d.getElementById('stage2-notes').textContent.indexOf('1人あたりに直した金額で比べています') > 0,
           'もう一度切り替えると、1人あたりに戻る');
         ok(d.getElementById('stage2-body').textContent.indexOf('相手の収入が家計にきちんと入っていることが前提') > 0,
           'お金の話だけである、という注記が出ている');

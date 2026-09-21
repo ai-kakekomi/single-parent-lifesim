@@ -621,12 +621,14 @@
       (差 >= 0 ? '約' + SPS.円(差) + ' 多く' : '約' + SPS.円(-差) + ' 少なく') + 'なる見込みです。</strong>' +
       (値 === 'perPerson' ? '1人あたりに直した金額での比較です。' : '家全体の金額での比較です。') + '</p>';
 
+    /* まず見る。それから考える。細かい説明は、折りたたみにして最後にまとめる */
+    $('stage2-notes').innerHTML = '<details class="explain"><summary>「1人あたりに直した金額」とは（詳しく）</summary>' +
+      '<div class="explain-body">' + 見方の説明() + '</div></details>';
     $('stage2-body').innerHTML =
-      頭 + 見方の切り替え() + 見方の説明() + SPSChart.凡例() +
+      頭 + 見方の切り替え() + SPSChart.凡例() +
       '<div class="chart-box">' + SPSChart.描く(y, 最新シミュ.cliffs, グラフの見方, 狭い画面()) + '</div>' +
       崖の説明(最新シミュ.cliffs) +
-      '<p class="hint">グラフの上を指でなぞる（マウスを乗せる）と、その年の金額が出ます。' +
-      '<a href="#stage2b">このグラフが置いている前提を見る</a></p>' +
+      '<p class="hint">グラフの上を指でなぞる（マウスを乗せる）と、その年の金額が出ます。</p>' +
       SPSChart.表(y, グラフの見方) + お金以外の注意();
 
     document.querySelectorAll('button[data-view]').forEach(function (b) {
@@ -1156,6 +1158,7 @@
     var h = ['<details class="explain ref"><summary>このグラフの前提。収入・生活費・学費をどう置いたか（詳しく）</summary>' +
       '<div class="assumption-box"><h4>このグラフの前提</h4>'];
     h.push('<ul>');
+    h.push('<li><strong>ひとり親になったあとの姿を出しています。</strong>離婚を考えている段階の方は、「離婚した場合」の姿です。</li>');
     h.push('<li><strong>収入は、いまのまま変わらない前提です。</strong>昇給も、転職も、働く時間をふやすことも入れていません。' +
       '（資格を取るルートだけは別で、そこだけ収入が変わります）</li>');
     h.push('<li><strong>生活費は、お子さんの成長に合わせて食費の部分が増えます。</strong>' +
@@ -2092,7 +2095,7 @@
     var 項目 = 出ている項目();
     if (!項目.some(function (m) { return m.id === 見ているもの; })) { 見ているもの = 'savings'; }
     $('menu-cards').innerHTML = 項目.map(function (m, i) {
-      return '<button type="button" class="menu-card" data-view="' + m.id + '">' +
+      return '<button type="button" class="menu-card" data-menu="' + m.id + '">' +
         '<span class="num">' + (i + 1) + '</span>' +
         '<span class="name"><span class="icon" aria-hidden="true">' + m.絵 + '</span>' + esc(m.名) + '</span>' +
         '<span class="go" aria-hidden="true">›</span>' +
@@ -2110,7 +2113,7 @@
       m.章.forEach(function (章id) { $(章id).classList.toggle('view-off', m.id !== id); });
     });
     [].forEach.call(document.querySelectorAll('#menu-cards .menu-card'), function (b) {
-      var いま = b.getAttribute('data-view') === id;
+      var いま = b.getAttribute('data-menu') === id;
       b.setAttribute('aria-current', いま ? 'true' : 'false');
     });
     /* 開いたものの最後に、「次」と「戻る」を置く */
@@ -2120,7 +2123,7 @@
       var 次 = 項目[項目.indexOf(いまの) + 1];
       var 足 = document.createElement('div');
       足.className = 'view-next';
-      足.innerHTML = (次 ? '<button type="button" class="primary" data-view="' + 次.id + '">次：' + esc(次.名) + '</button>' : '') +
+      足.innerHTML = (次 ? '<button type="button" class="primary" data-menu="' + 次.id + '">次：' + esc(次.名) + '</button>' : '') +
         '<a href="#menu">ほかのものを選ぶ</a>';
       $(いまの.章[いまの.章.length - 1]).appendChild(足);
     }
@@ -2202,8 +2205,9 @@
 
       見本ボタンを描く();
       document.addEventListener('click', function (e) {
-        var b = e.target.closest && e.target.closest('[data-view]');
-        if (b) { 見る(b.getAttribute('data-view'), true); return; }
+        /* data-view は、離婚の比較の「1人あたり／家全体」の切り替えが使っているので、メニューは別の名前にしている */
+        var b = e.target.closest && e.target.closest('[data-menu]');
+        if (b) { 見る(b.getAttribute('data-menu'), true); return; }
         /* ページ内リンクの行き先が、しまってある項目の中なら、先にそれを開く */
         var a = e.target.closest && e.target.closest('a[href^="#"]');
         var 先 = a && document.getElementById(a.getAttribute('href').slice(1));

@@ -239,12 +239,7 @@
     <section class="stage" id="stage2b">
       <h2 data-label="貯金シミュレーション"></h2>
       <p class="lead">
-        1か月に残るお金を積み上げると、貯金がどう増えていくかが見えます。<br>
-        <strong>制度を申請した場合と、しなかった場合を並べています。</strong>取りこぼしが何年でいくらになるかを見てください。
-      </p>
-      <p class="hint">
-        ひとり親になったあとの姿を出しています（離婚を考えている段階の方は「離婚した場合」の姿です）。
-        年収は変わらないものとして計算しています。
+        制度を申請した場合と、しなかった場合の、貯金の見通しです。
       </p>
       <div id="stage2b-body"></div>
     </section>
@@ -257,10 +252,22 @@
     <section class="stage" id="stage2">
       <h2 data-label="続けた場合と、離婚した場合の比べ方"></h2>
       <p class="lead">
-        一番下のお子さんが22歳になるまで、1か月あたりに使えるお金がどう変わるかを並べています。<br>
-        <strong>家族の人数が違うので、そのまま足した金額では比べられません。1人あたりに直した金額で比べています。</strong>
+        一番下のお子さんが22歳になるまで、1か月あたりに使えるお金がどう変わるかを並べています。
       </p>
 
+
+
+      <div id="stage2-body"></div>
+      <div class="panel tight">
+        <label for="parent-end-age">親御さんからの援助が終わると考える年齢</label>
+        <div class="slider-row">
+          <input type="range" id="parent-end-age" min="65" max="90" value="75" step="1">
+          <output id="parent-end-age-out">75歳</output>
+        </div>
+        <p class="hint">これは制度で決まった数字ではなく、私たちが置いた仮定です。動かして確かめてください。</p>
+      </div>
+      <!-- 細かい説明は、結果を見たあとで読めるように、最後にまとめる -->
+      <div id="stage2-notes"></div>
       <details class="explain ref">
         <summary>このグラフが置いている仮定と、入っていない大事なもの</summary>
       <div class="notice">
@@ -289,17 +296,6 @@
         </p>
       </div>
       </details>
-
-      <div class="panel tight">
-        <label for="parent-end-age">親御さんからの援助が終わると考える年齢</label>
-        <div class="slider-row">
-          <input type="range" id="parent-end-age" min="65" max="90" value="75" step="1">
-          <output id="parent-end-age-out">75歳</output>
-        </div>
-        <p class="hint">これは制度で決まった数字ではなく、私たちが置いた仮定です。動かして確かめてください。</p>
-      </div>
-
-      <div id="stage2-body"></div>
     </section>
     <!-- ============ 次にやること（一本道） ============ -->
     <div id="guide">
