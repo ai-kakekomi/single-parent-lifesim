@@ -650,3 +650,29 @@ details.prog[open] > summary::before { transform: rotate(90deg); }
 .bs-cell.minus .bs-num { color: var(--danger); }
 .balance-detail { margin: .5rem 0; }
 .balance-detail summary { cursor: pointer; font-size: .88rem; font-weight: 600; color: var(--accent-dark); }
+
+/* ---------- メニュー（結果を1つずつ開く） ---------- */
+.view-off { display: none !important; }
+.menu-cards { display: grid; gap: .6rem; }
+.menu-card {
+  display: grid; grid-template-columns: 2rem 1fr auto; align-items: center; gap: .2rem .6rem;
+  width: 100%; text-align: left; padding: .8rem .9rem; margin: 0;
+  background: var(--panel); color: var(--ink); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow); font: inherit; cursor: pointer;
+}
+.menu-card:hover { border-color: var(--accent); }
+.menu-card .num {
+  grid-row: 1 / span 2; width: 1.8rem; height: 1.8rem; border-radius: 50%;
+  background: var(--accent); color: #fff; font-weight: 700; font-size: .9rem;
+  display: flex; align-items: center; justify-content: center;
+}
+.menu-card .name { font-weight: 700; font-size: 1rem; line-height: 1.4; }
+.menu-card .icon { margin-right: .35rem; }
+/* 上に固定している帯に、飛び先の見出しが隠れないようにする */
+#menu, #stage1, #stage2, #stage2b, #stage3, #stage3a, #stage4, #safety { scroll-margin-top: 4rem; }
+.menu-card .say { grid-column: 2; color: var(--ink-sub); font-size: .86rem; line-height: 1.5; }
+.menu-card .say strong { color: var(--ink); white-space: nowrap; }
+.menu-card .go { grid-row: 1 / span 2; grid-column: 3; color: var(--ink-sub); font-size: 1.4rem; line-height: 1; }
+.menu-card[aria-current="true"] { border: 2px solid var(--accent); background: var(--accent-soft); }
+.view-next { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin: 1.6rem 0 0; padding-top: 1rem; border-top: 1px solid var(--line); }
+.view-next a { font-size: .9rem; }

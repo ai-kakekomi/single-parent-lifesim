@@ -175,7 +175,8 @@ function 章の並びのチェック() {
       });
       ok(d.getElementById('stage2b').compareDocumentPosition(d.getElementById('guide')) & 4,
         '4つの章は、貯金のグラフと家計の表より後ろにある');
-      ok(d.getElementById('guide').classList.contains('shown'), '「つぎにやること」の案内が出る');
+      ok(d.getElementById('guide').classList.contains('shown'), '4つの章の入れものが出る');
+      ok(d.getElementById('menu').classList.contains('shown'), '結果のメニューが出る');
 
       /* 下の「つぎへ」ナビは、もう置かない */
       ['step-bar', 'step-next', 'step-prev', 'step-dots', 'step-count', 'show-all'].forEach(function (id) {
@@ -570,10 +571,10 @@ server.listen(0, '127.0.0.1', function () {
            d.querySelector('#my-income').classList.contains('flash'),
           '金額を入れた欄も色づいている');
         d.querySelectorAll('#sample-buttons button')[1].click();
-        /* 自分で「この内容で見てみる」を押したときは、結果まで送る */
+        /* 自分で「この内容で見てみる」を押したときは、結果のメニューまで送る */
         d.getElementById('calc').click();
-        eq(移動先[移動先.length - 1], 'stage2b',
-          '「この内容で見てみる」を押したときは、結果まで画面が動く', 移動先.join(' / '));
+        eq(移動先[移動先.length - 1], 'menu',
+          '「この内容で見てみる」を押したときは、結果のメニューまで画面が動く', 移動先.join(' / '));
         /* 次に何かを入力すると、お知らせは消える */
         var 欄 = d.getElementById('my-age');
         欄.value = '40';
@@ -1206,10 +1207,12 @@ server.listen(0, '127.0.0.1', function () {
           eq(d.getElementById('stage2-body').innerHTML, '',
             '出さないときは、中身も作らない');
           var 単親番号 = 番号();
-          ok(単親番号[単親番号.length - 1].indexOf('3. つぎにやること') === 0,
-            'ひとり親のときは、章の番号が3までになる', 単親番号.join(' / '));
-          ok(単親番号.some(function (t) { return t.indexOf('2. 貯金シミュレーション') === 0; }),
-            '番号が飛ばずに、つめて振り直される');
+          ok(単親番号.some(function (t) { return t.indexOf('2. 見たいものを選んでください') === 0; }),
+            '番号は、入力とメニューの2つにふる', 単親番号.join(' / '));
+          ok(単親番号.some(function (t) { return t === '貯金シミュレーション'; }),
+            'メニューから開くものには、番号をふらない（カードの番号とぶつかるため）');
+          eq(d.querySelectorAll('#menu-cards .menu-card').length, 4,
+            'ひとり親のときは、カードは4枚（離婚した場合とくらべる、は出さない）');
 
           単親にする(false);
           ok(d.getElementById('stage2').classList.contains('shown'),
@@ -1217,10 +1220,12 @@ server.listen(0, '127.0.0.1', function () {
           ok(d.querySelectorAll('#stage2-body svg path').length >= 2,
             'そのときはグラフも描かれる');
           var 婚姻番号 = 番号();
-          ok(婚姻番号[婚姻番号.length - 1].indexOf('4. つぎにやること') === 0,
-            '離婚を考えているときは、章の番号が4まである', 婚姻番号.join(' / '));
-          ok(婚姻番号.some(function (t) { return t.indexOf('3. 続けた場合と、離婚した場合') === 0; }),
-            'くらべ方の章に3番がふられる');
+          ok(婚姻番号.some(function (t) { return t === '続けた場合と、離婚した場合のくらべ方'; }),
+            'くらべ方の章にも、番号はふらない', 婚姻番号.join(' / '));
+          eq(d.querySelectorAll('#menu-cards .menu-card').length, 5,
+            '離婚を考えているときは、カードは5枚');
+          ok(d.querySelectorAll('#menu-cards .menu-card')[2].querySelector('.name').textContent
+            .indexOf('離婚した場合とくらべる') >= 0, '3枚目が「離婚した場合とくらべる」');
 
           /* もとに戻す */
           単親にする(true);

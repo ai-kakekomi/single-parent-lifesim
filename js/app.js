@@ -1147,8 +1147,8 @@
     h.push('<li><strong>小学校・中学校の就学援助は、差し引いていません。</strong>' +
       '市区町村ごとに金額が違い、国の目安を確かめられなかったためです。' +
       '実際の負担は、ここに出る金額より軽くなります。</li>');
-    h.push('<li><strong>生活防衛資金の線も、右肩上がりです。</strong>' +
-      '生活費の半年分なので、お子さんが大きくなって生活費が上がると、目標の額も上がります。</li>');
+    h.push('<li><strong>生活防衛資金の目標も、少しずつ上がります。</strong>' +
+      '生活費の半年分なので、お子さんが大きくなって生活費が上がると、目標の額も上がります。グラフには描いていません。</li>');
     h.push('<li><strong>手当は、毎年その年のお子さんの年齢で計算し直しています。</strong>' +
       '児童扶養手当も児童手当も、年齢で切れるところがあります。そこがグラフの段差になります。</li>');
     h.push('<li><strong>物価の上昇と、これから先の制度改正は入れていません。</strong></li>');
@@ -1678,8 +1678,8 @@
 
   function 防衛資金の説明() {
     return '<div class="notice">' +
-      '<h4>緑の線は「生活防衛資金」です</h4>' +
-      '<p style="margin:.3rem 0"><strong>まずはこの線にとどくまで貯めることだけ考えれば大丈夫です。' +
+      '<h4>「生活防衛資金」は、生活費の半年分の貯金です</h4>' +
+      '<p style="margin:.3rem 0"><strong>まずはこの額にとどくまで貯めることだけ考えれば大丈夫です。' +
       'ここにとどくまで、投資のことは考えなくていいです。</strong></p>' +
       '<p style="margin:.3rem 0">仕事を失ったとき、体をこわしたとき、家電がこわれたとき。' +
       'このお金があれば、借金をせずに乗りきれます。ひとり親家庭は収入が一人分なので、ここがいちばん効きます。</p>' +
@@ -1986,9 +1986,9 @@
     h.push('<p>ここまでで、今日やれることは終わりです。がんばりました。</p>');
     h.push('<p class="finish-head">今日の持ち帰り</p>');
     h.push('<ul>');
-    h.push('<li>まずやることリスト（②のボタンでコピーできます）</li>');
-    h.push('<li>落とし穴チェック（③のボタンでコピーできます）</li>');
-    h.push('<li>AIに相談する文章 6本（④のボタンでコピーできます）</li>');
+    h.push('<li>まずやることリスト（「ひとり親支援制度を探す」の中のボタンでコピーできます）</li>');
+    h.push('<li>落とし穴チェック（「はまりやすい落とし穴」の中のボタンでコピーできます）</li>');
+    h.push('<li>AIに相談する文章 6本（ここの上のボタンでコピーできます）</li>');
     h.push('</ul>');
     if (最初の一歩) {
       h.push('<p class="finish-first">最初の一歩は、これです。<br><strong>' + esc(最初の一歩) + '</strong></p>');
@@ -1999,6 +1999,114 @@
     $('finish-body').innerHTML = h.join('');
   }
 
+  /* ---------- メニュー ----------
+     結果を全部ならべると、どこを読めばいいか分からなくなる。
+     入力のあとにカードを出して、選んだものだけを下に開く。
+     カードには、その人の数字を1つだけ載せる（押す理由になるため）。 */
+  var メニューの項目 = [
+    { id: 'savings', 絵: '💰', 名: '貯金シミュレーション', 章: ['stage2b'] },
+    { id: 'programs', 絵: '🔍', 名: 'ひとり親支援制度を探す', 章: ['stage1', 'stage3a'] },
+    { id: 'divorce', 絵: '⚖️', 名: '離婚した場合とくらべる', 章: ['stage2'], 婚姻中だけ: true },
+    { id: 'pitfalls', 絵: '⚠️', 名: 'はまりやすい落とし穴', 章: ['stage3'] },
+    { id: 'ai', 絵: '🤖', 名: 'AIに相談する文章をつくる', 章: ['stage4', 'finish'] }
+  ];
+  var 見ているもの = 'savings';
+
+  function 出ている項目() {
+    return メニューの項目.filter(function (m) {
+      return !m.婚姻中だけ || (最新入力 && !最新入力.isSingleParent);
+    });
+  }
+
+  function メニューのひとこと(id) {
+    var c = 最新資産;
+    if (id === 'savings' && c) {
+      if (c.monthlyBalance < 0) { return 'いま、毎月あと <strong>' + SPS.円(-c.monthlyBalance) + '</strong> 足りない状態です'; }
+      if (c.goesNegativeNow) {
+        return 'いまのままだと、いちばん下のお子さんが <strong>' + esc(月を年齢で(c, c.negativeFromMonthNow)) + '</strong> に貯金が底をつきます';
+      }
+      if (c.goesNegative) {
+        return 'いちばん下のお子さんが <strong>' + esc(月を年齢で(c, c.negativeFromMonth) || '') + '</strong>、貯金が底をつく計算です';
+      }
+      return '制度を活用すると、ひと月に約 <strong>' + SPS.円(c.monthlyBalance) + '</strong> 残る計算です';
+    }
+    if (id === 'programs' && c) {
+      /* 開いた先の要約（制度を描く）と、同じ数え方をする。数字が食い違わないように */
+      var 使用中 = {};
+      (最新入力.usedPrograms || []).forEach(function (pid) { 使用中[pid] = true; });
+      var 該当 = 最新判定.results.filter(function (r) { return r.status === 'likely' && !使用中[r.program.id]; }).length;
+      var 要確認 = 最新判定.results.filter(function (r) { return r.status === 'check' && !使用中[r.program.id]; }).length;
+      var 窓口 = 要確認 ? '窓口で確かめたい制度が <strong>' + 要確認 + '件</strong>' : '';
+      if (!最新入力.isSingleParent && c.gaps.length) {
+        return '離婚したあとは、月 <strong>＋' + SPS.円(c.gapMonthly) + '</strong> の制度が使えます' + (窓口 ? '。' + 窓口 : '');
+      }
+      if (該当) {
+        return 'まだ使っていない制度が <strong>' + 該当 + '件</strong>' +
+          (c.gaps.length ? '、月 <strong>＋' + SPS.円(c.gapMonthly) + '</strong>' : '') + (窓口 ? '。' + 窓口 : '');
+      }
+      return 窓口 ? 窓口 + ' あります' : '使える制度を、条件と申請先つきで一覧にしています';
+    }
+    if (id === 'divorce') { return '結婚を続けた場合と、ひとりあたりのお金でくらべます'; }
+    if (id === 'pitfalls') {
+      var n = 当てはまる落とし穴(最新入力, 最新判定).length;
+      return n ? 'あなたに当てはまりそうなものが <strong>' + n + '件</strong> あります' : '先に知っておくと、あとで困らないこと';
+    }
+    if (id === 'ai') { return 'コピーして貼るだけの文章ができています。ここまで来れば、今日は十分です'; }
+    return '';
+  }
+
+  function メニューを描く() {
+    var 項目 = 出ている項目();
+    if (!項目.some(function (m) { return m.id === 見ているもの; })) { 見ているもの = 'savings'; }
+    $('menu-cards').innerHTML = 項目.map(function (m, i) {
+      return '<button type="button" class="menu-card" data-view="' + m.id + '">' +
+        '<span class="num">' + (i + 1) + '</span>' +
+        '<span class="name"><span class="icon" aria-hidden="true">' + m.絵 + '</span>' + esc(m.名) + '</span>' +
+        '<span class="go" aria-hidden="true">›</span>' +
+        '<span class="say">' + メニューのひとこと(m.id) + '</span></button>';
+    }).join('');
+    document.body.classList.add('menu-on');
+    見る(見ているもの, false);
+  }
+
+  /** 選んだものだけを出す。ほかは、しまう（消すのではなく、見えなくするだけ） */
+  function 見る(id, スクロールする) {
+    var 項目 = 出ている項目();
+    見ているもの = id;
+    メニューの項目.forEach(function (m) {
+      m.章.forEach(function (章id) { $(章id).classList.toggle('view-off', m.id !== id); });
+    });
+    [].forEach.call(document.querySelectorAll('#menu-cards .menu-card'), function (b) {
+      var いま = b.getAttribute('data-view') === id;
+      b.setAttribute('aria-current', いま ? 'true' : 'false');
+    });
+    /* 開いたものの最後に、「つぎ」と「もどる」を置く */
+    [].forEach.call(document.querySelectorAll('.view-next'), function (el) { el.parentNode.removeChild(el); });
+    var いまの = 項目.filter(function (m) { return m.id === id; })[0];
+    if (いまの) {
+      var つぎ = 項目[項目.indexOf(いまの) + 1];
+      var 足 = document.createElement('div');
+      足.className = 'view-next';
+      足.innerHTML = (つぎ ? '<button type="button" class="primary" data-view="' + つぎ.id + '">つぎ：' + esc(つぎ.名) + '</button>' : '') +
+        '<a href="#menu">ほかのものを選ぶ</a>';
+      $(いまの.章[いまの.章.length - 1]).appendChild(足);
+    }
+    見出しの番号をふり直す();
+    if (スクロールする) {
+      var 先 = いまの && $(いまの.章[0]);
+      if (先 && 先.scrollIntoView) { 先.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    }
+  }
+
+  /** ある場所が、どの項目の中にあるか */
+  function 入っている項目(el) {
+    var 見つけた = null;
+    メニューの項目.forEach(function (m) {
+      m.章.forEach(function (章id) { if ($(章id).contains(el)) { 見つけた = m; } });
+    });
+    return 見つけた;
+  }
+
   /* ---------- 見出しの番号 ----------
      出している章だけに、上から順に番号をふる。
      離婚のくらべ方をしまうと番号が飛ぶので、そのつど数え直す。 */
@@ -2006,7 +2114,11 @@
     var n = 0;
     document.querySelectorAll('h2[data-label]').forEach(function (h) {
       var 章 = h.closest('.stage');
-      if (章 && !章.classList.contains('shown')) { h.textContent = h.getAttribute('data-label'); return; }
+      /* 番号をふるのは「入力」と「メニュー」だけ。
+         メニューから開くものには、カードの番号があるので、ここではふらない。 */
+      if (章 && (!章.classList.contains('shown') || 入っている項目(章))) {
+        h.textContent = h.getAttribute('data-label'); return;
+      }
       n++;
       h.textContent = n + '. ' + h.getAttribute('data-label');
     });
@@ -2033,13 +2145,14 @@
     $('safety').classList.add('shown');
     $('guide').classList.add('shown');
     $('finish').classList.add('shown');
+    $('menu').classList.add('shown');
     まとめを描く();
-    見出しの番号をふり直す();
+    メニューを描く();
     /* 記入例を入れたときは、画面を動かさない。
        いきなり飛ばされると、どこに何が入ったのか分からなくなるため。
        自分で「この内容で見てみる」を押したときだけ、結果まで送る。 */
     if (スクロールする !== false) {
-      var 先 = $('stage2b');
+      var 先 = $('menu');
       if (先 && 先.scrollIntoView) { 先.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     }
   }
@@ -2053,6 +2166,15 @@
       読み込む();
 
       見本ボタンを描く();
+      document.addEventListener('click', function (e) {
+        var b = e.target.closest && e.target.closest('[data-view]');
+        if (b) { 見る(b.getAttribute('data-view'), true); return; }
+        /* ページ内リンクの行き先が、しまってある項目の中なら、先にそれを開く */
+        var a = e.target.closest && e.target.closest('a[href^="#"]');
+        var 先 = a && document.getElementById(a.getAttribute('href').slice(1));
+        var m = 先 && 最新入力 && 入っている項目(先);
+        if (m && m.id !== 見ているもの) { 見る(m.id, false); }
+      });
       子ども欄を作る(1, [null], [null]);
       $('child-count').addEventListener('change', function () {
         子ども欄を作る(parseInt(this.value, 10) || 0, 子どもの年齢たち(), 子どもの生まれ月たち());

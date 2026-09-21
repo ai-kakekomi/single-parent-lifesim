@@ -316,7 +316,7 @@
     var 月列 = curve.monthly || [];
     var 月数見込み = Math.min(月列.length, (描く数 - 1) * 12 + 1);
     月列.slice(0, 月数見込み).forEach(function (q) {
-      全値.push(床(q.all), 床(q.now), q.target);
+      全値.push(床(q.all), 床(q.now));
     });
     if (!月列.length) { pts.slice(0, 描く数).forEach(function (p) { 全値.push(床(p.all), 床(p.now)); }); }
     if (tr && tr.monthly) {
@@ -363,30 +363,11 @@
     }
     var 一本 = 一本にまとめるか(curve);
     s.push('<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H +
-      '" role="img" aria-label="貯金のたまり方の見通し。生活防衛資金の線と、借りられる上限つき">');
+      '" role="img" aria-label="貯金のたまり方の見通し。借りられる上限つき">');
 
-    /* --- 生活防衛資金（生活費の半年分）の線 ---
-           帯にすると、データの線と紛れて読みにくいので、1本の線にする。
-           生活費はお子さんの成長で上がるので、この線も右肩上がりになる。 */
-    if (curve.safetyTarget > 0) {
-      var ys;
-      if (月列.length) {
-        var 目標線 = 月列.slice(0, Math.min(月列.length, 軸の右月 + 1)).map(function (q, k) {
-          return (k ? 'L' : 'M') + Xm(k).toFixed(1) + ' ' + Y(q.target).toFixed(1);
-        }).join(' ');
-        s.push('<path d="' + 目標線 + '" fill="none" stroke="' + 色.bandLine + '" stroke-width="1.5"/>');
-        ys = Y(月列[0].target);
-      } else {
-        ys = Y(curve.safetyTarget);
-        s.push('<line x1="' + 左 + '" y1="' + ys.toFixed(1) + '" x2="' + (左 + 幅) + '" y2="' + ys.toFixed(1) +
-          '" stroke="' + 色.bandLine + '" stroke-width="1.5"/>');
-      }
-      /* 上のほうは、大事な地点の文字を並べる場所として空けておく。
-         線がそこにかかるときは、文字を線の下に回す。 */
-      var 目標額 = Math.round((月列.length ? 月列[0].target : curve.safetyTarget) / 10000);
-      注記追加((縦長 ? '生活防衛資金 ' + 目標額 + '万円'
-        : '生活防衛資金 ' + 目標額 + '万円（生活費の半年分）'), 左 + 4, ys - 5, 'start', 色.bandLine, 10, 40);
-    }
+    /* 生活防衛資金の線は、グラフには描かない。
+       このグラフで見せたいのは「学費の時期に落ちる」「制度で変わる」「資格で抜ける」の3つで、
+       線が1本ふえるとそれが読みにくくなるため。考え方は、グラフの下の文章で伝えている。 */
 
     /* --- 横の目盛り線（きりのいい数だけ。5本くらい） --- */
     目盛り一覧(下限, 上限, 6).forEach(function (v) {
@@ -409,8 +390,12 @@
         s.push('<rect x="' + 左 + '" y="' + zy.toFixed(1) + '" width="' + 幅 + '" height="' +
           (借金の下 - zy).toFixed(1) + '" fill="' + 色.floor + '" opacity="0.07"/>');
         if (借金の下 - zy > 22) {
+          /* 線が0円を割る場所の近くに置くと、線や印と重なる。
+             割る場所が右半分なら左はしに、そうでなければ右はしに置く。 */
+          var 割る月 = 一本 ? curve.negativeFromMonth : curve.negativeFromMonthNow;
+          var 左に置く = (割る月 != null && 割る月 >= 0 && Xm(割る月) > 左 + 幅 / 2);
           注記追加((縦長 ? '借金になる' : 'ここから下は借金になります'),
-            左 + 幅 - 4, zy + 14, 'end', 色.floor, 10, 46);
+            (左に置く ? 左 + 6 : 左 + 幅 - 4), zy + 14, (左に置く ? 'start' : 'end'), 色.floor, 10, 46);
         }
       }
     }
@@ -445,8 +430,20 @@
 
     /* --- 折れ線 --- */
     var 末 = 描く数 - 1;
-    function 線(key, col, dash, 太さ, 濃さ) {
+    /* 借りられる上限に当たったら、線はそこで止める。
+       床にはりつけたまま右へ伸ばすと、上限の赤い線と重なって見えなくなるため。
+       止まった場所には「借りられる上限」の印が付く。 */
+    function 線の点(key) {
       var 元 = 月列.length ? 月列.slice(0, 描く月数) : pts.slice(0, 描く数);
+      if (curve.borrowFloor != null) {
+        for (var k = 0; k < 元.length; k++) {
+          if (元[k][key] <= curve.borrowFloor) { return 元.slice(0, k + 1); }
+        }
+      }
+      return 元;
+    }
+    function 線(key, col, dash, 太さ, 濃さ) {
+      var 元 = 線の点(key);
       var 目盛 = 月列.length ? Xm : X;
       var d = 元.map(function (p, i) { return (i ? 'L' : 'M') + 目盛(i).toFixed(1) + ' ' + Y(床(p[key])).toFixed(1); }).join(' ');
       s.push('<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + (太さ || 2) +
@@ -462,13 +459,19 @@
     /* 線のはしの名前は、いちばん下（床のラベルを置く帯）には入れない */
     var 下限y = 上 + 高 - 24;
     function 収める(v) { return Math.min(Math.max(v, 上 + 10), 下限y); }
-    var 末の値 = 月列.length ? 月列[描く月数 - 1] : pts[末];
-    var 末x = 月列.length ? Xm(描く月数 - 1) : X(末);
+    /* 線のはしの名前は、その線が実際に終わる場所に置く */
+    function はし(key) {
+      var 元 = 線の点(key), i = 元.length - 1;
+      var 床で終わる = (curve.borrowFloor != null && 元[i][key] <= curve.borrowFloor);
+      return { x: (月列.length ? Xm : X)(i),
+        y: 床で終わる ? Y(curve.borrowFloor) - 9 : 収める(Y(床(元[i][key])) + 4) };
+    }
+    var はしall = はし('all'), はしnow = はし('now');
     var ラベル = 一本
-      ? [{ y: 収める(Y(床(末の値.all)) + 4), col: 色.withProg, 名: 'いまの見通し', x: 末x }]
+      ? [{ y: はしall.y, col: 色.withProg, 名: 'いまの見通し', x: はしall.x }]
       : [
-        { y: 収める(Y(床(末の値.now)) + 4), col: 色.withoutProg, 名: 'いまのまま', x: 末x },
-        { y: 収める(Y(床(末の値.all)) + 4), col: 色.withProg, 名: '制度活用', x: 末x }
+        { y: はしnow.y, col: 色.withoutProg, 名: 'いまのまま', x: はしnow.x },
+        { y: はしall.y, col: 色.withProg, 名: '制度活用', x: はしall.x }
       ];
     if (tr && 資格描く数 > 0) {
       /* 線の長さをだいたい測っておく。
@@ -514,8 +517,10 @@
     }
     ラベル.forEach(function (L) {
       var 基点 = (L.x != null) ? L.x : X(末);
-      var 右寄せ = (基点 > 左 + 幅 * 0.72);
-      var x = 右寄せ ? Math.min(基点 - 4, 左 + 幅) : 基点 + 7;
+      /* 名前は、線の終わりの右に出す（左に出すと、下りてくる線そのものに重なる）。
+         右の余白にも入りきらないときだけ、左に出す。 */
+      var 右寄せ = (基点 + 9 + L.名.length * 12 > W - 2);
+      var x = 右寄せ ? Math.min(基点 - 4, 左 + 幅) : 基点 + 9;
       注記追加(L.名, x, L.y, (右寄せ ? 'end' : 'start'), L.col, 12, 30);
     });
 
@@ -626,9 +631,7 @@
       h.push('<span><span class="swatch" style="background:' + 色.withProg + '"></span>制度活用（太い実線）</span>');
       h.push('<span><span class="swatch" style="background:' + 色.withoutProg + ';opacity:.8"></span>いまのまま（細い破線）</span>');
     }
-    h.push('<span><span class="swatch" style="background:' + 色.bandLine + '"></span>生活防衛資金（生活費の半年分）</span>');
-    h.push('<span><span class="swatch" style="background:' + 色.floor + ';opacity:.22"></span>ここから下は借金になる</span>');
-    h.push('<span><span class="swatch" style="background:' + 色.floor + ';opacity:.55"></span>借りることもできない</span>');
+    /* 赤い2つの領域は、グラフの中に説明を書いてあるので、凡例には入れない */
     if (資格あり) {
       h.push('<span><span class="swatch" style="background:' + 色.training + '"></span>資格を取るルート（太い実線）</span>');
     }
