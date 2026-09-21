@@ -629,14 +629,15 @@
       (値 === 'perPerson' ? '1人あたりに直した金額での比較です。' : '家全体の金額での比較です。') + '</p>';
 
     /* まず見る。それから考える。細かい説明は、折りたたみにして最後にまとめる */
-    $('stage2-notes').innerHTML = '<details class="explain"><summary>「1人あたりに直した金額」とは（詳しく）</summary>' +
+    $('stage2-notes').innerHTML = お金以外の注意() +
+      '<details class="explain"><summary>「1人あたりに直した金額」とは（詳しく）</summary>' +
       '<div class="explain-body">' + 見方の説明() + '</div></details>';
     $('stage2-body').innerHTML =
       頭 + 見方の切り替え() + SPSChart.凡例() +
       '<div class="chart-box">' + SPSChart.描く(y, 最新シミュ.cliffs, グラフの見方, 狭い画面()) + '</div>' +
       崖の説明(最新シミュ.cliffs) +
       '<p class="hint">グラフの上を指でなぞる（マウスを乗せる）と、その年の金額が出ます。</p>' +
-      SPSChart.表(y, グラフの見方) + お金以外の注意();
+      SPSChart.表(y, グラフの見方);
 
     document.querySelectorAll('button[data-view]').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -670,14 +671,15 @@
   }
 
   function お金以外の注意() {
-    return '<div class="pit yellow" style="margin-top:1rem">' +
-      '<h4>🟡 このグラフは、お金の話だけです</h4>' +
+    /* 折りたたみの先頭に置く。見出しだけで、一番言いたいことが伝わるようにしてある */
+    return '<details class="explain"><summary>このグラフは、お金の話だけです。身の安全に不安があるときは（詳しく）</summary>' +
+      '<div class="explain-body">' +
       '<p>結婚を続けた場合の金額は、<strong>相手の収入が家計にきちんと入っていることが前提</strong>です。</p>' +
       '<p>生活費を渡してもらえない。使い道を細かく責められる。身の安全に不安がある。' +
       'そういう場合は、お金の多い少ないとは別の問題です。グラフの数字だけで決めないでください。</p>' +
       '<p><a href="#safety">身の安全のことを読む</a>／' +
       '<a href="manual.html#erase" target="_blank" rel="noopener">相談できるところの一覧を開く</a></p>' +
-      '</div>';
+      '</div></details>';
   }
 
   /* ---------- 貯金のたまり方（資産カーブ） ---------- */

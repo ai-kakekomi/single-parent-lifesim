@@ -532,9 +532,9 @@ server.listen(0, '127.0.0.1', function () {
         d.querySelectorAll('#stage2-body button[data-view]')[0].click();
         ok(d.getElementById('stage2-notes').textContent.indexOf('1人あたりに直した金額で比べています') > 0,
           'もう一度切り替えると、1人あたりに戻る');
-        ok(d.getElementById('stage2-body').textContent.indexOf('相手の収入が家計にきちんと入っていることが前提') > 0,
-          'お金の話だけである、という注記が出ている');
-        ok(d.querySelector('#stage2-body a[href="#safety"]') !== null,
+        ok(d.getElementById('stage2-notes').textContent.indexOf('相手の収入が家計にきちんと入っていることが前提') > 0,
+          'お金の話だけである、という注記が、最後の折りたたみに入っている');
+        ok(d.querySelector('#stage2-notes a[href="#safety"]') !== null,
           '身の安全のことを見に行くリンクがある');
 
         /* グラフの左端が、入力した貯金額であること（1年ずれていないこと） */
