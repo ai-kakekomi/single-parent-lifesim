@@ -59,7 +59,7 @@ function 生まれ月と表とカードのチェック() {
       return 待つ(250);
     }).then(function () {
       ok(d.getElementById('child-month-0').value !== '', '例のボタンで、生まれ月も入る');
-      eq(d.querySelectorAll('.child-month').length, 2, 'お子さんの人数ぶん、生まれ月の欄が出る');
+      eq(d.querySelectorAll('.child-month').length, 2, 'お子さんの人数分、生まれ月の欄が出る');
 
       /* ---- 家計の表：年度と、その年度の終わりの貯金 ---- */
       var 見出し = d.getElementById('balance-year-out').textContent;
@@ -136,7 +136,7 @@ function 生まれ月と表とカードのチェック() {
       });
       var 児手カード = d.getElementById('prog-jido_teate');
       ok(児手カード.querySelector('.prog-amount').textContent.indexOf('年およそ ＋') === 0,
-        '児童手当は、閉じたままでも1年ぶんの金額が読める',
+        '児童手当は、閉じたままでも1年分の金額が読める',
         児手カード.querySelector('.prog-amount').textContent);
 
       /* 未申告の「対象の可能性が高い」ものが先頭に来る並びは、そのまま */
@@ -245,7 +245,7 @@ function 生まれ月と表とカードのチェック() {
       return 待つ(250);
     }).then(function () {
       ok(d.getElementById('child-month-0').value !== '', '例のボタンで、生まれ月も入る');
-      eq(d.querySelectorAll('.child-month').length, 2, 'お子さんの人数ぶん、生まれ月の欄が出る');
+      eq(d.querySelectorAll('.child-month').length, 2, 'お子さんの人数分、生まれ月の欄が出る');
 
       /* ---- 家計の表：年度と、その年度の終わりの貯金 ---- */
       var 見出し = d.getElementById('balance-year-out').textContent;
@@ -322,7 +322,7 @@ function 生まれ月と表とカードのチェック() {
       });
       var 児手カード = d.getElementById('prog-jido_teate');
       ok(児手カード.querySelector('.prog-amount').textContent.indexOf('年およそ ＋') === 0,
-        '児童手当は、閉じたままでも1年ぶんの金額が読める',
+        '児童手当は、閉じたままでも1年分の金額が読める',
         児手カード.querySelector('.prog-amount').textContent);
 
       /* 未申告の「対象の可能性が高い」ものが先頭に来る並びは、そのまま */

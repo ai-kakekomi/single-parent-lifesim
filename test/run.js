@@ -84,7 +84,7 @@ eq(SPS.給与所得(0), 0, '収入ゼロなら所得もゼロ');
 eq(SPS.児童扶養手当の所得額({ salaryGross: 1810000, childSupportYearly: 300000 }, 児扶), 1220000,
   'こども家庭庁の計算例（給与181万・養育費年30万）の所得額は122万円');
 eq(SPS.児童扶養手当の所得額({ salaryGross: 1810000, childSupportYearly: 0 }, 児扶), 980000,
-  '同じ収入で養育費がないと98万円（養育費24万円ぶんの差）');
+  '同じ収入で養育費がないと98万円（養育費24万円分の差）');
 eq(SPS.児童扶養手当の所得額({ salaryGross: 1810000, childSupportYearly: 1000000 }, 児扶) -
    SPS.児童扶養手当の所得額({ salaryGross: 1810000, childSupportYearly: 0 }, 児扶), 800000,
   '養育費100万円のうち80万円（8割）だけが所得に足される');
@@ -207,7 +207,7 @@ eq(SPS.手取り目安(0, true), 0, '収入ゼロなら手取りもゼロ');
     .filter(function (r) { return r.key === 'takehome'; })[0];
   eq(行.amount, 100000, '控除をまだ使っていない人も、内訳の手取りは入れた額になる');
 
-  /* 年収を動かして比べても、増えたぶんの手取りは見積もりどおりに出る */
+  /* 年収を動かして比べても、増えた分の手取りは見積もりどおりに出る */
   var 前 = SPS.シミュレーション(使用中, データ).years[0].divorced.takehome;
   var 後 = SPS.シミュレーション(Object.assign({}, 使用中, { myIncome: 元.myIncome + 200000 }), データ)
     .years[0].divorced.takehome;
@@ -274,8 +274,8 @@ ok(k204.residentTax > 300000 * 0.10,
 var 理論_所得税 = Math.floor(350000 * 0.05 * 1.021);
 [2800000, 3200000, 4500000].forEach(function (年収) {
   var k = SPS.ひとり親控除の効果(年収, 子1人);
-  ちかい(k.incomeTax, 理論_所得税, '年収' + (年収 / 10000) + '万円の所得税ぶんが理論値と合う');
-  eq(k.residentTax, 30000, '年収' + (年収 / 10000) + '万円の住民税ぶんは30万円×10%＝30,000円');
+  ちかい(k.incomeTax, 理論_所得税, '年収' + (年収 / 10000) + '万円の所得税分が理論値と合う');
+  eq(k.residentTax, 30000, '年収' + (年収 / 10000) + '万円の住民税分は30万円×10%＝30,000円');
   eq(k.taxFree, false, '年収' + (年収 / 10000) + '万円は、もともと税がかかっている');
 });
 
@@ -337,7 +337,7 @@ var 入力A = {
   divorced_childSupportMonthly: 0, parentSupportMonthly: 0, parentAge: 0
 };
 var simA = SPS.シミュレーション(入力A, データ);
-eq(simA.years.length, 22 - 5 + 1, '一番下の子が5歳なら、22歳になるまでの18年ぶんが出る');
+eq(simA.years.length, 22 - 5 + 1, '一番下の子が5歳なら、22歳になるまでの18年分が出る');
 eq(simA.years[0].youngestAge, 5, '最初の年は一番下の子が5歳');
 eq(simA.years[simA.years.length - 1].youngestAge, 22, '最後の年は22歳');
 ok(simA.cliffs.length >= 2, '制度が切りかわるところが2つ以上見つかる', simA.cliffs.length);
@@ -435,7 +435,7 @@ var 資産F = SPS.資産カーブ(入力F, データ);
 var simF = SPS.シミュレーション(入力F, データ);
 var 学費表 = データ.tuition;
 
-eq(資産F.points.length, simF.years.length, '比較グラフと同じ年数ぶん出る');
+eq(資産F.points.length, simF.years.length, '比較グラフと同じ年数分出る');
 eq(資産F.livingCost, 105000, '入力した生活費がそのまま使われる');
 eq(資産F.safetyMin, 105000 * 3, '生活防衛資金の下は生活費の3か月分');
 eq(資産F.safetyMax, 105000 * 6, '生活防衛資金の上は生活費の6か月分');
@@ -447,20 +447,20 @@ eq(資産F.points[0].tuition, 学0, 'その年の学校にかかるお金が出�
 eq(資産F.points[0].livingCost, 105000, '1年目の生活費は、入力した額そのまま');
 eq(資産F.points[0].monthlyAll, simF.years[0].divorced.total - 105000 - Math.round(学0 / 12),
   '1か月の残りは、使えるお金から生活費と学校のお金を引いた額');
-/* 一番左の点は、入力した貯金そのもの。そこから1年ぶんずつ積み上げる */
+/* 一番左の点は、入力した貯金そのもの。そこから1年分ずつ積み上げる */
 eq(資産F.points[0].all, 資産F.startSavings, '一番左の点は、入力した貯金額そのもの');
 eq(資産F.points[0].now, 資産F.startSavings, '「いまのまま」の線も同じ点から始まる');
 eq(資産F.points[1].all, 資産F.points[0].all + 資産F.points[0].monthlyAll * 12,
-  '1年後の点は、いまの貯金にその年の12か月ぶんを足した額');
+  '1年後の点は、いまの貯金にその年の12か月分を足した額');
 eq(資産F.points[2].all, 資産F.points[1].all + 資産F.points[1].monthlyAll * 12,
-  '2年後の点は、1年後にさらに1年ぶん積み増した額');
+  '2年後の点は、1年後にさらに1年分積み増した額');
 eq(資産F.points[0].youngestAge, simF.years[0].youngestAge, '一番左の点は、いまのお子さんの年齢');
 
 /* いまの貯金が起点になる */
 var 起点あり = SPS.資産カーブ(Object.assign({}, 入力F, { currentSavings: 500000 }), データ);
 eq(起点あり.startSavings, 500000, 'いまの貯金が起点として記録される');
-eq(起点あり.points[0].all, 資産F.points[0].all + 500000, '起点のぶんだけ、線がまるごと上に上がる');
-eq(起点あり.finalAll, 資産F.finalAll + 500000, '最後まで起点のぶんだけ上');
+eq(起点あり.points[0].all, 資産F.points[0].all + 500000, '起点の分だけ、線がまるごと上に上がる');
+eq(起点あり.finalAll, 資産F.finalAll + 500000, '最後まで起点の分だけ上');
 eq(起点あり.finalDiff, 資産F.finalDiff, '起点をずらしても、2本の線の開きは変わらない');
 eq(資産F.safetyTarget, 105000 * 6, '生活防衛資金の目標は、生活費の半年分（1本の線）');
 ok(!SPS.資産カーブ(Object.assign({}, 入力F, { currentSavings: 105000 * 3 }), データ).alreadyReachedSafety,
@@ -471,7 +471,7 @@ ok(!資産F.alreadyReachedSafety, '貯金0円なら、まだ届いていない')
 
 /* すでに使っている制度 */
 eq(資産F.points[0].monthlyNow,
-   資産F.points[0].monthlyAll - 資産F.gapMonthly, '何も申告しなければ、いまの線は伸びしろのぶんだけ低い');
+   資産F.points[0].monthlyAll - 資産F.gapMonthly, '何も申告しなければ、いまの線は伸びしろの分だけ低い');
 ok(資産F.gaps.length === 3, 'まだ使っていない制度が3つ見つかる', JSON.stringify(資産F.gaps));
 /* 学費を助ける制度も「利用中」に入れないと、2本の線は重ならない
    （修学支援新制度と奨学給付金は自分で申し込むものなので） */
@@ -484,7 +484,7 @@ eq(すべて利用中.points[0].monthlyNow, すべて利用中.points[0].monthly
 var 一部使用中 = SPS.資産カーブ(Object.assign({}, 入力F, { usedPrograms: ['jido_teate'] }), データ);
 eq(一部使用中.gaps.length, 2, '児童手当だけ使っていれば、残りは2つ');
 eq(一部使用中.points[0].monthlyNow - 資産F.points[0].monthlyNow,
-   simF.years[0].divorced.jidoTeate, '申告した児童手当のぶんだけ、いまの線が上がる');
+   simF.years[0].divorced.jidoTeate, '申告した児童手当の分だけ、いまの線が上がる');
 ok(一部使用中.finalDiff < 資産F.finalDiff, '使っている制度が増えるほど、2本の開きは小さくなる');
 
 ok(資産F.diffAtTenYears > 0, '10年でも差がついている');
@@ -517,7 +517,7 @@ eq(赤字.points[0].all, 赤字.startSavings, '赤字のケースでも、一番
 eq(赤字.drawUntilOffset,
    Math.min(赤字.points.length - 1, 0 + 3,
      赤字.hitsBorrowFloorAtOffset === null ? Infinity : 赤字.hitsBorrowFloorAtOffset),
-  'マイナスに入ってから3年ぶん、または借りられる上限に達するまでの、早いほうで描くのをやめる');
+  'マイナスに入ってから3年分、または借りられる上限に達するまでの、早いほうで描くのをやめる');
 ok(赤字.drawUntilOffset < 赤字.points.length - 1, '描く範囲が、全期間より短くなっている');
 eq(赤字.shortfallMonthly, -赤字.points[0].monthlyAll, '1か月あたりいくら足りないかを持っている（累積ではなく月額）');
 ok(赤字.shortfallMonthly > 0, '足りない額は正の数で持つ');
@@ -532,7 +532,7 @@ var 途中赤字 = SPS.資産カーブ(Object.assign({}, 入力F, { currentSavin
 if (途中赤字.goesNegative) {
   ok(途中赤字.negativeFromOffset > 0, '途中から赤字になる場合、はじめの年ではない');
   eq(途中赤字.drawUntilOffset, Math.min(途中赤字.points.length - 1, 途中赤字.negativeFromOffset + 3),
-    '赤字に入った年から3年ぶんまで描く');
+    '赤字に入った年から3年分まで描く');
 }
 
 /* 借りられる上限（貸金業法の総量規制）を、グラフの床にする */
@@ -626,7 +626,7 @@ eq(訓.points[2].income, 3200000, '修了後は見込みの年収にうつる');
 ok(訓.points[2].monthly > 訓.points[0].monthly,
   '修了したあとは、通いはじめた年より、1か月に残る額が増える');
 ok(訓.points[1].monthly > 訓.points[0].monthly,
-  '最後の年は4万円の上乗せがあるぶん、一番残る');
+  '最後の年は4万円の上乗せがある分、一番残る');
 
 /* 課税世帯になる場合 */
 var 課税 = SPS.資産カーブ(Object.assign({}, 訓入力,
@@ -762,13 +762,13 @@ eq(起点そろえ.training.points[0].all, 200000, '「資格を取るルート�
 eq(起点そろえ.training.points[0].youngestAge, 起点そろえ.points[0].youngestAge,
   '3本とも、同じ年齢の位置から始まる');
 eq(起点そろえ.points.length, 起点そろえ.training.points.length, '点の数も3本ともそろっている');
-/* 貯金額を変えると、起点だけがそのぶん動く（形は変わらない） */
+/* 貯金額を変えると、起点だけがその分動く（形は変わらない） */
 var 起点ゼロ = SPS.資産カーブ(Object.assign({}, 入力F, {
   currentSavings: 0, training: { enabled: true, years: 2, afterIncome: 3200000 }
 }), データ);
 eq(起点ゼロ.points[0].all, 0, '貯金0円なら、起点も0円');
 eq(起点そろえ.points[5].all - 起点ゼロ.points[5].all, 200000,
-  '途中の点も、入れた貯金のぶんだけ上に平行移動する');
+  '途中の点も、入れた貯金の分だけ上に平行移動する');
 eq(起点そろえ.training.points[5].all - 起点ゼロ.training.points[5].all, 200000,
   '資格ルートの線も同じだけ平行移動する');
 /* 一番右の点は、末子22歳の時点 */
@@ -787,9 +787,9 @@ eq(月c.monthly[12].all, 月c.points[1].all, '12か月後の値が、1年後の�
 eq(月c.monthly[24].all, 月c.points[2].all, '24か月後の値が、2年後の点と一致する');
 eq(月c.monthly[月c.monthly.length - 1].all, 月c.points[月c.points.length - 1].all,
   '一番最後の月が、一番右の点と一致する');
-/* 月ごとに、ちゃんと1か月ぶんずつ動いている */
+/* 月ごとに、ちゃんと1か月分ずつ動いている */
 eq(月c.monthly[1].all - 月c.monthly[0].all, 月c.points[0].monthlyAll,
-  '1か月で、その年の1か月ぶんだけ動く');
+  '1か月で、その年の1か月分だけ動く');
 
 /* 底をつく月・床に当たる月が、月ごとの並びと合っている */
 if (月c.negativeFromMonth !== null) {
@@ -809,7 +809,7 @@ for (var t2 = 1; t2 < 目標たち.length; t2++) {
 }
 ok(目標が下がらない, '生活防衛資金の線は、下がることがない（単調非減少）');
 ok(月c.safetyTargetEnd > 月c.safetyTargetNow,
-  'お子さんが大きくなるぶん、目標の額は上がっていく',
+  'お子さんが大きくなる分、目標の額は上がっていく',
   月c.safetyTargetNow + ' → ' + 月c.safetyTargetEnd);
 eq(月c.safetyTargetNow, 月c.points[0].livingCost * 6, 'いまの目標は、いまの生活費の半年分');
 eq(月c.safetyTargetEnd, 月c.monthly[月c.monthly.length - 1].target, '最後の目標も並びと一致する');
@@ -844,7 +844,7 @@ eq(訓月.monthly.length, 月c.monthly.length, '本体と同じ月数');
 eq(訓月.monthly[12].all, 訓月.points[1].all, '12か月後が1年後の点と一致する');
 /* 訓練中の谷が、月の精度で見える */
 var 訓練中の値 = 訓月.monthly.slice(0, 訓月.years * 12 + 1).map(function (q) { return q.all; });
-eq(訓練中の値.length, 訓月.years * 12 + 1, '訓練期間ぶんの月の値がある');
+eq(訓練中の値.length, 訓月.years * 12 + 1, '訓練期間分の月の値がある');
 
 /* グラフが月ごとに描かれている（点の数が増えている） */
 var 月svg = Chart.資産を描く(月c);
@@ -1069,7 +1069,7 @@ var 三歳の点 = 保c.points.filter(function (pt) { return pt.youngestAge === 
 eq(三歳の点.childcare, 0, '3歳になると保育料は0円になる（無償化）');
 ok(保c.points[0].monthlyAll < SPS.資産カーブ(
   Object.assign({}, 保入力, { children: [3] }), データ).points[0].monthlyAll,
-  '保育料のぶんだけ、1か月の残りが少なくなる');
+  '保育料の分だけ、1か月の残りが少なくなる');
 
 /* ------------------------------------------------------------ */
 見出し('8-3-7. 学校そのものと、塾・習いごとの分離');
@@ -1097,11 +1097,11 @@ var 平均で = SPS.学費の内訳(8, {}, 学表, { useAverage: true });
 var ゼロで = SPS.学費の内訳(8, {}, 学表, { useAverage: false, monthly: 0 });
 var 五千で = SPS.学費の内訳(8, {}, 学表, { useAverage: false, monthly: 5000 });
 eq(平均で.total, 366599, '全国平均を使えば、学習費総額どおり');
-eq(ゼロで.extra, 0, '塾を0円にすれば、塾のぶんは0円');
+eq(ゼロで.extra, 0, '塾を0円にすれば、塾の分は0円');
 eq(ゼロで.total, 110110, '0円なら、学校そのものだけが残る');
 eq(ゼロで.school, 平均で.school, '塾の額を変えても、学校そのものの額は変わらない');
 eq(五千で.extra, 60000, '1か月5,000円なら、年60,000円');
-eq(五千で.total, 110110 + 60000, '合計もそのぶんだけ');
+eq(五千で.total, 110110 + 60000, '合計もその分だけ');
 /* 大学は分けない（学費と生活費の調査なので、塾の設定に左右されない） */
 eq(SPS.学費の内訳(19, {}, 学表, { useAverage: false, monthly: 0 }).total,
    SPS.学費の内訳(19, {}, 学表, { useAverage: true }).total, '大学は塾の設定に左右されない');
@@ -1137,7 +1137,7 @@ eq(ゼロ行.extra, 0, '塾を0円にすれば、内訳の塾も0円');
 
 eq(SPS.学費(3, {}, 学費表), 0, '3歳（幼稚園）は0円。無償化されているため');
 eq(SPS.学費(5, {}, 学費表), 0, '5歳も0円');
-eq(SPS.学費(6, {}, 学費表), 366599, '6歳（公立の小学校）の1年ぶん');
+eq(SPS.学費(6, {}, 学費表), 366599, '6歳（公立の小学校）の1年分');
 eq(SPS.学費(11, {}, 学費表), 366599, '11歳まで小学校');
 eq(SPS.学費(6, { elementary: 'private' }, 学費表), 1741516, '私立の小学校を選ぶと金額が変わる');
 eq(SPS.学費(12, {}, 学費表), 542450, '12歳（公立の中学校）');
@@ -1162,15 +1162,15 @@ eq(安.university, 'national_home', '基準になる道は国立・自宅から'
 var 私立高 = SPS.資産カーブ(Object.assign({}, 入力F, { plans: [{ high: 'private' }] }), データ);
 eq(私立高.tuitionCheapestTotal, 資産F.tuitionTotal, '基準の道の合計は、全部公立のときの合計と同じ');
 eq(資産F.tuitionExtra, 0, '全部公立なら、基準との差はゼロ');
-eq(私立高.tuitionExtra, 私立高.tuitionTotal - 資産F.tuitionTotal, '私立を選んだぶんだけ、基準との差が出る');
-/* 私立を選んだぶんの差は、学費を助ける制度のぶんを引いたあとの実質の差になる */
+eq(私立高.tuitionExtra, 私立高.tuitionTotal - 資産F.tuitionTotal, '私立を選んだ分だけ、基準との差が出る');
+/* 私立を選んだ分の差は、学費を助ける制度の分を引いたあとの実質の差になる */
 var 私立差の見込み = (1179261 - 596954) * 3 - (152000 - 143700) * 3;
 ok(Math.abs(私立高.tuitionExtra - 私立差の見込み) < 20000,
   '公立と私立の高校の差が、支援を引いたあとの実質の差になっている',
   私立高.tuitionExtra + ' / ' + 私立差の見込み);
 ok(私立高.finalAll < 資産F.finalAll, '私立を選ぶと、最後の貯金は少なくなる');
 ok(Math.abs((資産F.finalAll - 私立高.finalAll) - 私立高.tuitionExtra) < 100,
-  '私立を選んだぶんの学費は、そのまま最後の貯金の差になる（1円未満のまるめの差をのぞく）',
+  '私立を選んだ分の学費は、そのまま最後の貯金の差になる（1円未満のまるめの差をのぞく）',
   (資産F.finalAll - 私立高.finalAll) + ' / ' + 私立高.tuitionExtra);
 
 var 私立大 = SPS.資産カーブ(Object.assign({}, 入力F, { plans: [{ university: 'private_away' }] }), データ);
@@ -1189,10 +1189,10 @@ eq(学費ゼロ.tuitionTotal, 学費の年合計, '学校のお金の合計が�
 学費ゼロ.points.forEach(function (pt, i) {
   eq(pt.monthlyAll, simF.years[i].divorced.total - pt.livingCost - Math.round(pt.tuition / 12),
     'どの年でも、生活費と学校のお金が1回ずつだけ引かれている');
-  ok(pt.livingCost >= 105000, 'その年の生活費は、入力した額以上になる（お子さんの成長ぶん）');
+  ok(pt.livingCost >= 105000, 'その年の生活費は、入力した額以上になる（お子さんの成長分）');
 });
 eq(学費ゼロ.tuitionTotal, 学費の年合計 - 学費ゼロ.points[学費ゼロ.points.length - 1].tuition,
-  '学校のお金の合計は、積み上げに使った年ぶんだけ（一番右の点の年は積まない）');
+  '学校のお金の合計は、積み上げに使った年分だけ（一番右の点の年は積まない）');
 
 /* 学費データそのものの点検 */
 eq(学費表.bands.length, 4, '学校の段階は4つ（小・中・高・大学）');
@@ -1390,8 +1390,8 @@ eq(u.full.national.tuition, 535800, '国公立の授業料減免の上限');
 eq(u.full.national.entrance, 282000, '国公立の入学金の減免');
 eq(u.full.private.tuition, 700000, '私立の授業料減免の上限');
 eq(u.full.private.entrance, 260000, '私立の入学金の減免');
-eq(u.full.private.grant_away, 909600, '私立・自宅外の給付型奨学金（月75,800円の12か月ぶん）');
-eq(u.full.national.grant_home, 350400, '国公立・自宅の給付型奨学金（月29,200円の12か月ぶん）');
+eq(u.full.private.grant_away, 909600, '私立・自宅外の給付型奨学金（月75,800円の12か月分）');
+eq(u.full.national.grant_home, 350400, '国公立・自宅の給付型奨学金（月29,200円の12か月分）');
 
 eq(SPS.学費の支援(19, { university: 'private_away' }, データ.tuition, 状況(1500000, 2, false)), 0,
   '申請していなければ、大学の支援は入らない（申請制のため）');
@@ -1619,7 +1619,7 @@ ok(SPS.児童手当([18], 児手表2).monthly > 0, '生まれ月がないとき�
       });
     });
   });
-  ok(行数 > 100, やり方 + 'で、じゅうぶんな数の年を確かめている（' + 行数 + '行）');
+  ok(行数 > 100, やり方 + 'で、十分な数の年を確かめている（' + 行数 + '行）');
 });
 
 /* ------------------------------------------------------------
@@ -1638,12 +1638,12 @@ ok(SPS.児童手当([18], 児手表2).monthly > 0, '生まれ月がないとき�
         '窓口で確かめるものに、それらしい金額を置かない（' + r.program.id + '）');
     }
     if (r.yearly != null) {
-      ok(r.yearly >= 0, '1年ぶんの金額はマイナスにならない（' + r.program.id + '）');
+      ok(r.yearly >= 0, '1年分の金額はマイナスにならない（' + r.program.id + '）');
       ok(r.status !== 'unlikely', '対象外のものに金額は付けない（' + r.program.id + '）');
     }
   });
   var 児手 = 判.results.filter(function (r) { return r.program.id === 'jido_teate'; })[0];
-  ok(児手.yearly > 0, '児童手当は1年ぶんの金額が出る');
+  ok(児手.yearly > 0, '児童手当は1年分の金額が出る');
   eq(児手.yearly, SPS.児童手当([SPS.学年の年齢(5, 2, 0), SPS.学年の年齢(8, 6, 0)],
     データ.programs_by_id.jido_teate.eligibility, true).monthly * 12,
     '児童手当の年額は、学年の年齢で計算したものと一致する');
@@ -1744,8 +1744,8 @@ ok(Chart.資産を描く(null).indexOf('<svg') === -1, 'データがないとき
 ok(Chart.資産の凡例().indexOf('生活防衛資金') === -1, '凡例に生活防衛資金は出さない');
 ok(Chart.資産の凡例().indexOf('借金') === -1 && Chart.資産の凡例().indexOf('借りることもできない') === -1,
   '赤い2つの領域は、グラフの中に説明があるので、凡例には出さない');
-ok(Chart.資産の凡例(false, true).indexOf('いまの見通し') > 0, '線が1本のときは、凡例も1本ぶんになる');
-ok(Chart.資産の凡例(false, true).indexOf('いまのまま') === -1, '1本のときに2本ぶんの説明を出さない');
+ok(Chart.資産の凡例(false, true).indexOf('いまの見通し') > 0, '線が1本のときは、凡例も1本分になる');
+ok(Chart.資産の凡例(false, true).indexOf('いまのまま') === -1, '1本のときに2本分の説明を出さない');
 ok(Chart.資産の凡例(false, false).indexOf('太い実線') > 0, '2本のときは、太さの違いも説明する');
 ok(Chart.資産を描く(起点あり).indexOf('いまの貯金') > 0, 'いまの貯金の位置が、グラフの左端に出る');
 var 赤字svg = Chart.資産を描く(赤字);
@@ -1764,7 +1764,7 @@ function 文字を拾う(svg) {
     var x = parseFloat(属性('x')), y = parseFloat(属性('y'));
     var サイズ = parseFloat(属性('font-size') || '12');
     var 寄せ = 属性('text-anchor') || 'start';
-    /* 日本語は1文字ぶん、英数字は約0.6文字ぶんの幅として見積もる */
+    /* 日本語は1文字分、英数字は約0.6文字分の幅として見積もる */
     var 幅 = 0;
     for (var i = 0; i < 文.length; i++) { 幅 += (/[\x20-\x7e]/.test(文[i]) ? 0.6 : 1.0) * サイズ; }
     var 左 = (寄せ === 'end') ? x - 幅 : (寄せ === 'middle') ? x - 幅 / 2 : x;
@@ -1861,7 +1861,7 @@ ok(!Chart.一本にまとめるか(作り物(30000)), '差が2%を超えたら2�
 var わずか = SPS.資産カーブ(Object.assign({}, 入力F,
   { usedPrograms: ['jido_fuyo_teate', 'jido_teate'] }), データ);
 ok(わずか.gaps.length > 0, 'ひとり親控除だけ取りこぼしている状態を作れる');
-ok(!Chart.一本にまとめるか(わずか), 'ひとり親控除ぶんの差は見てわかる大きさなので、2本のまま');
+ok(!Chart.一本にまとめるか(わずか), 'ひとり親控除分の差は見てわかる大きさなので、2本のまま');
 
 /* 大事な地点の印 */
 function 印の位置(svg) {
@@ -2177,7 +2177,7 @@ var 本文の幅 = 720;
     ok(字.length > 0, 名 + 'に文字がある');
     var 右はみ = 字.filter(function (t) { return t.x2 > W + 1; });
     var 左はみ = 字.filter(function (t) { return t.x1 < -1; });
-    /* y は文字の下側なので、上に文字の高さぶんの余裕がいる */
+    /* y は文字の下側なので、上に文字の高さ分の余裕がいる */
     var 上はみ = 字.filter(function (t) { return t.y - t.h < 0; });
     ok(右はみ.length === 0, 名 + 'の文字が右にはみ出さない', 右はみ.map(function (t) { return t.文; }).join(' / '));
     ok(左はみ.length === 0, 名 + 'の文字が左にはみ出さない', 左はみ.map(function (t) { return t.文; }).join(' / '));
