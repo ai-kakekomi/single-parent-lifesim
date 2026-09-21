@@ -377,7 +377,14 @@
   /* ---------- 入力をまとめて取り出す ---------- */
   function 入力を読む() {
     var 子 = 子どもの年齢たち();
+    var 入力 = 入力そのまま(子);
+    /* 手取りの補正は、ここで一度だけ出す。年収を動かして比べる計算でも同じ補正を使うため */
+    入力.takeHomeAdjustMonthly = SPS.手取りの補正(入力);
+    return 入力;
+  }
+  function 入力そのまま(子) {
     return {
+      takeHomeMonthly: 万('take-home'),
       childMonths: 子どもの生まれ月たち(),
       isSingleParent: 選択('status') === 'single',
       myAge: 数('my-age'),
@@ -412,6 +419,7 @@
     document.querySelector('input[name="status"][value="' + (i.isSingleParent ? 'single' : 'married') + '"]').checked = true;
     $('my-age').value = i.myAge;
     $('my-income').value = Math.round(i.myIncome / 10000);
+    $('take-home').value = i.takeHomeMonthly ? 円を万円に(i.takeHomeMonthly) : '';
     $('spouse-income').value = Math.round(i.spouseIncome / 10000);
     $('child-count').value = i.children.length;
     子ども欄を作る(i.children.length, i.children, i.childMonths || []);

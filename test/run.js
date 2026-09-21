@@ -179,6 +179,48 @@ ok(SPS.手取りめやす(3000000, true) / 3000000 > 0.7 &&
 eq(SPS.手取りめやす(0, true), 0, '収入ゼロなら手取りもゼロ');
 
 /* ------------------------------------------------------------
+ * 給与明細の手取りを入れてもらえたときの補正（issue #6）
+ *   国保・国民年金の人は、一律14.5%の見積もりとずれる。
+ *   明細の手取りと見積もりの差を「補正」として持ち、家計の計算にだけ使う。
+ * ---------------------------------------------------------- */
+見出し('7-1b. 手取りの補正');
+(function () {
+  var 元 = Object.assign({}, 見本.samples[0].input,
+    { divorced_childSupportMonthly: 見本.samples[0].input.childSupportMonthly });
+  var 人数 = 元.children.length;
+  eq(SPS.手取りの補正(元), 0, '手取りが空欄なら、補正は0円');
+  eq(SPS.手取りの補正(Object.assign({}, 元, { takeHomeMonthly: 9999999 })), 0,
+    '額面より多い手取り（入れまちがい）は、補正しない');
+
+  /* ひとり親控除をもう使っている人: 明細の手取りには控除が効いている */
+  var 使用中 = Object.assign({}, 元, { usedPrograms: ['hitorioya_kojo'], takeHomeMonthly: 100000 });
+  var 見積もり = Math.floor(SPS.手取りめやす(元.myIncome, true, 人数) / 12);
+  eq(SPS.手取りの補正(使用中), 100000 - 見積もり, '補正 ＝ 明細の手取り − 見積もり');
+  使用中.takeHomeAdjustMonthly = SPS.手取りの補正(使用中);
+  eq(SPS.シミュレーション(使用中, データ).years[0].divorced.takehome, 100000,
+    '控除を使っている人は、入れた手取りがそのまま家計に入る');
+
+  /* まだ使っていない人: 明細の手取りには控除が効いていない */
+  var 未使用 = Object.assign({}, 元, { usedPrograms: [], takeHomeMonthly: 100000 });
+  未使用.takeHomeAdjustMonthly = SPS.手取りの補正(未使用);
+  var 行 = SPS.資産カーブ(未使用, データ).points[0].breakdown.now.income
+    .filter(function (r) { return r.key === 'takehome'; })[0];
+  eq(行.amount, 100000, '控除をまだ使っていない人も、うちわけの手取りは入れた額になる');
+
+  /* 年収を動かして比べても、ふえたぶんの手取りは見積もりどおりに出る */
+  var 前 = SPS.シミュレーション(使用中, データ).years[0].divorced.takehome;
+  var 後 = SPS.シミュレーション(Object.assign({}, 使用中, { myIncome: 元.myIncome + 200000 }), データ)
+    .years[0].divorced.takehome;
+  var 見積もりの差 = Math.floor(SPS.手取りめやす(元.myIncome + 200000, true, 人数) / 12) - 見積もり;
+  eq(後 - 前, 見積もりの差, '年収を20万円ふやしたときの手取りのふえ方は、補正があっても変わらない');
+
+  /* 判定には使わない */
+  eq(JSON.stringify(SPS.シミュレーション(使用中, データ).years[0].divorced.jidoFuyoTeate),
+    JSON.stringify(SPS.シミュレーション(元, データ).years[0].divorced.jidoFuyoTeate),
+    '手取りを入れても、児童扶養手当の額は変わらない（判定は額面で行う）');
+}());
+
+/* ------------------------------------------------------------
  * ひとり親控除で、実際に軽くなる税
  *   いちばん大事なのは「控除は、税を払っている人にしか効かない」こと。
  *   もともと税がかからない収入なら、軽くなる額は0円。
