@@ -679,9 +679,22 @@ details.prog[open] > summary::before { transform: rotate(90deg); }
 #curve-chart svg { cursor: pointer; }
 
 /* ---------- 用語の辞典 ---------- */
-.gloss-group { margin: 1.2rem 0 .4rem; font-size: 1rem; }
+/* 分野の見出しは左の帯で区切り、言葉には行頭の印を付け、説明は一段下げる。
+   全部が同じ高さに並ぶと、どこが見出しでどこが説明か分からなくなるため。 */
+.gloss-group {
+  margin: 1.6rem 0 .5rem; padding: .3rem .7rem; font-size: 1rem;
+  background: var(--accent-soft); border-left: 5px solid var(--accent); border-radius: 0 6px 6px 0;
+}
 .gloss { margin: 0; }
-.gloss dt { font-weight: 700; margin-top: .8rem; }
+.gloss dt { position: relative; font-weight: 700; margin-top: .9rem; padding-left: 1.1rem; }
+.gloss dt::before {
+  content: ''; position: absolute; left: .15rem; top: .62em;
+  width: .5rem; height: .5rem; border-radius: 50%; background: var(--accent);
+}
 .gloss dt .yomi { font-weight: 400; font-size: .78rem; color: var(--ink-sub); margin-left: .5rem; }
-.gloss dd { margin: .15rem 0 0; font-size: .92rem; line-height: 1.75; }
+.gloss dd {
+  margin: .15rem 0 0 1.1rem; padding-bottom: .8rem; font-size: .92rem; line-height: 1.75;
+  color: var(--ink-sub); border-bottom: 1px solid var(--line);
+}
+.gloss dd:last-child { border-bottom: none; }
 .gloss dd a { font-size: .86rem; white-space: nowrap; }
