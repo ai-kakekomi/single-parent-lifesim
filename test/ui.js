@@ -200,8 +200,8 @@ function 章の並びのチェック() {
 
       /* 身の安全と「すぐ閉じる」 */
       var 安全 = d.getElementById('safety');
-      ok(安全.classList.contains('shown'), '身の安全の欄が出ている');
-      eq(安全.closest('#guide'), null, '身の安全の欄は、4つの章の外にある');
+      eq(安全.closest('.stage').id, 'stage3', '身の安全の欄は、「はまりやすい落とし穴」の中にある');
+      ok(安全.compareDocumentPosition(d.getElementById('stage3-body')) & 4, '落とし穴の一番上に置いてある');
       ok(安全.textContent.indexOf('#8008') > 0, '相談先の番号が書いてある');
       ok(d.querySelectorAll('.escape-btn').length >= 2,
         '「すぐ閉じる」は、上と身の安全の欄の両方にある');
@@ -212,8 +212,8 @@ function 章の並びのチェック() {
       /* 飛び先は、計算する前から見えている節でなければならない。
          もとは #stage3 を指していたが、あそこは .stage なので
          計算するまで display:none で、押しても何も起きなかった（issue #1）*/
-      ok(!d.getElementById('safety').classList.contains('stage'),
-        '飛び先の「身の安全」は、計算しなくても出ている節');
+      ok(d.getElementById('stage3').contains(d.getElementById('safety')),
+        '飛び先の「身の安全」は、落とし穴の項目の中にある（計算の前は、リンクを押すとこの欄だけが出る）');
       w.close();
     });
   });
@@ -1278,9 +1278,16 @@ server.listen(0, '127.0.0.1', function () {
         eq(d.getElementById('loading').style.display, 'none',
           'ファイルを直接開いても、データが読み込める');
         eq(d.querySelectorAll('#sample-buttons button').length, 6, 'ファイル直開きでも例のボタンが出る');
+        /* 身の安全は、何も入力していなくても読めなければならない（issue #1 のやり直し）。
+           上のリンクを押すと、落とし穴の項目のうち、身の安全の欄だけが出る。 */
+        ok(!d.getElementById('stage3').classList.contains('shown'), '計算の前は、落とし穴の項目は出ていない');
+        d.querySelector('.nav a[href="#safety"]').dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true }));
+        ok(d.getElementById('stage3').classList.contains('safety-only'),
+          '計算の前に「身の安全のことを先に読む」を押すと、身の安全の欄だけが出る');
         d.querySelectorAll('#sample-buttons button')[3].click();
         return 待つ(300);
       }).then(function () {
+        ok(!d.getElementById('stage3').classList.contains('safety-only'), '計算したあとは、落とし穴の項目がふつうに出る');
         eq(d.querySelectorAll('#stage1-body .prog').length, 18, 'ファイル直開きでも制度カードが18枚出る');
         eq(d.querySelectorAll('#stage2-body svg path').length, 2, 'ファイル直開きでもグラフが描ける');
         ok(d.querySelectorAll('#stage3-body .pit').length > 0, 'ファイル直開きでも注意書きが出る');

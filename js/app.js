@@ -2090,7 +2090,7 @@
     プロンプトを描く(最新入力, 最新判定);
     ['stage1', 'stage2b', 'stage3', 'stage3a', 'stage4'].forEach(function (id) { $(id).classList.add('shown'); });
     $('stage2').classList.toggle('shown', 比較を出す);
-    $('safety').classList.add('shown');
+    $('stage3').classList.remove('safety-only');
     $('guide').classList.add('shown');
     $('finish').classList.add('shown');
     $('menu').classList.add('shown');
@@ -2125,6 +2125,12 @@
         var 先 = a && document.getElementById(a.getAttribute('href').slice(1));
         var m = 先 && 最新入力 && 入っている項目(先);
         if (m && m.id !== 見ているもの) { 見る(m.id, false); }
+        /* 身の安全は、計算の前でも読めなければならない。まだ何も入力していないときは、その欄だけを出す */
+        if (先 && !最新入力 && $('safety').contains(先)) {
+          /* 落とし穴の項目は、計算するまで入れもの（#guide）ごと隠れているので、入れものも出す */
+          $('guide').classList.add('shown');
+          $('stage3').classList.add('safety-only');
+        }
       });
       子ども欄を作る(1, [null], [null]);
       $('child-count').addEventListener('change', function () {

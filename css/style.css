@@ -569,8 +569,6 @@ table.map-table tbody th { background: #f6f8fa; white-space: nowrap; width: 5rem
 }
 
 /* 身の安全 */
-.safety { display: none; }
-.safety.shown { display: block; }
 .safety {
   background: var(--danger-soft); border: 1px solid #e2b3b3;
   border-left: 5px solid var(--danger);
@@ -722,3 +720,8 @@ details.explain > .explain-body > p.hint { font-size: .9rem; color: var(--ink); 
 
 /* 項目の中の小見出し */
 .sub-title { font-size: 1.02rem; margin: 1.4rem 0 .4rem; padding-left: .6rem; border-left: 4px solid var(--accent); }
+
+/* 身の安全の欄は、落とし穴の項目の一番上にある。
+   計算の前に上のリンクから来たときは、この欄だけを出す（ほかはまだ中身がない）。 */
+.stage.safety-only { display: block; }
+.stage.safety-only > *:not(.safety) { display: none; }
